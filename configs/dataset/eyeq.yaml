@@ -1,0 +1,3 @@
+# EyeQ dataset's configuration
+dataset_path: '/sk/DNN/dataset/Retinal_Image/'
+val_portion: 0.25   # split (val_portion * 100)% of training data as the validation set
