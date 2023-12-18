@@ -48,4 +48,4 @@ def eyeq_process(dataset_part, image_list, source_dir, destination_dir):
             logging.info('\'{}\' image has error during preprocessing!!!'.format(src_img_path))
             continue
     
-    return exist_prep_img_num, completed_new_prep_img_num, failed_new_prep_img_num
+    return existed_prep_img_num, completed_new_prep_img_num, failed_new_prep_img_num
