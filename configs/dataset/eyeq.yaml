@@ -1,16 +1,24 @@
 # EyeQ dataset's configuration
 
+# Directories and files of EyePACS
+original_dataset_root_dir: '/sk/DNN/dataset/Retinal_Image/EyePACS/'   # root directory of EyePACS dataset
+original_dataset_train_dir_name: 'train'                              # name of directory under the 'original_dataset_root_dir' directory containing 'train' images of EyePACS dataset 
+original_dataset_val_dir_name: 'train'                                # name of directory under the 'original_dataset_root_dir' directory containing 'validation' images of EyePACS dataset
+original_dataset_test_dir_name: 'test'                                # name of directory under the 'original_dataset_root_dir' directory containing 'test' images of EyePACS dataset
+
 # Directories and files of EyeQ
 dataset_root_dir: '/sk/DNN/dataset/Retinal_Image/EyeQ/'   # root directory of EyeQ dataset
 
 dataset_preprocessed_dir_name: 'preprocessed_img'         # name of directory under the 'dataset_root_dir' directory containing 'preprocessed train/test images for EyeQ' from the original images of EyePACS dataset
 dataset_preprocessed_train_dir_name: 'train'              # name of directory under the 'dataset_preprocessed_dir_name' directory containing preprocessed 'train' images for EyeQ
+dataset_preprocessed_val_dir_name: 'train'                # name of directory under the 'dataset_preprocessed_dir_name' directory containing preprocessed 'validation' images for EyeQ
 dataset_preprocessed_test_dir_name: 'test'                # name of directory under the 'dataset_preprocessed_dir_name' directory containing preprocessed 'test' images for EyeQ
 
 dataset_src_dir_name: 'src'                               # name of directory under the 'dataset_root_dir' directory containing the original source code of EyeQ
-dataset_src_train_test_list_dir_name: 'data'              # name of directory under the 'dataset_src_dir_name' containing 'the name list of images of train and test for EyeQ' from the original EyePACS dataset
+dataset_src_train_val_test_list_dir_name: 'data'          # name of directory under the 'dataset_src_dir_name' containing 'the name list of images of train/validation/test for EyeQ' from the original EyePACS dataset
 dataset_src_train_list_filename: 'Label_EyeQ_train.csv'   # filename contains the name list of images of 'train' for EyeQ 
+dataset_src_val_list_filename: 'Label_EyeQ_train.csv'     # filename contains the name list of images of 'validation' for EyeQ 
 dataset_src_test_list_filename: 'Label_EyeQ_test.csv'     # filename contains the name list of images of 'test' for EyeQ 
 
-
-val_portion: 0.25   # split (val_portion * 100)% of training data as the validation set
+val_from_train: True    # whether the validation data splitted from the training data  
+val_portion: 0.25       # split (val_portion * 100)% of training data as the validation set
