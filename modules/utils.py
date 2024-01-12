@@ -131,7 +131,8 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Pathname of test image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_test_list_filename'])))
 
         
-        logging.info('Split training data as validation dat : {}'.format(cfg['val_from_train']))
+        logging.info('Split training data as validation data : {}'.format(cfg['val_from_train']))
+        logging.info('Shuffle training data before splitting into train and validation data : {}'.format(cfg['val_from_train_shuffle']))
         logging.info('Validation portion from training set : {}'.format(cfg['val_portion']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))

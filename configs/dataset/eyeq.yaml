@@ -20,5 +20,6 @@ dataset_src_train_list_filename: 'Label_EyeQ_train.csv'   # filename contains th
 dataset_src_val_list_filename: 'Label_EyeQ_train.csv'     # filename contains the name list of images of 'validation' for EyeQ 
 dataset_src_test_list_filename: 'Label_EyeQ_test.csv'     # filename contains the name list of images of 'test' for EyeQ 
 
-val_from_train: True    # whether the validation data splitted from the training data  
-val_portion: 0.25       # split (val_portion * 100)% of training data as the validation set
+val_from_train: True          # whether the validation data splitted from the training data
+val_from_train_shuffle: True  # whether the train data shuffled before splitting
+val_portion: 0.25             # split (val_portion * 100)% of training data as the validation set

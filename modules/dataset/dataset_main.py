@@ -5,6 +5,8 @@ import tensorflow as tf
 
 from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
+from modules.dataset.dataset_utils import (gen_ImgPathList)
+from modules.dataset.eyeq import (gen_EyeQdataset)
 
 def gen_dataset(dataset_name, dataset_cfg):
     """Generate train/validation/test dataloader of the dataset"""
@@ -19,6 +21,7 @@ def gen_dataset(dataset_name, dataset_cfg):
         prep_ds_test_subdir = os.path.join(prep_ds_root_dir, dataset_cfg['dataset_preprocessed_test_dir_name']) 
 
         val_from_train = dataset_cfg['val_from_train']
+        val_from_train_shuffle = dataset_cfg['val_from_train_shuffle']
         val_portion = dataset_cfg['val_portion']
 
         if not os.path.exists(prep_ds_root_dir): # case of the preprocessed images of the dataset not existed
@@ -63,7 +66,32 @@ def gen_dataset(dataset_name, dataset_cfg):
             if val_from_train == False:
                 val_img_num = len(fnmatch.filter(os.listdir(prep_ds_val_subdir), '*.jpeg'))
             test_img_num = len(fnmatch.filter(os.listdir(prep_ds_test_subdir), '*.jpeg'))
-            logging.info('The preprocessed images of dataset already existed. Found {}, {}, {} images for train and test'.format(train_img_num, val_img_num, test_img_num)) 
+            logging.info('The preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(train_img_num, val_img_num, test_img_num))
+
+        # At this point, the preprocessed images of the dataset already used
+        # create list of image path for train/validation/test of dataset, then
+        # generate train/validation/test dataloader of the EyeQ dataset
+        ds_parts = {'train': 'train', 
+                    'val': 'validation', 
+                    'test': 'test'}
+        prep_ds_dirs = {ds_parts['train']: prep_ds_train_subdir, 
+                        ds_parts['val']: prep_ds_val_subdir, 
+                        ds_parts['test']: prep_ds_test_subdir}
+        
+        # list of image path for train/validation/test of dataset
+        img_path_lists = gen_ImgPathList(ds_parts=ds_parts, 
+                                         ds_part_dirs=prep_ds_dirs, 
+                                         val_from_train=val_from_train,
+                                         val_from_train_shuffle=val_from_train_shuffle,
+                                         val_portion=val_portion)
+
+        # train/validation/test dataloader of the EyeQ dataset
+        ds_dataloaders = list()
+        for (k_ds_part, v_ds_part), (k_img_path_list, v_img_path_list) in zip(ds_parts.items(), img_path_lists.items()):
+             ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, img_path_list=v_img_path_list)
+             ds_dataloaders.append(ds_dataloader)
+             logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
+
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))
 
