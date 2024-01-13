@@ -9,20 +9,20 @@ from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-def eyeq_process(dataset_part, image_list, source_dir, destination_dir):
+def eyeq_process(dataset_part, image_info, source_dir, destination_dir):
     """Preprocess images of EyeQ dataset from EyePACS dataset"""
     if not os.path.exists(destination_dir):
         os.makedirs(destination_dir)
         logging.info('\'{}\' directory is created!'.format(destination_dir))
 
-    total_src_img_num = len(image_list)
+    total_src_img_num = len(image_info)
     total_prep_img_num = 0
     existed_prep_img_num = 0
     completed_new_prep_img_num = 0
     failed_new_prep_img_num = 0
     prog_bar = ProgressBar(total_src_img_num, total_prep_img_num)
     
-    for image in image_list:
+    for image in image_info:
         total_prep_img_num += 1
         prog_bar.update('Preprocessing \'{}\' images: {}/{}'.format(dataset_part, total_prep_img_num, total_src_img_num))
 
