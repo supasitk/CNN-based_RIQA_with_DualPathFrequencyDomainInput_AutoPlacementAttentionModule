@@ -91,6 +91,9 @@ def gen_dataset(dataset_name, dataset_cfg):
 
         img_filename_col_name = dataset_cfg['dataset_csv_info_column_name_of_image_filename']
         img_label_col_name = dataset_cfg['dataset_csv_info_column_name_of_image_label']
+
+        img_path_dict_key = 'img_path'
+        img_label_dict_key = 'img_label'
         
         # dictionraies of image path and label for train/validation/test of dataset
         img_path_label_dicts = gen_EyeQImgPathLabelDict(ds_num_class=num_class,
@@ -99,6 +102,8 @@ def gen_dataset(dataset_name, dataset_cfg):
                                                         img_infos=img_infos,
                                                         img_filename_col_name=img_filename_col_name,
                                                         img_label_col_name=img_label_col_name,
+                                                        img_path_dict_key=img_path_dict_key,
+                                                        img_label_dict_key=img_label_dict_key,
                                                         val_from_train=val_from_train,
                                                         val_from_train_shuffle=val_from_train_shuffle,
                                                         val_portion=val_portion)
