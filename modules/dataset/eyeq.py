@@ -1,4 +1,5 @@
 import os
+import random
 import numpy as np
 import tensorflow as tf
 
@@ -17,7 +18,7 @@ def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_labe
 
 
 def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, img_filename_col_name, img_label_col_name, val_from_train, val_from_train_shuffle, val_portion):
-    """Create dictionaries of image path for train/validation/test of dataset"""
+    """Create dictionaries of image path and label for train/validation/test of dataset"""
     # train and validation dataset
     train_img_path_label_dict = _EyeQimgPathLabelDict(ds_part_dir=ds_part_dirs[ds_parts['train']], 
                                                       img_info=img_infos[ds_parts['train']], 
@@ -59,6 +60,12 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
                                                      img_filename_col_name=img_filename_col_name, 
                                                      img_label_col_name=img_label_col_name) 
 
+    # shuffle train dataset
+    zipped_train_img_path_label_dict = list(zip(train_img_path_label_dict['img_path'], train_img_path_label_dict['img_label']))
+    random.shuffle(zipped_train_img_path_label_dict)
+    train_img_path_label_dict['img_path'], train_img_path_label_dict['img_label'] = zip(*zipped_train_img_path_label_dict)
+
+    # dictionary of image path and label for train/validation/test of dataset
     img_path_label_dicts = {ds_parts['train']: train_img_path_label_dict, 
                             ds_parts['val']: val_img_path_label_dict, 
                             ds_parts['test']: test_img_path_label_dict}
