@@ -31,3 +31,4 @@ class_name: ['Good', 'Usable', 'Reject']    # Name of classes (ID of class start
 val_from_train: True          # whether the validation data splitted from the training data
 val_from_train_shuffle: True  # whether the train data shuffled before splitting
 val_portion: 0.25             # split (val_portion * 100)% of training data as the validation set
+train_augment: True           # whether the data augmentation for training data

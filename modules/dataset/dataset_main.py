@@ -108,12 +108,24 @@ def gen_dataset(dataset_name, dataset_cfg):
                                                         val_from_train_shuffle=val_from_train_shuffle,
                                                         val_portion=val_portion)
 
-        # # train/validation/test dataloader of the EyeQ dataset
-        # ds_dataloaders = list()
-        # for (k_ds_part, v_ds_part), (k_img_path_list, v_img_path_list) in zip(ds_parts.items(), img_path_lists.items()):
-        #      ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, img_path_list=v_img_path_list)
-        #      ds_dataloaders.append(ds_dataloader)
-        #      logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
+        # !------ [2nd step] ------!
+        ds_dataloaders = list()
+        for (k_ds_part, v_ds_part), (k_img_path_label_dict, v_img_path_label_dict) in zip(ds_parts.items(), img_path_label_dicts.items()):
+            if v_ds_part == 'train':
+                shuffle = True
+                augment = dataset_cfg['train_augment']
+            else:
+                shuffle = False
+                augment = False
+
+            ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, 
+                                                           img_path_label_dict=v_img_path_label_dict,
+                                                           img_path_dict_key=img_path_dict_key,
+                                                           img_label_dict_key=img_label_dict_key,
+                                                           shuffle=shuffle,
+                                                           augment=augment)
+            ds_dataloaders.append(ds_dataloader)
+            logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
 
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))

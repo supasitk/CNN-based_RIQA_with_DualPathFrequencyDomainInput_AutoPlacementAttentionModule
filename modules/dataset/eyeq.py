@@ -69,7 +69,9 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     # shuffle train dataset
     zipped_train_img_path_label_dict = list(zip(train_img_path_label_dict[img_path_dict_key], train_img_path_label_dict[img_label_dict_key]))
     random.shuffle(zipped_train_img_path_label_dict)
-    train_img_path_label_dict[img_path_dict_key], train_img_path_label_dict[img_label_dict_key] = zip(*zipped_train_img_path_label_dict)
+    shuffled_train_img_path, shuffled_train_img_label = zip(*zipped_train_img_path_label_dict)
+    train_img_path_label_dict[img_path_dict_key] = list(shuffled_train_img_path)
+    train_img_path_label_dict[img_label_dict_key] = list(shuffled_train_img_label)
 
     # dictionary of image path and label for train/validation/test of dataset
     img_path_label_dicts = {ds_parts['train']: train_img_path_label_dict, 
@@ -79,9 +81,20 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def gen_EyeQdataset(train_val_test, img_path_list):
-    """Create dataloader for train/validation/test of dataset""" 
-    num_img = len(img_path_list)
-    dataset = tf.data.Dataset.from_tensor_slices(img_path_list)
+def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle=True, augment=True):
+    """Create dataloader for train/validation/test of dataset"""
+    num_img_path = len(img_path_label_dict[img_path_dict_key])
+    num_img_label = len(img_path_label_dict[img_label_dict_key])
+    if num_img_path != num_img_label:
+        raise ValueError('Number of image path ({}) and label ({}) of \'{}\' dataset are not equal'.format(num_img_path, num_img_label, train_val_test))
+
+    num_img = num_img_label
+    dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
+
+    if train_val_test == 'train':
+        dataset = dataset.repeat()
+
+    if shuffle:
+        dataset = dataset.shuffle(buffer_size=num_img)
 
     return dataset, num_img

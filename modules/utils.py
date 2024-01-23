@@ -140,6 +140,7 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Split training data as validation data: {}'.format(cfg['val_from_train']))
         logging.info('Shuffle training data before splitting into train and validation data: {}'.format(cfg['val_from_train_shuffle']))
         logging.info('Validation portion from training set: {}'.format(cfg['val_portion']))
+        logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
 
