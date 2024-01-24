@@ -141,6 +141,12 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Shuffle training data before splitting into train and validation data: {}'.format(cfg['val_from_train_shuffle']))
         logging.info('Validation portion from training set: {}'.format(cfg['val_portion']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
+        if cfg['train_augment']:
+            logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
+            logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
+            logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
+            if cfg['train_augment_rotation']:
+                logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
 
