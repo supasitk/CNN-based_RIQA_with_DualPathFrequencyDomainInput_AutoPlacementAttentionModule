@@ -1,0 +1,9 @@
+# run info
+config_summary: 'RIQA'
+
+# dataset
+dataset_name: 'EyeQ'  # ['EyeQ']
+dataset_config_path: './configs/dataset/eyeq.yaml'
+
+# training setting
+seed: 0
