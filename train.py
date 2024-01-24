@@ -56,8 +56,18 @@ def main(_):
     write_dataset_config_summary(ds_name, ds_cfg)
 
     # generate train/validation/test dataloader of the RIQA dataset
-    train_ds, val_ds, test_ds = gen_dataset(ds_name, ds_cfg)
+    train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
+    
+    # create iterator of dataloader
+    train_ds_iter = iter(train_ds)
+    val_ds_iter = iter(val_ds)
+    test_ds_iter = iter(test_ds)
 
+    # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
+    train_batch_size = int(cfg['batch_size'])
+    steps_per_epoch = train_ds_len // train_batch_size
+    total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
+    max_epoch = total_steps / steps_per_epoch
 
 if __name__ == '__main__':
     app.run(main)

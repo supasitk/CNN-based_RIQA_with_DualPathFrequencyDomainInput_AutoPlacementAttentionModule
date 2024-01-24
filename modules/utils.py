@@ -104,6 +104,11 @@ def write_exec_config_summary(cfg):
     logging.info('Dataset: {}'.format(cfg['dataset_name']))
     logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
     logging.info('-' * 100)
+    logging.info('*** Training Setting ***')
+    logging.info('Batch size: {}'.format(cfg['batch_size']))
+    logging.info('Training unit: {}'.format(cfg['train_unit']))
+    logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
+    logging.info('Seed: {}'.format(cfg['seed']))
 
 
 def write_dataset_config_summary(ds_name, cfg):
@@ -148,8 +153,6 @@ def write_dataset_config_summary(ds_name, cfg):
             if cfg['train_augment_rotation']:
                 logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
         logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
-        logging.info('*** Training Setting ***')
-        logging.info('Batch size: {}'.format(cfg['batch_size']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
 

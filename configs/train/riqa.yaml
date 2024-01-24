@@ -6,4 +6,7 @@ dataset_name: 'EyeQ'  # ['EyeQ']
 dataset_config_path: './configs/dataset/eyeq.yaml'
 
 # training setting
+batch_size: 32
+train_unit: 'epoch'     # 'epoch' or 'step' of training
+max_train_unit: 160
 seed: 0
