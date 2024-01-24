@@ -114,20 +114,34 @@ def gen_dataset(dataset_name, dataset_cfg):
             if v_ds_part == 'train':
                 shuffle = True
                 augment = dataset_cfg['train_augment']
+                augment_infos = None
+                if augment:
+                    augment_infos = dict()
+                    augment_infos.update([('hflip', dataset_cfg['train_augment_hflip'])])
+                    augment_infos.update([('vflip', dataset_cfg['train_augment_vflip'])])
+                    augment_infos.update([('rotation', dataset_cfg['train_augment_rotation'])])
+                    augment_infos.update([('rotation_factor', dataset_cfg['train_augment_rotation_factor'])])
+                drop_remainder = True
             else:
                 shuffle = False
                 augment = False
+                augment_infos = None
+                drop_remainder = False
 
             ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, 
                                                            img_path_label_dict=v_img_path_label_dict,
                                                            img_path_dict_key=img_path_dict_key,
                                                            img_label_dict_key=img_label_dict_key,
                                                            shuffle=shuffle,
-                                                           augment=augment)
+                                                           augment=augment,
+                                                           augment_infos=augment_infos,
+                                                           resized_img_dim=dataset_cfg['resized_image_dim'],
+                                                           batch_size=dataset_cfg['batch_size'],
+                                                           drop_remainder=drop_remainder)
             ds_dataloaders.append(ds_dataloader)
             logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
 
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))
 
-    return None, None, None
+    return ds_dataloaders[0], ds_dataloaders[1], ds_dataloaders[2]

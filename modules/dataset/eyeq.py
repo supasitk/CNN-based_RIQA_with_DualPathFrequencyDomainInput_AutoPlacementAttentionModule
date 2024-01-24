@@ -3,6 +3,8 @@ import random
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.keras import layers
+
 
 def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key):
     # create dictionary of image path and label
@@ -81,7 +83,32 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle=True, augment=True):
+def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim):
+    def transform_data(img_path, img_label):
+        img = tf.io.read_file(img_path)
+        # decode image to tensor with type uint8 having values in the range [0, 255]
+        img = tf.io.decode_image(img, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
+        # convert image from type uint8 to float32 which the values are normalized by 255 (MAX value of the input dtype, uint8),
+        # and return values in the range [0,1]
+        img = tf.image.convert_image_dtype(img, tf.dtypes.float32)
+        img = tf.image.resize(img, [resized_img_dim, resized_img_dim])
+        if augment:
+            data_augmentation = tf.keras.Sequential()
+            if augment_infos['hflip']:
+                data_augmentation.add(layers.RandomFlip('horizontal'))
+            if augment_infos['vflip']:
+                data_augmentation.add(layers.RandomFlip('vertical'))
+            if augment_infos['rotation']:
+                data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor']))
+            img = data_augmentation(img)
+        # rescale an input in the [0, 1] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
+        img = layers.Rescaling(scale=2, offset=-1)(img)
+        
+        return img, img_path, img_label
+    return transform_data
+
+
+def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -96,5 +123,13 @@ def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_
 
     if shuffle:
         dataset = dataset.shuffle(buffer_size=num_img)
+
+    dataset = dataset.map(
+                _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim),
+                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
     return dataset, num_img

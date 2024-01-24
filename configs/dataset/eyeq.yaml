@@ -31,10 +31,14 @@ class_name: ['Good', 'Usable', 'Reject']    # Name of classes (ID of class start
 val_from_train: True          # whether the validation data splitted from the training data
 val_from_train_shuffle: True  # whether the train data shuffled before splitting
 val_portion: 0.25             # split (val_portion * 100)% of training data as the validation set
-# Augmentation
+#-- Augmentation --#
 train_augment: True                     # whether the data augmentation for training data, if True, details of augment need to be specified
 train_augment_hflip: True               # Random horizontal flipping
 train_augment_vflip: True               # Random vertical flipping
 train_augment_rotation: True            # Random rotation
 train_augment_rotation_factor: 0.2      # Fraction of 2 Pi of rotation results in an output rotating by a random amount in the range [-20% * 2pi, 20% * 2pi]
+resized_image_dim: 224       # Dimension of resized image for input to model
+
+# Training setting
+batch_size: 32
 
