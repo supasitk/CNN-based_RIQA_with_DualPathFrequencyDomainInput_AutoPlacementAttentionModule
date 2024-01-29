@@ -5,6 +5,10 @@ config_summary: 'RIQA'
 dataset_name: 'EyeQ'  # ['EyeQ']
 dataset_config_path: './configs/dataset/eyeq.yaml'
 
+# model
+model_name: 'singleBranch-RGB'    # ['singleBranch-RGB']
+model_config_path: './configs/model/singleBranch-RGB.yaml'
+
 # training setting
 batch_size: 32
 train_unit: 'epoch'     # 'epoch' or 'step' of training

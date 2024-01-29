@@ -104,11 +104,37 @@ def write_exec_config_summary(cfg):
     logging.info('Dataset: {}'.format(cfg['dataset_name']))
     logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
     logging.info('-' * 100)
+    logging.info('*** MODEL ***')
+    logging.info('Model: {}'.format(cfg['model_name']))
+    logging.info('Model config path: {}'.format(cfg['model_config_path']))
+    logging.info('-' * 100)
     logging.info('*** Training Setting ***')
     logging.info('Batch size: {}'.format(cfg['batch_size']))
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))
+
+
+def write_model_config_summary(model_name, cfg):
+    """summarize important configuration of model"""
+    logging.info('-' * 100)
+    logging.info('Summary of model configuration')
+    logging.info('-' * 100)
+    logging.info('Model name: {}'.format(model_name))
+    
+    # details of configuration sepearted for each model
+    if model_name == 'singleBranch-RGB':
+      logging.info('*** Detail of branch ***')
+      logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
+      logging.info('Name of branch: {}'.format(cfg['name_of_branch']))
+      logging.info('*** Input Channel ***')
+      logging.info('Number of input channel of dataset: {}'.format(cfg['number_of_input_channel']))
+      logging.info('Number of group that input channels splitted for the branch(es): {}'.format(cfg['number_of_input_channel_group']))
+      logging.info('List for number of input channel(s) for each group: {}'.format(cfg['list_of_num_input_channel']))
+    else:
+      raise ValueError('Unknown \'{}\' model'.format(model_name))
+    logging.info('-' * 100)
+    
 
 
 def write_dataset_config_summary(ds_name, cfg):
@@ -155,5 +181,4 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
-
     logging.info('-' * 100)

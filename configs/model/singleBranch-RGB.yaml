@@ -1,0 +1,12 @@
+# Model configuration of Single-Branch with Input Channel "RGB"
+
+# branch detail
+number_of_branch: 1                 # number of model's branch(es)
+name_of_branch: ['RGB']             # list for name of model's branch(es) [#list elements must be equal to 'number_of_branch']
+
+# input channel
+number_of_input_channel: 3          # number of input channel of dataset for the model
+number_of_input_channel_group: 1    # number of group that input channels splitted for the branch(es)
+list_of_num_input_channel: [3]      # list for number of input channel(s) for each group, 
+                                    # (number of list elements must be equal to 'number_of_input_channel_group', 
+                                    # and sum of all element' value must be equal to 'number_of_input_channel')
