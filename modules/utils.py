@@ -105,7 +105,7 @@ def write_exec_config_summary(cfg):
     logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
     logging.info('-' * 100)
     logging.info('*** MODEL ***')
-    logging.info('Model: {}'.format(cfg['model_name']))
+    logging.info('Model structure: {}'.format(cfg['model_structure']))
     logging.info('Model config path: {}'.format(cfg['model_config_path']))
     logging.info('-' * 100)
     logging.info('*** Training Setting ***')
@@ -115,24 +115,23 @@ def write_exec_config_summary(cfg):
     logging.info('Seed: {}'.format(cfg['seed']))
 
 
-def write_model_config_summary(model_name, cfg):
+def write_model_config_summary(model_structure, cfg):
     """summarize important configuration of model"""
     logging.info('-' * 100)
     logging.info('Summary of model configuration')
     logging.info('-' * 100)
-    logging.info('Model name: {}'.format(model_name))
+    logging.info('Model Structure: {}'.format(model_structure))
     
     # details of configuration sepearted for each model
-    if model_name == 'singleBranch-RGB':
+    if model_structure == 'OneBranch_ThreeInputChannelRGB':
       logging.info('*** Detail of branch ***')
       logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
-      logging.info('Name of branch: {}'.format(cfg['name_of_branch']))
+      logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
       logging.info('*** Input Channel ***')
       logging.info('Number of input channel of dataset: {}'.format(cfg['number_of_input_channel']))
-      logging.info('Number of group that input channels splitted for the branch(es): {}'.format(cfg['number_of_input_channel_group']))
-      logging.info('List for number of input channel(s) for each group: {}'.format(cfg['list_of_num_input_channel']))
+      logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
     else:
-      raise ValueError('Unknown \'{}\' model'.format(model_name))
+      raise ValueError('Unknown \'{}\' model'.format(model_structure))
     logging.info('-' * 100)
     
 

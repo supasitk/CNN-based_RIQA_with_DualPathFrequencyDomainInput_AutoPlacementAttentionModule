@@ -6,8 +6,8 @@ dataset_name: 'EyeQ'  # ['EyeQ']
 dataset_config_path: './configs/dataset/eyeq.yaml'
 
 # model
-model_name: 'singleBranch-RGB'    # ['singleBranch-RGB']
-model_config_path: './configs/model/singleBranch-RGB.yaml'
+model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
+model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 
 # training setting
 batch_size: 32

@@ -1,0 +1,12 @@
+# Model configuration of Single-Branch with Input Channel "RGB"
+
+# branch detail
+number_of_branch: 1                 # number of model's branch(es)
+name_of_branches:                   # name of model's branch(es) (#elements must be equal to 'number_of_branch')
+  1: 'RGB'
+
+# input channel
+number_of_input_channel: 3                  # number of input channel of dataset for the model
+indices_of_input_channel_for_branches:      # indices of input channel(s) for each branch(es), 
+  1: [0,1,2]                                # (#elements must be equal to 'number_of_branch') 
+                                    

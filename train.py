@@ -57,10 +57,10 @@ def main(_):
     write_dataset_config_summary(ds_name, ds_cfg)
 
     # summarize important configuration of model to log file
-    model_name = cfg['model_name']
+    model_structure = cfg['model_structure']
     model_cfg_path = cfg['model_config_path']
     model_cfg = load_yaml(model_cfg_path)
-    write_model_config_summary(model_name, model_cfg)
+    write_model_config_summary(model_structure, model_cfg)
 
     # generate train/validation/test dataloader of the RIQA dataset
     train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
