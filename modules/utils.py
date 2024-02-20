@@ -112,6 +112,8 @@ def write_exec_config_summary(cfg):
     logging.info('Batch size: {}'.format(cfg['batch_size']))
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
+    logging.info('Weight decay: {}'.format(cfg['weights_decay']))
+    logging.info('Dropout rate: {}'.format(cfg['dropout_rate']))
     logging.info('Seed: {}'.format(cfg['seed']))
 
 
@@ -124,12 +126,15 @@ def write_model_config_summary(model_structure, cfg):
     
     # details of configuration sepearted for each model
     if model_structure == 'OneBranch_ThreeInputChannelRGB':
-      logging.info('*** Detail of branch ***')
-      logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
-      logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
       logging.info('*** Input Channel ***')
       logging.info('Number of input channel of dataset: {}'.format(cfg['number_of_input_channel']))
       logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
+      logging.info('*** Detail of branch ***')
+      logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
+      logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
+      logging.info('Neural network for branch(es): {}'.format(cfg['model_of_branches']))
+      logging.info('Number of layer for branch(es): {}'.format(cfg['numLayer_of_branches']))
+      logging.info('Pretrained weight for branch(es): {}'.format(cfg['pretrainedWeight_of_branches']))
     else:
       raise ValueError('Unknown \'{}\' model'.format(model_structure))
     logging.info('-' * 100)

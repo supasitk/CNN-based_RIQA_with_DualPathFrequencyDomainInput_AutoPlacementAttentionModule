@@ -78,6 +78,7 @@ def main(_):
 
     # define network
     model = NNmodel(cfg, ds_cfg, model_cfg)
+    model.summary(print_fn=lambda x: logging.info(x))
 
 if __name__ == '__main__':
     app.run(main)

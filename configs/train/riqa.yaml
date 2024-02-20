@@ -13,4 +13,6 @@ model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 batch_size: 32
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
+dropout_rate: 0.0
+weights_decay: !!float 1e-4
 seed: 0
