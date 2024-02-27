@@ -94,6 +94,18 @@ class ProgressBar(object):
     sys.stdout.flush()
 
 
+def Check_Layer_Not_Loaded_with_PretrainedWeight(model, initial_weights):
+  """check which layers of the model are NOT loaded (replaced) with the pretrained weights"""
+  layer_list = []
+
+  for layer, initial_weight in zip(model.layers, initial_weights):
+    weight = layer.get_weights()
+    if weight and all(tf.nest.map_structure(np.array_equal, weight, initial_weight)):
+      layer_list.append(layer.name)
+
+  logging.info('Layers of the model have NO pretrained weights: {}'.format(layer_list))
+
+
 def write_exec_config_summary(cfg):
     """summarize important configuration of execution"""
     logging.info('-' * 100)

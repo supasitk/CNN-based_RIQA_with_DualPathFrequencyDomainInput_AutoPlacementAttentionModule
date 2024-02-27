@@ -41,7 +41,8 @@ def genModel(cfg, ds_cfg, model_cfg):
     FirstBranch_key = 1
     FirstBranch_idx_input_ch = Branches_idx_input_ch[FirstBranch_key] # list returned 
     FirstBranch_inputs = tf.gather(inputs, FirstBranch_idx_input_ch, axis=-1, name='1st_branch_input')
-    FirstBranch_model = genModelBranch(branch_name=Branches_name[FirstBranch_key],
+    FirstBranch_model = genModelBranch(branch_id=FirstBranch_key, 
+                                       branch_name=Branches_name[FirstBranch_key],
                                        input_h_size=input_h_size,
                                        input_w_size=input_w_size,
                                        input_num_channel=len(FirstBranch_idx_input_ch), 
