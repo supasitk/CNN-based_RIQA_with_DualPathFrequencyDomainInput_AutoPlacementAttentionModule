@@ -5,7 +5,6 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import (Input, GlobalAveragePooling2D, Flatten, Dropout, Dense)
 
 from modules.model.baseline.baseline_main import (genModelBranch)
-from modules.operations import (kernel_init, regularizer)
 
 
 def genModel(cfg, ds_cfg, model_cfg):
@@ -29,7 +28,6 @@ def genModel(cfg, ds_cfg, model_cfg):
     Branches_pretrainedWeight = model_cfg['pretrainedWeight_of_branches'] # dictionary returned
     if len(Branches_pretrainedWeight) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of pretrained-weight list \'{}\' for branches'.format(num_branch, len(Branches_pretrainedWeight)))
-    weights_decay = cfg['weights_decay']
     dropout_rate = cfg['dropout_rate']
     num_class = ds_cfg['class_num']
 
@@ -48,14 +46,13 @@ def genModel(cfg, ds_cfg, model_cfg):
                                        input_num_channel=len(FirstBranch_idx_input_ch), 
                                        model_name=Branches_model[FirstBranch_key], 
                                        num_layer=Branches_numLayer[FirstBranch_key],
-                                       pretrained_weight=Branches_pretrainedWeight[FirstBranch_key],
-                                       weights_decay=weights_decay)
+                                       pretrained_weight=Branches_pretrainedWeight[FirstBranch_key])
     FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
     
     # ------------------ Feature Aggregration ------------------#
     all_features = GlobalAveragePooling2D()(FirstBranch_features)
     all_features = Flatten()(all_features)
     all_features = Dropout(dropout_rate)(all_features)
-    logits = Dense(num_class, kernel_initializer=kernel_init(), kernel_regularizer=regularizer(weights_decay))(all_features)
+    logits = Dense(num_class, name='logits')(all_features)
 
     return Model(inputs, logits, name=cfg['model_structure'])

@@ -1,19 +1,28 @@
 from absl import logging
 
-from modules.model.baseline.ResNet import (genResNet)
+from modules.model.baseline.resnet import (ResNet50, ResNet101, ResNet152)
 
-
-def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, weights_decay):
+def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight):
     if model_name == 'ResNet':
-        model_branch = genResNet(input_h_size=input_h_size,
-                                 input_w_size=input_w_size,
-                                 input_num_channel=input_num_channel, 
-                                 num_layer=num_layer, 
-                                 pretrained_weight=pretrained_weight, 
-                                 weights_decay=weights_decay,
-                                 id=branch_id, 
-                                 name=branch_name)
+        if num_layer == 50:
+            genResNet = ResNet50
+        elif num_layer == 101:
+            genResNet = ResNet101
+        elif num_layer == 152:
+            genResNet = ResNet152
+        else:
+            raise ValueError('Unknown number of layer \'{}\' for model \'{}\''.format(num_layer, model_name))
+        model_branch = genResNet(include_top=False,
+                                 weights=pretrained_weight,
+                                 input_tensor=None,
+                                 input_shape=(input_h_size, input_w_size, input_num_channel),
+                                 pooling=None)
     else:
         raise ValueError('Unknown model \'{}\''.format(model_name))
+
+    # show detail of model
+    logging.info('-' * 30)
+    logging.info('Branch {}: {}'.format(branch_id, branch_name))
+    model_branch.summary(print_fn=lambda x: logging.info(x))
 
     return model_branch
