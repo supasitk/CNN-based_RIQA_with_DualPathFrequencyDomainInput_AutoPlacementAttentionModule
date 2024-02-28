@@ -8,6 +8,8 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summa
                            write_dataset_config_summary, write_model_config_summary)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
+from modules.optimizers import (getOptimizer)
+from modules.losses import (getLossFn)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
 
@@ -82,6 +84,13 @@ def main(_):
     logging.info('-' * 30)
     logging.info('Network structure: {}'.format(model_structure))
     model.summary(print_fn=lambda x: logging.info(x))
+
+    # optimizer
+    optimizer = getOptimizer(cfg)
+
+    # loss function
+    criterion = getLossFn(cfg)
+
 
 if __name__ == '__main__':
     app.run(main)

@@ -9,10 +9,28 @@ dataset_config_path: './configs/dataset/eyeq.yaml'
 model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
 model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 
+# optimizer ['SGD']
+# --- SGD --- #
+optimizer: 'SGD'
+optimizer_config:
+  'momentum': 0.0
+  'nesterov': False
+
+# learning rate
+lr_init: !!float 1e-2
+
+# loss function ['SparseCategoricalCrossentropy']
+# --- SparseCategoricalCrossentropy --- #
+loss_fn: 'SparseCategoricalCrossentropy'    
+loss_fn_config:
+  'from_logits': True
+  'reduction': 'sum_over_batch_size'
+
+
 # training setting
 batch_size: 32
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
 dropout_rate: 0.0
-weights_decay: !!float 1e-4
+#weights_decay: null   # [null or float]
 seed: 0
