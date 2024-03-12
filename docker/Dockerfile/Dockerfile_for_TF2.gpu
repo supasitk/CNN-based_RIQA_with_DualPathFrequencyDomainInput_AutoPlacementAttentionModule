@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install \ 
     tensorflow-model-optimization \ 
     tensorflow_datasets \
+    tensorflow[and-cuda] \
     numpy \
     opencv-python \
     PyYAML \ 
