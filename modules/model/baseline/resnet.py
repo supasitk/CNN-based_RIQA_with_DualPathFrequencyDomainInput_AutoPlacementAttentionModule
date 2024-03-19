@@ -22,14 +22,15 @@ Reference:
       https://arxiv.org/abs/1512.03385) (CVPR 2015)
 """
 
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
-from keras import backend
-from keras.applications import imagenet_utils
-from keras.engine import training
-from keras.layers import VersionAwareLayers
-from keras.utils import data_utils
-from keras.utils import layer_utils
+from tensorflow.keras import backend
+from tensorflow.keras.applications import imagenet_utils
+from tensorflow.keras import Model
+from tensorflow.keras.layers import (Input, ZeroPadding2D, Conv2D, BatchNormalization, 
+                                     Activation, MaxPooling2D, GlobalAveragePooling2D, 
+                                     Dense, GlobalMaxPooling2D, Add, DepthwiseConv2D, Lambda)
+from tensorflow.keras.utils import (get_file, get_source_inputs)
 
 # isort: off
 from tensorflow.python.util.tf_export import keras_export
@@ -75,7 +76,7 @@ WEIGHTS_HASHES = {
     ),
 }
 
-layers = None
+#layers = None
 
 
 def ResNet(
@@ -139,11 +140,11 @@ def ResNet(
     Returns:
       A `keras.Model` instance.
     """
-    global layers
-    if "layers" in kwargs:
-        layers = kwargs.pop("layers")
-    else:
-        layers = VersionAwareLayers()
+#    global layers
+#    if "layers" in kwargs:
+#        layers = kwargs.pop("layers")
+#    else:
+#        layers = VersionAwareLayers()
     if kwargs:
         raise ValueError(f"Unknown argument(s): {kwargs}")
     if not (weights in {"imagenet", None} or tf.io.gfile.exists(weights)):
@@ -171,58 +172,58 @@ def ResNet(
     )
 
     if input_tensor is None:
-        img_input = layers.Input(shape=input_shape)
+        img_input = Input(shape=input_shape)
     else:
         if not backend.is_keras_tensor(input_tensor):
-            img_input = layers.Input(tensor=input_tensor, shape=input_shape)
+            img_input = Input(tensor=input_tensor, shape=input_shape)
         else:
             img_input = input_tensor
 
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
-    x = layers.ZeroPadding2D(padding=((3, 3), (3, 3)), name="conv1_pad")(
+    x = ZeroPadding2D(padding=((3, 3), (3, 3)), name="conv1_pad")(
         img_input
     )
-    x = layers.Conv2D(64, 7, strides=2, use_bias=use_bias, name="conv1_conv")(x)
+    x = Conv2D(64, 7, strides=2, use_bias=use_bias, name="conv1_conv")(x)
 
     if not preact:
-        x = layers.BatchNormalization(
+        x = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name="conv1_bn"
         )(x)
-        x = layers.Activation("relu", name="conv1_relu")(x)
+        x = Activation("relu", name="conv1_relu")(x)
 
-    x = layers.ZeroPadding2D(padding=((1, 1), (1, 1)), name="pool1_pad")(x)
-    x = layers.MaxPooling2D(3, strides=2, name="pool1_pool")(x)
+    x = ZeroPadding2D(padding=((1, 1), (1, 1)), name="pool1_pad")(x)
+    x = MaxPooling2D(3, strides=2, name="pool1_pool")(x)
 
     x = stack_fn(x)
 
     if preact:
-        x = layers.BatchNormalization(
+        x = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name="post_bn"
         )(x)
-        x = layers.Activation("relu", name="post_relu")(x)
+        x = Activation("relu", name="post_relu")(x)
 
     if include_top:
-        x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+        x = GlobalAveragePooling2D(name="avg_pool")(x)
         imagenet_utils.validate_activation(classifier_activation, weights)
-        x = layers.Dense(
+        x = Dense(
             classes, activation=classifier_activation, name="predictions"
         )(x)
     else:
         if pooling == "avg":
-            x = layers.GlobalAveragePooling2D(name="avg_pool")(x)
+            x = GlobalAveragePooling2D(name="avg_pool")(x)
         elif pooling == "max":
-            x = layers.GlobalMaxPooling2D(name="max_pool")(x)
+            x = GlobalMaxPooling2D(name="max_pool")(x)
 
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
     if input_tensor is not None:
-        inputs = layer_utils.get_source_inputs(input_tensor)
+        inputs = get_source_inputs(input_tensor)
     else:
         inputs = img_input
 
     # Create model.
-    model = training.Model(inputs, x, name=model_name)
+    model = Model(inputs, x, name=model_name)
 
     # Load weights.
     if weights is not None:
@@ -238,7 +239,7 @@ def ResNet(
                 model_name + "_weights_tf_dim_ordering_tf_kernels_notop.h5"
             )
             file_hash = WEIGHTS_HASHES[model_name][1]
-        weights_path = data_utils.get_file(
+        weights_path = get_file(
             file_name,
             BASE_WEIGHTS_PATH + file_name,
             cache_subdir="models",
@@ -275,32 +276,32 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
     if conv_shortcut:    
-        shortcut = layers.Conv2D(
+        shortcut = Conv2D(
             filters, 1, strides=stride, name=name + "_0_conv"
         )(x)
-        shortcut = layers.BatchNormalization(
+        shortcut = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name=name + "_0_bn"
         )(shortcut)
     else:
         shortcut = x
 
-    x = layers.Conv2D(
+    x = Conv2D(
         filters, kernel_size, strides=stride, padding="SAME", name=name + "_1_conv"
     )(x)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_1_relu")(x)
+    x = Activation("relu", name=name + "_1_relu")(x)
 
-    x = layers.Conv2D(
+    x = Conv2D(
         filters, kernel_size, padding="SAME", name=name + "_2_conv"
     )(x)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
     
-    x = layers.Add(name=name + "_add")([shortcut, x])
-    x = layers.Activation("relu", name=name + "_out")(x)
+    x = Add(name=name + "_add")([shortcut, x])
+    x = Activation("relu", name=name + "_out")(x)
     return x
 
 
@@ -345,36 +346,36 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
     if conv_shortcut:
-        shortcut = layers.Conv2D(
+        shortcut = Conv2D(
             4 * filters, 1, strides=stride, name=name + "_0_conv"
         )(x)
-        shortcut = layers.BatchNormalization(
+        shortcut = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name=name + "_0_bn"
         )(shortcut)
     else:
         shortcut = x
 
-    x = layers.Conv2D(filters, 1, strides=stride, name=name + "_1_conv")(x)
-    x = layers.BatchNormalization(
+    x = Conv2D(filters, 1, strides=stride, name=name + "_1_conv")(x)
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_1_relu")(x)
+    x = Activation("relu", name=name + "_1_relu")(x)
 
-    x = layers.Conv2D(
+    x = Conv2D(
         filters, kernel_size, padding="SAME", name=name + "_2_conv"
     )(x)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_2_relu")(x)
+    x = Activation("relu", name=name + "_2_relu")(x)
 
-    x = layers.Conv2D(4 * filters, 1, name=name + "_3_conv")(x)
-    x = layers.BatchNormalization(
+    x = Conv2D(4 * filters, 1, name=name + "_3_conv")(x)
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_3_bn"
     )(x)
 
-    x = layers.Add(name=name + "_add")([shortcut, x])
-    x = layers.Activation("relu", name=name + "_out")(x)
+    x = Add(name=name + "_add")([shortcut, x])
+    x = Activation("relu", name=name + "_out")(x)
     return x
 
 
@@ -416,43 +417,43 @@ def block2(x, filters, kernel_size=3, stride=1, conv_shortcut=False, name=None):
     """
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
-    preact = layers.BatchNormalization(
+    preact = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_preact_bn"
     )(x)
-    preact = layers.Activation("relu", name=name + "_preact_relu")(preact)
+    preact = Activation("relu", name=name + "_preact_relu")(preact)
 
     if conv_shortcut:
-        shortcut = layers.Conv2D(
+        shortcut = Conv2D(
             4 * filters, 1, strides=stride, name=name + "_0_conv"
         )(preact)
     else:
         shortcut = (
-            layers.MaxPooling2D(1, strides=stride)(x) if stride > 1 else x
+            MaxPooling2D(1, strides=stride)(x) if stride > 1 else x
         )
 
-    x = layers.Conv2D(
+    x = Conv2D(
         filters, 1, strides=1, use_bias=False, name=name + "_1_conv"
     )(preact)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_1_relu")(x)
+    x = Activation("relu", name=name + "_1_relu")(x)
 
-    x = layers.ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + "_2_pad")(x)
-    x = layers.Conv2D(
+    x = ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + "_2_pad")(x)
+    x = Conv2D(
         filters,
         kernel_size,
         strides=stride,
         use_bias=False,
         name=name + "_2_conv",
     )(x)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_2_relu")(x)
+    x = Activation("relu", name=name + "_2_relu")(x)
 
-    x = layers.Conv2D(4 * filters, 1, name=name + "_3_conv")(x)
-    x = layers.Add(name=name + "_out")([shortcut, x])
+    x = Conv2D(4 * filters, 1, name=name + "_3_conv")(x)
+    x = Add(name=name + "_out")([shortcut, x])
     return x
 
 
@@ -503,28 +504,28 @@ def block3(
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
     if conv_shortcut:
-        shortcut = layers.Conv2D(
+        shortcut = Conv2D(
             (64 // groups) * filters,
             1,
             strides=stride,
             use_bias=False,
             name=name + "_0_conv",
         )(x)
-        shortcut = layers.BatchNormalization(
+        shortcut = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name=name + "_0_bn"
         )(shortcut)
     else:
         shortcut = x
 
-    x = layers.Conv2D(filters, 1, use_bias=False, name=name + "_1_conv")(x)
-    x = layers.BatchNormalization(
+    x = Conv2D(filters, 1, use_bias=False, name=name + "_1_conv")(x)
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_1_relu")(x)
+    x = Activation("relu", name=name + "_1_relu")(x)
 
     c = filters // groups
-    x = layers.ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + "_2_pad")(x)
-    x = layers.DepthwiseConv2D(
+    x = ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + "_2_pad")(x)
+    x = DepthwiseConv2D(
         kernel_size,
         strides=stride,
         depth_multiplier=c,
@@ -533,25 +534,25 @@ def block3(
     )(x)
     x_shape = backend.shape(x)[:-1]
     x = backend.reshape(x, backend.concatenate([x_shape, (groups, c, c)]))
-    x = layers.Lambda(
+    x = Lambda(
         lambda x: sum(x[:, :, :, :, i] for i in range(c)),
         name=name + "_2_reduce",
     )(x)
     x = backend.reshape(x, backend.concatenate([x_shape, (filters,)]))
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
-    x = layers.Activation("relu", name=name + "_2_relu")(x)
+    x = Activation("relu", name=name + "_2_relu")(x)
 
-    x = layers.Conv2D(
+    x = Conv2D(
         (64 // groups) * filters, 1, use_bias=False, name=name + "_3_conv"
     )(x)
-    x = layers.BatchNormalization(
+    x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_3_bn"
     )(x)
 
-    x = layers.Add(name=name + "_add")([shortcut, x])
-    x = layers.Activation("relu", name=name + "_out")(x)
+    x = Add(name=name + "_add")([shortcut, x])
+    x = Activation("relu", name=name + "_out")(x)
     return x
 
 
@@ -770,12 +771,12 @@ def decode_predictions(preds, top=5):
     return imagenet_utils.decode_predictions(preds, top=top)
 
 
-preprocess_input.__doc__ = imagenet_utils.PREPROCESS_INPUT_DOC.format(
-    mode="",
-    ret=imagenet_utils.PREPROCESS_INPUT_RET_DOC_CAFFE,
-    error=imagenet_utils.PREPROCESS_INPUT_ERROR_DOC,
-)
-decode_predictions.__doc__ = imagenet_utils.decode_predictions.__doc__
+#preprocess_input.__doc__ = imagenet_utils.PREPROCESS_INPUT_DOC.format(
+#    mode="",
+#    ret=imagenet_utils.PREPROCESS_INPUT_RET_DOC_CAFFE,
+#    error=imagenet_utils.PREPROCESS_INPUT_ERROR_DOC,
+#)
+#decode_predictions.__doc__ = imagenet_utils.decode_predictions.__doc__
 
 DOC = """
 

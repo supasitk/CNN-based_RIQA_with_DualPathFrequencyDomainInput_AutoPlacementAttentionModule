@@ -1,13 +1,13 @@
 # EyeQ dataset's configuration
 
 # Directories and files of EyePACS
-original_dataset_root_dir: '/sk/DNN/dataset/Retinal_Image/EyePACS/'   # root directory of EyePACS dataset
+original_dataset_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyePACS/'   # root directory of EyePACS dataset
 original_dataset_train_dir_name: 'train'                              # name of directory under the 'original_dataset_root_dir' directory containing 'train' images of EyePACS dataset 
 original_dataset_val_dir_name: 'train'                                # name of directory under the 'original_dataset_root_dir' directory containing 'validation' images of EyePACS dataset
 original_dataset_test_dir_name: 'test'                                # name of directory under the 'original_dataset_root_dir' directory containing 'test' images of EyePACS dataset
 
 # Directories and files of EyeQ
-dataset_root_dir: '/sk/DNN/dataset/Retinal_Image/EyeQ/'   # root directory of EyeQ dataset
+dataset_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/'   # root directory of EyeQ dataset
 
 dataset_preprocessed_dir_name: 'preprocessed_img'         # name of directory under the 'dataset_root_dir' directory containing 'preprocessed train/test images for EyeQ' from the original images of EyePACS dataset
 dataset_preprocessed_train_dir_name: 'train'              # name of directory under the 'dataset_preprocessed_dir_name' directory containing preprocessed 'train' images for EyeQ
