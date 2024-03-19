@@ -3,6 +3,8 @@ import numpy as np
 import os
 import cv2
 
+# Using the aliases of builtin types like np.int is deprecated
+np.int = int
 
 def imread(file_path, c=None):
     if c is None:
