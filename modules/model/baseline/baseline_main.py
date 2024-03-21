@@ -27,6 +27,7 @@ def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num
     # show detail of model
     logging.info('-' * 30)
     logging.info('Branch {}: {}'.format(branch_id, branch_name))
-    model_branch.summary(print_fn=lambda x: logging.info(x))
+    #model_branch.summary(print_fn=lambda x: logging.info(x))
+    model_branch.summary()
 
     return model_branch

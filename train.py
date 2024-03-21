@@ -83,7 +83,8 @@ def main(_):
     # show detail of network
     logging.info('-' * 30)
     logging.info('Network structure: {}'.format(model_structure))
-    model.summary(print_fn=lambda x: logging.info(x))
+    #model.summary(print_fn=lambda x: logging.info(x))
+    model.summary()
 
     # optimizer
     optimizer = getOptimizer(cfg)
