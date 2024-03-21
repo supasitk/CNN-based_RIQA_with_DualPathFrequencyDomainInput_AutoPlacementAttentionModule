@@ -162,14 +162,14 @@ def ResNet(
         )
 
     # Determine proper input shape
-    input_shape = imagenet_utils.obtain_input_shape(
-        input_shape,
-        default_size=224,
-        min_size=32,
-        data_format=backend.image_data_format(),
-        require_flatten=include_top,
-        weights=weights,
-    )
+    # input_shape = imagenet_utils.obtain_input_shape(
+    #     input_shape,
+    #     default_size=224,
+    #     min_size=32,
+    #     data_format=backend.image_data_format(),
+    #     require_flatten=include_top,
+    #     weights=weights,
+    # )
 
     if input_tensor is None:
         img_input = Input(shape=input_shape)
