@@ -5,6 +5,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import (Input, GlobalAveragePooling2D, Flatten, Dropout, Dense)
 
 from modules.model.baseline.baseline_main import (genModelBranch)
+from modules.model.layer.CustomLayer import (BranchInput)
 
 
 def genModel(cfg, ds_cfg, model_cfg):
@@ -38,7 +39,8 @@ def genModel(cfg, ds_cfg, model_cfg):
     # 1st branch
     FirstBranch_key = 1
     FirstBranch_idx_input_ch = Branches_idx_input_ch[FirstBranch_key] # list returned 
-    FirstBranch_inputs = tf.gather(inputs, FirstBranch_idx_input_ch, axis=-1, name='1st_branch_input')
+    FirstBranch_inputs = BranchInput(Branch_idx_input_ch=FirstBranch_idx_input_ch, 
+                                     name='1st_branch_input')(inputs)
     FirstBranch_model = genModelBranch(branch_id=FirstBranch_key, 
                                        branch_name=Branches_name[FirstBranch_key],
                                        input_h_size=input_h_size,
