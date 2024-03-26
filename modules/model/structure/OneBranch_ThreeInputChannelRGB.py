@@ -40,7 +40,7 @@ def genModel(cfg, ds_cfg, model_cfg):
     FirstBranch_key = 1
     FirstBranch_idx_input_ch = Branches_idx_input_ch[FirstBranch_key] # list returned 
     FirstBranch_inputs = BranchInput(Branch_idx_input_ch=FirstBranch_idx_input_ch, 
-                                     name='1st_branch_input')(inputs)
+                                     name='branch_1_input')(inputs)
     FirstBranch_model = genModelBranch(branch_id=FirstBranch_key, 
                                        branch_name=Branches_name[FirstBranch_key],
                                        input_h_size=input_h_size,

@@ -90,6 +90,7 @@ def ResNet(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet",
     classifier_activation="softmax",
     **kwargs,
 ):
@@ -223,7 +224,8 @@ def ResNet(
         inputs = img_input
 
     # Create model.
-    model = Model(inputs, x, name=model_name)
+    #model = Model(inputs, x, name=model_name)
+    model = Model(inputs, x, name=branch_model_name)
 
     # Load weights.
     if weights is not None:
@@ -589,6 +591,7 @@ def ResNet18(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet18",
     **kwargs,
 ):
     """Instantiates the ResNet18 architecture."""
@@ -610,6 +613,7 @@ def ResNet18(
         input_shape,
         pooling,
         classes,
+        branch_model_name,
         **kwargs,
     )
 
@@ -621,6 +625,7 @@ def ResNet34(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet34",
     **kwargs,
 ):
     """Instantiates the ResNet34 architecture."""
@@ -642,6 +647,7 @@ def ResNet34(
         input_shape,
         pooling,
         classes,
+        branch_model_name,
         **kwargs,
     )
 
@@ -658,6 +664,7 @@ def ResNet50(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet50",
     **kwargs,
 ):
     """Instantiates the ResNet50 architecture."""
@@ -679,6 +686,7 @@ def ResNet50(
         input_shape,
         pooling,
         classes,
+        branch_model_name,
         **kwargs,
     )
 
@@ -693,6 +701,7 @@ def ResNet101(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet101",
     **kwargs,
 ):
     """Instantiates the ResNet101 architecture."""
@@ -714,6 +723,7 @@ def ResNet101(
         input_shape,
         pooling,
         classes,
+        branch_model_name,
         **kwargs,
     )
 
@@ -728,6 +738,7 @@ def ResNet152(
     input_shape=None,
     pooling=None,
     classes=1000,
+    branch_model_name="resnet152",
     **kwargs,
 ):
     """Instantiates the ResNet152 architecture."""
@@ -749,6 +760,7 @@ def ResNet152(
         input_shape,
         pooling,
         classes,
+        branch_model_name,
         **kwargs,
     )
 

@@ -20,7 +20,8 @@ def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num
                                  weights=pretrained_weight,
                                  input_tensor=None,
                                  input_shape=(input_h_size, input_w_size, input_num_channel),
-                                 pooling=None)
+                                 pooling=None,
+                                 branch_model_name=f'branch_{branch_id}_{branch_name}')
     else:
         raise ValueError('Unknown model \'{}\''.format(model_name))
 
