@@ -32,5 +32,5 @@ batch_size: 32
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
 dropout_rate: 0.0
-#weights_decay: null   # [null or float]
+weights_decay: null   # [null or float]
 seed: 0
