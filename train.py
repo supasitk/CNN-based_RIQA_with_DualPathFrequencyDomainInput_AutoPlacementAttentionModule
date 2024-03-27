@@ -5,7 +5,8 @@ import os
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
-                           write_dataset_config_summary, write_model_config_summary)
+                           write_dataset_config_summary, write_model_config_summary,
+                           ProgressBar)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
@@ -67,10 +68,10 @@ def main(_):
     # generate train/validation/test dataloader of the RIQA dataset
     train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
     
-    # create iterator of dataloader
-    train_ds_iter = iter(train_ds)
-    val_ds_iter = iter(val_ds)
-    test_ds_iter = iter(test_ds)
+#    # create iterator of dataloader
+#    train_ds_iter = iter(train_ds)
+#    val_ds_iter = iter(val_ds)
+#    test_ds_iter = iter(test_ds)
 
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
@@ -91,6 +92,51 @@ def main(_):
 
     # loss function
     criterion = getLossFn(cfg)
+
+    # load checkpoint
+    checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
+    checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
+#                                     optimizer=optimizer,
+                                     model=model)
+    manager = tf.train.CheckpointManager(checkpoint=checkpoint,
+                                         directory=checkpoint_dir,
+                                         max_to_keep=3)
+    if manager.latest_checkpoint:
+        checkpoint.restore(manager.latest_checkpoint)
+        logging.info('[*] Load ckpt from {} at step {}.'.format(manager.latest_checkpoint, checkpoint.step.numpy()))
+    else:
+        logging.info("[*] Training from scratch.")
+
+    # define training step function for model
+    @tf.function
+    def train_step(inputs, labels):
+        with tf.GradientTape() as tape:
+            logits = model(inputs, training=True)
+            loss = criterion(labels, logits)
+            grads = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        return logits, loss
+
+
+    # training loop
+    remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
+    prog_bar = ProgressBar(steps_per_epoch,
+                           checkpoint.step.numpy() % steps_per_epoch)
+    logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))
+    logging.info('Total/Remain of training steps: {} ({:.2f} epochs)'.format(remain_steps, remain_steps/steps_per_epoch))
+    logging.info('Start/Resume TRAINING...')
+
+    for inputs, input_paths, labels in train_ds.take(remain_steps):
+        checkpoint.step.assign_add(1)
+        steps = checkpoint.step.numpy()
+        epochs = ((steps - 1) // steps_per_epoch) + 1
+
+        logits, loss = train_step(inputs, labels)
+
+        prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}'.format(epochs, max_epoch, loss.numpy()))
+
+
+
 
 
 if __name__ == '__main__':
