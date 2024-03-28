@@ -11,7 +11,7 @@ export MPLCONFIGDIR=$PROJECT_HOME/mplconfigdir
 
 # Set environment for CUDA and Tensorflow
 export TF_FORCE_GPU_ALLOW_GROWTH=true
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=7
 
 # Arguments
 CONFIG_PATH="./configs/train/riqa.yaml"

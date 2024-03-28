@@ -2,6 +2,7 @@ from absl import app, flags, logging
 from absl.flags import FLAGS
 import sys
 import os
+import numpy as np
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
@@ -11,6 +12,7 @@ from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (getLossFn)
+from modules.metric import (accumulated_result, compute_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
 
@@ -68,11 +70,6 @@ def main(_):
     # generate train/validation/test dataloader of the RIQA dataset
     train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
     
-#    # create iterator of dataloader
-#    train_ds_iter = iter(train_ds)
-#    val_ds_iter = iter(val_ds)
-#    test_ds_iter = iter(test_ds)
-
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
     steps_per_epoch = train_ds_len // train_batch_size
@@ -116,12 +113,18 @@ def main(_):
             grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return logits, loss
-
+    
+    # define validation and test step function for model
+    @tf.function
+    def val_test_step(inputs):
+        return model(inputs, training=False)
 
     # training loop
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
     prog_bar = ProgressBar(steps_per_epoch,
                            checkpoint.step.numpy() % steps_per_epoch)
+    results = accumulated_result()
+    class_names = ds_cfg['class_name']
     logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))
     logging.info('Total/Remain of training steps: {} ({:.2f} epochs)'.format(remain_steps, remain_steps/steps_per_epoch))
     logging.info('Start/Resume TRAINING...')
@@ -132,11 +135,43 @@ def main(_):
         epochs = ((steps - 1) // steps_per_epoch) + 1
 
         logits, loss = train_step(inputs, labels)
-
+        
+        results.update(input_paths, labels, logits)
         prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}'.format(epochs, max_epoch, loss.numpy()))
 
+        # check if end epoch
+        if steps % steps_per_epoch == 0:
+#           eval_report = compute_metric(results.accum_y_true, results.accum_y_logit, results.accum_y_prob, results.accum_y_pred, class_names)
+            eval_report = compute_metric(results.accum_y_true, results.accum_y_prob, results.accum_y_pred, class_names)
+            print(' Accuracy: ' + str("{:0.4f}".format(np.mean(eval_report['Accuracy']))) +
+                  ' Precision: ' + str("{:0.4f}".format(np.mean(eval_report['Precision']))) +
+                  ' Sensitivity: ' + str("{:0.4f}".format(np.mean(eval_report['Sensitivity']))) +
+                  ' F1: ' + str("{:0.4f}".format(np.mean(eval_report['F1']))))
+            results.reset()
+    
+    # validation
+    results.reset()
+    for val_inputs, val_input_paths, val_labels in val_ds:
+        val_logits = val_test_step(val_inputs)
+        results.update(val_input_paths, val_labels, val_logits)
+    eval_report = compute_metric(results.accum_y_true, results.accum_y_prob, results.accum_y_pred, class_names)
+    print('Validation !!!')
+    print(' Accuracy: ' + str("{:0.4f}".format(np.mean(eval_report['Accuracy']))) +
+          ' Precision: ' + str("{:0.4f}".format(np.mean(eval_report['Precision']))) +
+          ' Sensitivity: ' + str("{:0.4f}".format(np.mean(eval_report['Sensitivity']))) +
+          ' F1: ' + str("{:0.4f}".format(np.mean(eval_report['F1']))))
 
-
+    # test
+    results.reset()
+    for test_inputs, test_input_paths, test_labels in test_ds:
+        test_logits = val_test_step(test_inputs)
+        results.update(test_input_paths, test_labels, test_logits)
+    eval_report = compute_metric(results.accum_y_true, results.accum_y_prob, results.accum_y_pred, class_names)
+    print('Test !!!')
+    print(' Accuracy: ' + str("{:0.4f}".format(np.mean(eval_report['Accuracy']))) +
+          ' Precision: ' + str("{:0.4f}".format(np.mean(eval_report['Precision']))) +
+          ' Sensitivity: ' + str("{:0.4f}".format(np.mean(eval_report['Sensitivity']))) +
+          ' F1: ' + str("{:0.4f}".format(np.mean(eval_report['F1']))))
 
 
 if __name__ == '__main__':
