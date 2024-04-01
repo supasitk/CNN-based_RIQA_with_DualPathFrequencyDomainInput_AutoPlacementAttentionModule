@@ -107,6 +107,16 @@ def Check_Layer_Not_Loaded_with_PretrainedWeight(model, initial_weights):
   logging.info('Layers of the model have NO pretrained weights: {}'.format(layer_list))
 
 
+def evaluation_result_log(eval_mode, eval_loss, eval_result, epoch_num=None):
+  """Logging evaluation result of execution"""
+  logging.info(str("[{} - epoch {}]".format(eval_mode, epoch_num)) + 
+               ' Loss: ' + str("{:0.4f}".format(eval_loss)) +
+               ' Accuracy: ' + str("{:0.4f}".format(np.mean(eval_result['Accuracy']))) +
+               ' macroPrecision: ' + str("{:0.4f}".format(np.mean(eval_result['Precision']))) +
+               ' macroSensitivity: ' + str("{:0.4f}".format(np.mean(eval_result['Sensitivity']))) +
+               ' macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
+
+
 def write_exec_config_summary(cfg):
     """summarize important configuration of execution"""
     logging.info('-' * 100)

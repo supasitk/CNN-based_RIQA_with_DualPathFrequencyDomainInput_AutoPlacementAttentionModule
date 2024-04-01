@@ -9,7 +9,7 @@ class accumulated_result(object):
     def __init__(self):
         self.accum_x_path = []
         self.accum_y_true = []
-#        self.accum_y_logit = []
+        self.accum_y_logit = []
         self.accum_y_prob = []
         self.accum_y_pred = []
         self.reset()
@@ -17,7 +17,7 @@ class accumulated_result(object):
     def reset(self):
         self.accum_x_path.clear()
         self.accum_y_true.clear()
-#        self.accum_y_logit.clear()
+        self.accum_y_logit.clear()
         self.accum_y_prob.clear()
         self.accum_y_pred.clear()
 
@@ -28,12 +28,11 @@ class accumulated_result(object):
         self.accum_x_path.extend(np.reshape(x_path, [batch_size]))
         self.accum_y_true.extend(np.reshape(y_true, [batch_size]))
         for i in range(batch_size): # slow down execution!!!!!
-#            self.accum_y_logit.append(y_logit[i].numpy().tolist())
+            self.accum_y_logit.append(y_logit[i].numpy().tolist())
             self.accum_y_prob.append(y_prob[i].numpy().tolist())
         self.accum_y_pred.extend(np.reshape(y_pred, [batch_size]))
 
 
-#def compute_metric(y_true, y_logit, y_prob, y_pred, class_names):
 def compute_metric(y_true, y_prob, y_pred, class_names):
     """Evaluate meter for classification"""
     n_class = len(class_names)
