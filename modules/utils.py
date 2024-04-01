@@ -111,10 +111,22 @@ def evaluation_result_log(eval_mode, eval_loss, eval_result, epoch_num=None):
   """Logging evaluation result of execution"""
   logging.info(str("[{} - epoch {}]".format(eval_mode, epoch_num)) + 
                ' Loss: ' + str("{:0.4f}".format(eval_loss)) +
-               ' Accuracy: ' + str("{:0.4f}".format(np.mean(eval_result['Accuracy']))) +
-               ' macroPrecision: ' + str("{:0.4f}".format(np.mean(eval_result['Precision']))) +
-               ' macroSensitivity: ' + str("{:0.4f}".format(np.mean(eval_result['Sensitivity']))) +
-               ' macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
+               ', Accuracy: ' + str("{:0.4f}".format(np.mean(eval_result['Accuracy']))) +
+               ', macroPrecision: ' + str("{:0.4f}".format(np.mean(eval_result['Precision']))) +
+               ', macroSensitivity: ' + str("{:0.4f}".format(np.mean(eval_result['Sensitivity']))) +
+               ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
+
+
+def last_k_avg_max_min_accuracy(acc_list, curr_num_val, k):
+  """calculate last k average accuracy"""
+  if curr_num_val < k:
+    k = curr_num_val
+  else:
+    # in case of restoring from checkpoint 
+    if len(acc_list) < k:
+      k = len(acc_list)
+
+  return np.mean(acc_list[-k:]), np.amax(acc_list[-k:]), np.amin(acc_list[-k:])
 
 
 def write_exec_config_summary(cfg):
@@ -148,6 +160,11 @@ def write_exec_config_summary(cfg):
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Weight decay: {}'.format(cfg['weights_decay']))
     logging.info('Dropout rate: {}'.format(cfg['dropout_rate']))
+    logging.info('Validation unit: {}'.format(cfg['val_unit']))
+    logging.info('Validation on every unit: {}'.format(cfg['val_on_every_unit']))
+    logging.info('Validation last k accuracy: {}'.format(cfg['val_last_k_accuracy']))
+    logging.info('Save unit: {}'.format(cfg['save_unit']))
+    logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))
 
 

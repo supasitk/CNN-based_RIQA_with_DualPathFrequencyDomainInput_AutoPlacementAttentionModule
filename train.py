@@ -2,12 +2,14 @@ from absl import app, flags, logging
 from absl.flags import FLAGS
 import sys
 import os
+import time
+import datetime
 import numpy as np
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
                            write_dataset_config_summary, write_model_config_summary,
-                           ProgressBar, evaluation_result_log)
+                           ProgressBar, evaluation_result_log, last_k_avg_max_min_accuracy)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
@@ -92,6 +94,8 @@ def main(_):
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
     checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
 #                                     optimizer=optimizer,
                                      model=model)
@@ -123,12 +127,25 @@ def main(_):
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
     prog_bar = ProgressBar(steps_per_epoch,
                            checkpoint.step.numpy() % steps_per_epoch)
-    accumulated_results = accumulated_result()
+    train_accumulated_results = accumulated_result()
+    val_accumulated_results = accumulated_result()
+    val_on_every_step = int(cfg['val_on_every_unit']) if cfg['val_unit'] == 'step' else int(cfg['val_on_every_unit'] * steps_per_epoch)
+    val_acc_list = []
+    val_last_k_accuracy = int(cfg['val_last_k_accuracy'])
+    val_best_acc = 0.
+    val_best_acc_step = 0
+    test_accumulated_results = accumulated_result()
     class_names = ds_cfg['class_name']
+    summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'])
+    save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
+
     logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))
     logging.info('Total/Remain of training steps: {} ({:.2f} epochs)'.format(remain_steps, remain_steps/steps_per_epoch))
     logging.info('Start/Resume TRAINING...')
 
+    start_time = time.time()
+
+    # train and validation
     for inputs, input_paths, labels in train_ds.take(remain_steps):
         checkpoint.step.assign_add(1)
         steps = checkpoint.step.numpy()
@@ -136,35 +153,82 @@ def main(_):
 
         logits, loss = train_step(inputs, labels)
         
-        accumulated_results.update(input_paths, labels, logits)
-        prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}'.format(epochs, max_epoch, loss.numpy()))
+        train_accumulated_results.update(input_paths, labels, logits)
+        prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}, elapsed_time={} h:m:s'.format(
+                        epochs, max_epoch, loss.numpy(), str(datetime.timedelta(seconds=time.time()-start_time))))
 
-        # check if end epoch
+        # check if end epoch 
         if steps % steps_per_epoch == 0:
-            loss = criterion(np.array(accumulated_results.accum_y_true), np.array(accumulated_results.accum_y_logit))
-            eval_result = compute_metric(accumulated_results.accum_y_true, accumulated_results.accum_y_prob, accumulated_results.accum_y_pred, class_names)
-            evaluation_result_log('Train', loss, eval_result, epochs)
-            accumulated_results.reset()
-    
-    # validation
-    accumulated_results.reset()
-    for val_inputs, val_input_paths, val_labels in val_ds:
-        val_logits = val_test_step(val_inputs)
-        accumulated_results.update(val_input_paths, val_labels, val_logits)
-    loss = criterion(np.array(accumulated_results.accum_y_true), np.array(accumulated_results.accum_y_logit))
-    eval_result = compute_metric(accumulated_results.accum_y_true, accumulated_results.accum_y_prob, accumulated_results.accum_y_pred, class_names)
-    evaluation_result_log('Validation', loss, eval_result, epochs)
+            loss = criterion(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
+                                               train_accumulated_results.accum_y_prob,
+                                               train_accumulated_results.accum_y_pred, 
+                                               class_names)
+            evaluation_result_log('Train', loss, train_eval_result, (steps / steps_per_epoch))
+            train_accumulated_results.reset()
 
+        # check if validation
+        if (steps % val_on_every_step) == 0 and steps > 1:
+            val_accumulated_results.reset()
+            for val_inputs, val_input_paths, val_labels in val_ds:
+                val_logits = val_test_step(val_inputs)
+                val_accumulated_results.update(val_input_paths, val_labels, val_logits)
+            val_loss = criterion(np.array(val_accumulated_results.accum_y_true), np.array(val_accumulated_results.accum_y_logit))
+            val_eval_result = compute_metric(val_accumulated_results.accum_y_true, 
+                                             val_accumulated_results.accum_y_prob, 
+                                             val_accumulated_results.accum_y_pred, 
+                                             class_names)
+            evaluation_result_log('Validation', val_loss, val_eval_result, (steps / steps_per_epoch))
+            current_val_acc = np.mean(val_eval_result['Accuracy'])
+            
+            # check if best accuracy of validation
+            is_current_val_best_acc = False 
+            if current_val_acc > val_best_acc:
+                is_current_val_best_acc = True
+                val_best_acc = current_val_acc
+                val_best_acc_step = steps
+                model.save_weights(f"{checkpoint_dir}/best_onlyWeights.weights.h5")
+                model.save(f"{checkpoint_dir}/best_ModelWithWeights.keras")
+
+            val_acc_list.append(current_val_acc)
+            val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_accuracy(val_acc_list, 
+                                                                                                     int(steps/val_on_every_step), 
+                                                                                                     val_last_k_accuracy)
+            logging.info(str("[Validation - epoch {}]".format((steps / steps_per_epoch))) +
+                         str(" New best validation accuracy: {}".format(is_current_val_best_acc)) +
+                         str(", Last {:d} avg|max|min validation accuracy: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_accuracy, val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc)) +
+                         str(", Best validation accuracy: {:0.4f} @ epoch {:0.2f} [step {:d}]".format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step)))
+        
+        # check if checkpoint
+        if steps % save_on_every_step == 0:
+            manager.save()
+            logging.info('[*] Save ckpt file at {}'.format(manager.latest_checkpoint))
+
+    manager.save()
+    logging.info('-' * 50)
+    logging.info('[*] End of training and Save ckpt file at {}'.format(manager.latest_checkpoint))
+    
     # test
-    accumulated_results.reset()
+    # evaluate the best weight of validating model with test dataset
+    logging.info('-' * 50)
+    logging.info('Evaluating the best weight of validating model with test dataset...')
+    # load the best weight into model
+    model.load_weights(f"{checkpoint_dir}/best_onlyWeights.weights.h5")
+    test_accumulated_results.reset()
     for test_inputs, test_input_paths, test_labels in test_ds:
         test_logits = val_test_step(test_inputs)
-        accumulated_results.update(test_input_paths, test_labels, test_logits)
-    loss = criterion(np.array(accumulated_results.accum_y_true), np.array(accumulated_results.accum_y_logit))
-    eval_result = compute_metric(accumulated_results.accum_y_true, accumulated_results.accum_y_prob, accumulated_results.accum_y_pred, class_names)
-    evaluation_result_log('Test', loss, eval_result, epochs)
+        test_accumulated_results.update(test_input_paths, test_labels, test_logits)
+    test_loss = criterion(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
+    test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
+                                      test_accumulated_results.accum_y_prob, 
+                                      test_accumulated_results.accum_y_pred, 
+                                      class_names)
+    evaluation_result_log('Test', test_loss, test_eval_result, (steps / steps_per_epoch))
 
-    logging.info('DONE!!!')
+    # write execution summary
+    logging.info('-' * 100)
+    logging.info("[*] Total execution time = {} h:m:s".format(str(datetime.timedelta(seconds=time.time()-start_time))))
+    logging.info("[*] Execution done! save ckpt file at {}".format(manager.latest_checkpoint))
 
 
 if __name__ == '__main__':
