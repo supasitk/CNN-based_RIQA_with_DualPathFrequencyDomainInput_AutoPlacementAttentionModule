@@ -129,6 +129,17 @@ def last_k_avg_max_min_accuracy(acc_list, curr_num_val, k):
   return np.mean(acc_list[-k:]), np.amax(acc_list[-k:]), np.amin(acc_list[-k:])
 
 
+def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False):
+  with summary_writer.as_default():
+    tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
+    tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
+    tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
+    tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
+    tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
+    if eval_mode == 'validation' and is_best_val_acc:
+       tf.summary.scalar(f"accuracy/{eval_mode}/best_accuracy", np.mean(eval_result['Accuracy']), step=step)
+
+
 def write_exec_config_summary(cfg):
     """summarize important configuration of execution"""
     logging.info('-' * 100)

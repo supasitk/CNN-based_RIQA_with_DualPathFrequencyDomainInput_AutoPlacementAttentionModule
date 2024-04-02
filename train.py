@@ -9,7 +9,8 @@ import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
                            write_dataset_config_summary, write_model_config_summary,
-                           ProgressBar, evaluation_result_log, last_k_avg_max_min_accuracy)
+                           ProgressBar, evaluation_result_log, last_k_avg_max_min_accuracy,
+                           evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
@@ -165,6 +166,7 @@ def main(_):
                                                train_accumulated_results.accum_y_pred, 
                                                class_names)
             evaluation_result_log('Train', loss, train_eval_result, (steps / steps_per_epoch))
+            evaluation_result_writer(summary_writer, 'train', loss, train_eval_result, steps)
             train_accumulated_results.reset()
 
         # check if validation
@@ -196,6 +198,8 @@ def main(_):
                 val_best_acc_step = steps
                 model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
                 model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
+
+            evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_current_val_best_acc)
 
             val_acc_list.append(current_val_acc)
             val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_accuracy(val_acc_list, 
@@ -233,6 +237,7 @@ def main(_):
                                       test_accumulated_results.accum_y_pred, 
                                       class_names)
     evaluation_result_log('Test', test_loss, test_eval_result, (steps / steps_per_epoch))
+    evaluation_result_writer(summary_writer, 'test', test_loss, test_eval_result, steps)
 
     # write execution summary
     logging.info('-' * 100)
