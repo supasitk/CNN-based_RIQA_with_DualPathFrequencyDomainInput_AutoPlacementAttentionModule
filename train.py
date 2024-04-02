@@ -157,7 +157,7 @@ def main(_):
         prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}, elapsed_time={} h:m:s'.format(
                         epochs, max_epoch, loss.numpy(), str(datetime.timedelta(seconds=time.time()-start_time))))
 
-        # check if end epoch 
+        # check if end each epoch of train
         if steps % steps_per_epoch == 0:
             loss = criterion(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
@@ -185,10 +185,17 @@ def main(_):
             is_current_val_best_acc = False 
             if current_val_acc > val_best_acc:
                 is_current_val_best_acc = True
+                # delete last best weight of validation
+                last_best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
+                last_best_val_acc_model_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras"
+                if os.path.exists(last_best_val_acc_weight_filepath):
+                    os.remove(last_best_val_acc_weight_filepath)
+                if os.path.exists(last_best_val_acc_model_filepath):
+                    os.remove(last_best_val_acc_model_filepath)
                 val_best_acc = current_val_acc
                 val_best_acc_step = steps
-                model.save_weights(f"{checkpoint_dir}/best_onlyWeights.weights.h5")
-                model.save(f"{checkpoint_dir}/best_ModelWithWeights.keras")
+                model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
+                model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
 
             val_acc_list.append(current_val_acc)
             val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_accuracy(val_acc_list, 
@@ -210,10 +217,12 @@ def main(_):
     
     # test
     # evaluate the best weight of validating model with test dataset
+    best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
     logging.info('-' * 50)
-    logging.info('Evaluating the best weight of validating model with test dataset...')
+    logging.info('Evaluating the best weight [val_acc: {:0.4f} @ epoch/step: {:0.2f}/{:d} ] of validating model with test dataset...'.format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step))
+    logging.info('Load the best weight @ {}'.format(best_val_acc_weight_filepath))
     # load the best weight into model
-    model.load_weights(f"{checkpoint_dir}/best_onlyWeights.weights.h5")
+    model.load_weights(best_val_acc_weight_filepath)
     test_accumulated_results.reset()
     for test_inputs, test_input_paths, test_labels in test_ds:
         test_logits = val_test_step(test_inputs)
