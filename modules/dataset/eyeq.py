@@ -84,6 +84,16 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
 
 
 def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim):
+    # function of data augmentation
+    if augment:
+        data_augmentation = tf.keras.Sequential()
+        if augment_infos['hflip']:
+            data_augmentation.add(layers.RandomFlip('horizontal'))
+        if augment_infos['vflip']:
+            data_augmentation.add(layers.RandomFlip('vertical'))
+        if augment_infos['rotation']:
+            data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor']))    
+
     def transform_data(img_path, img_label):
         img = tf.io.read_file(img_path)
         # decode image to tensor with type uint8 having values in the range [0, 255]
@@ -93,13 +103,6 @@ def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_
         img = tf.image.convert_image_dtype(img, tf.dtypes.float32)
         img = tf.image.resize(img, [resized_img_dim, resized_img_dim])
         if augment:
-            data_augmentation = tf.keras.Sequential()
-            if augment_infos['hflip']:
-                data_augmentation.add(layers.RandomFlip('horizontal'))
-            if augment_infos['vflip']:
-                data_augmentation.add(layers.RandomFlip('vertical'))
-            if augment_infos['rotation']:
-                data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor']))
             img = data_augmentation(img)
         # rescale an input in the [0, 1] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
         img = layers.Rescaling(scale=2, offset=-1)(img)

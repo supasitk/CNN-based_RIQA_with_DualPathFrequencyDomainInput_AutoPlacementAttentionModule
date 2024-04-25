@@ -7,7 +7,7 @@ from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
 from modules.dataset.eyeq import (gen_EyeQImgPathLabelDict, gen_EyeQdataset)
 
-def gen_dataset(dataset_name, dataset_cfg):
+def gen_dataset(dataset_name, dataset_cfg, train_cfg):
     """Generate train/validation/test dataloader of the dataset"""
 
     if dataset_name == 'EyeQ': # Eye Quality (EyeQ) dataset
@@ -110,6 +110,7 @@ def gen_dataset(dataset_name, dataset_cfg):
 
         # !------ [2nd step] ------!
         ds_dataloaders = list()
+        ds_num_imgs = list()
         for (k_ds_part, v_ds_part), (k_img_path_label_dict, v_img_path_label_dict) in zip(ds_parts.items(), img_path_label_dicts.items()):
             if v_ds_part == 'train':
                 shuffle = True
@@ -136,12 +137,15 @@ def gen_dataset(dataset_name, dataset_cfg):
                                                            augment=augment,
                                                            augment_infos=augment_infos,
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
-                                                           batch_size=dataset_cfg['batch_size'],
+                                                           batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder)
             ds_dataloaders.append(ds_dataloader)
+            ds_num_imgs.append(total_num_img)
             logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
 
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))
 
-    return ds_dataloaders[0], ds_dataloaders[1], ds_dataloaders[2]
+    return (ds_dataloaders[0], ds_num_imgs[0],       
+            ds_dataloaders[1], ds_num_imgs[1],      
+            ds_dataloaders[2], ds_num_imgs[2])      # train, validation, test

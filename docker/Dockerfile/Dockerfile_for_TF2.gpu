@@ -1,0 +1,27 @@
+# Docker image for running examples in Tensorflow models.
+# base_image depends on whether we are running on GPUs or non-GPUs
+FROM tensorflow/tensorflow:2.16.1-gpu-jupyter
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    build-essential \
+    vim \
+    wget \
+    git \
+    libnccl2 \
+    libnccl-dev \ 
+    python3-opencv \ 
+    cmake 
+
+RUN pip install \ 
+    tensorflow-model-optimization \ 
+    tensorflow_datasets \
+    tensorflow[and-cuda] \
+    numpy \
+    opencv-python \
+    PyYAML \ 
+    ipython \
+    graphviz \ 
+    scikit-learn \ 
+    scikit-image \ 
+    dlib
