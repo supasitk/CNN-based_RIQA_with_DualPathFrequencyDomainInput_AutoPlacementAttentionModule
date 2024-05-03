@@ -129,7 +129,7 @@ def last_k_avg_max_min_accuracy(acc_list, curr_num_val, k):
   return np.mean(acc_list[-k:]), np.amax(acc_list[-k:]), np.amin(acc_list[-k:])
 
 
-def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False):
+def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
     tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
@@ -138,6 +138,8 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
     if eval_mode == 'validation' and is_best_val_acc:
        tf.summary.scalar(f"accuracy/{eval_mode}/best_accuracy", np.mean(eval_result['Accuracy']), step=step)
+    if eval_mode == 'train':
+       tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
 
 
 def write_exec_config_summary(cfg):
@@ -158,8 +160,9 @@ def write_exec_config_summary(cfg):
     logging.info('Optimizer: {}'.format(cfg['optimizer']))
     logging.info('Optimizer configuration: {}'.format(cfg['optimizer_config']))
     logging.info('-' * 100)
-    logging.info('*** LEARNING RATE ***')
-    logging.info('Learning rate (Init): {}'.format(cfg['lr_init']))
+    logging.info('*** LEARNING RATE SCHEDULER ***')
+    logging.info('Learning rate schedule: {}'.format(cfg['lr_schedule']))
+    logging.info('Learning rate configuration: {}'.format(cfg['lr_config']))
     logging.info('-' * 100)
     logging.info('*** LOSS FUNCTION ***')
     logging.info('Loss function: {}'.format(cfg['loss_fn']))
@@ -201,7 +204,6 @@ def write_model_config_summary(model_structure, cfg):
       raise ValueError('Unknown \'{}\' model'.format(model_structure))
     logging.info('-' * 100)
     
-
 
 def write_dataset_config_summary(ds_name, cfg):
     """summarize important configuration of dataset"""
