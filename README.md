@@ -15,7 +15,7 @@ Reimplement Baseline of Retinal Image Quality Assessment
 6. **Learning rate scheduler**
     - [x] Fix
     - [x] Exponential decay
-    - [ ] Cosine decay
+    - [x] Cosine decay
     - [ ] Reduce LR on Plateau
     - [ ] Early stopping
 7. **Loss function and classification**
