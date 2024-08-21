@@ -2,7 +2,7 @@ from absl import logging
 
 from modules.model.baseline.resnet import (ResNet18, ResNet34, ResNet50, ResNet101, ResNet152)
 
-def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight):
+def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, attn_exist=False, attn_config=None):
     if model_name == 'ResNet':
         if num_layer == 18:
             genResNet = ResNet18

@@ -8,7 +8,7 @@ from modules.model.baseline.baseline_main import (genModelBranch)
 from modules.model.layer.CustomLayer import (BranchInput)
 
 
-def genModel(cfg, ds_cfg, model_cfg):
+def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg):
     # ------------------ Model Configuration ------------------ #
     input_h_size = ds_cfg['resized_image_dim']
     input_w_size = ds_cfg['resized_image_dim']
@@ -32,6 +32,14 @@ def genModel(cfg, ds_cfg, model_cfg):
     dropout_rate = cfg['dropout_rate']
     num_class = ds_cfg['class_num']
 
+    # ------------------ Model Attentionn Configuration ------------------ #
+    Branches_attn_existence = model_attn_cfg['attention_existence']  # dictionary returned
+    if len(Branches_attn_existence) != num_branch:
+        raise ValueError('Number of branch \'{}\' not equal to number of attention existence list \'{}\' for branches'.format(num_branch, len(Branches_attn_existence)))
+    Branches_attn_config = model_attn_cfg['attention_config_of_branches'] # dictionary returned
+    if len(Branches_attn_config) != num_branch:
+        raise ValueError('Number of branch \'{}\' not equal to number of attention configuration list \'{}\' for branches'.format(num_branch, len(Branches_attn_config)))
+    
     # ------------------ Input Layer ------------------ #
     inputs = Input([input_h_size, input_w_size, input_num_channel], name='input_image')
 
@@ -48,7 +56,9 @@ def genModel(cfg, ds_cfg, model_cfg):
                                        input_num_channel=len(FirstBranch_idx_input_ch), 
                                        model_name=Branches_model[FirstBranch_key], 
                                        num_layer=Branches_numLayer[FirstBranch_key],
-                                       pretrained_weight=Branches_pretrainedWeight[FirstBranch_key])
+                                       pretrained_weight=Branches_pretrainedWeight[FirstBranch_key],
+                                       attn_exist=Branches_attn_existence[FirstBranch_key],
+                                       attn_config=Branches_attn_config[FirstBranch_key])
     FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
     
     # ------------------ Feature Aggregration ------------------#

@@ -1,9 +1,10 @@
 # Attention for Model configuration of Single-Branch with Input Channel "RGB"
 # This attention configuration need to corresponds with the model configuration 'OneBranch_ThreeInputChannelRGB.yaml' 
 
-attention_existence: True     # Whether to use attention [True, False]
+attention_existence:    # Whether to use attention [True, False] (#elements must be equal to 'number_of_branch')
+  1: True  
 
-attention_of_branches:              # Attention configuration for branch(es) (#elements must be equal to 'number_of_branch')
+attention_config_of_branches:       # Attention configuration for branch(es) (#elements must be equal to 'number_of_branch')
                                     # Specify only layer's ID needed to attach attention module (not given layer's ID imply to not need attention module)
                                     # Format is [Layer_ID (integer), Attention_Type (string), Attention_configuration (list)]
   1: [

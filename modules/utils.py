@@ -262,7 +262,7 @@ def write_model_attention_config_summary(model_attn, cfg):
     if model_attn == 'Attn_OneBranch_ThreeInputChannelRGB':
       logging.info('Attention existence: {}'.format(cfg['attention_existence']))
       if cfg['attention_existence']:
-        logging.info('Attention detail for each bracnch(es): {}'.format(cfg['attention_of_branches']))
+        logging.info('Attention configuration for each bracnch(es): {}'.format(cfg['attention_config_of_branches']))
     else:
       raise ValueError('Unknown \'{}\' model attention'.format(model_attn))
     logging.info('-' * 100)

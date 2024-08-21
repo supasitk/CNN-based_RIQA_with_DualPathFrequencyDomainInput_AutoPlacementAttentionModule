@@ -87,7 +87,7 @@ def main(_):
     max_epoch = total_steps / steps_per_epoch
 
     # define network
-    model = NNmodel(cfg, ds_cfg, model_cfg)
+    model = NNmodel(cfg, ds_cfg, model_cfg, model_attn_cfg)
     # show detail of network
     logging.info('-' * 30)
     logging.info('Network structure: {}'.format(model_structure))
