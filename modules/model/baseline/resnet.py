@@ -260,7 +260,7 @@ def ResNet(
     return model
 
 
-def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
+def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None):
     """A residual block for ResNet[18/34].
 
     Args:
@@ -307,7 +307,7 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
     return x
 
 
-def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None):
+def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None, start_block_id=None, attention=None):
     """A set of stacked residual blocks.
 
     Args:
@@ -322,15 +322,15 @@ def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None):
     Returns:
       Output tensor for the stacked blocks.
     """
-    x = block0(x, filters, stride=stride1, conv_shortcut=conv_shortcut1, name=name + "_block1")
+    x = block0(x, filters, stride=stride1, conv_shortcut=conv_shortcut1, name=name + "_block1", block_id=start_block_id, attention=attention)
     for i in range(2, blocks + 1):
         x = block0(
-            x, filters, conv_shortcut=False, name=name + "_block" + str(i)
+            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention
         )
     return x
 
 
-def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
+def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None):
     """A residual block for ResNet[50/101/152].
 
     Args:
@@ -381,7 +381,7 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None):
     return x
 
 
-def stack1(x, filters, blocks, stride1=2, name=None):
+def stack1(x, filters, blocks, stride1=2, name=None, start_block_id=None, attention=None):
     """A set of stacked residual blocks.
 
     Args:
@@ -394,10 +394,10 @@ def stack1(x, filters, blocks, stride1=2, name=None):
     Returns:
       Output tensor for the stacked blocks.
     """
-    x = block1(x, filters, stride=stride1, name=name + "_block1")
+    x = block1(x, filters, stride=stride1, name=name + "_block1", block_id=start_block_id, attention=attention)
     for i in range(2, blocks + 1):
         x = block1(
-            x, filters, conv_shortcut=False, name=name + "_block" + str(i)
+            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention
         )
     return x
 
@@ -592,15 +592,16 @@ def ResNet18(
     pooling=None,
     classes=1000,
     branch_model_name="resnet18",
+    attention=None,
     **kwargs,
 ):
     """Instantiates the ResNet18 architecture."""
 
     def stack_fn(x):
-        x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2")
-        x = stack0(x, 128, 2, name="conv3")
-        x = stack0(x, 256, 2, name="conv4")
-        return stack0(x, 512, 2, name="conv5")
+        x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention)
+        x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention)
+        x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention)
+        return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention)
 
     return ResNet(
         stack_fn,
@@ -626,15 +627,16 @@ def ResNet34(
     pooling=None,
     classes=1000,
     branch_model_name="resnet34",
+    attention=None,
     **kwargs,
 ):
     """Instantiates the ResNet34 architecture."""
 
     def stack_fn(x):
-        x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2")
-        x = stack0(x, 128, 4, name="conv3")
-        x = stack0(x, 256, 6, name="conv4")
-        return stack0(x, 512, 3, name="conv5")
+        x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention)
+        x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
+        x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention)
+        return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention)
 
     return ResNet(
         stack_fn,
@@ -665,15 +667,16 @@ def ResNet50(
     pooling=None,
     classes=1000,
     branch_model_name="resnet50",
+    attention=None,
     **kwargs,
 ):
     """Instantiates the ResNet50 architecture."""
 
     def stack_fn(x):
-        x = stack1(x, 64, 3, stride1=1, name="conv2")
-        x = stack1(x, 128, 4, name="conv3")
-        x = stack1(x, 256, 6, name="conv4")
-        return stack1(x, 512, 3, name="conv5")
+        x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
+        x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
+        x = stack1(x, 256, 6, name="conv4", start_block_id=7, attention=attention)
+        return stack1(x, 512, 3, name="conv5", start_block_id=13, attention=attention)
 
     return ResNet(
         stack_fn,
@@ -702,15 +705,16 @@ def ResNet101(
     pooling=None,
     classes=1000,
     branch_model_name="resnet101",
+    attention=None,
     **kwargs,
 ):
     """Instantiates the ResNet101 architecture."""
 
     def stack_fn(x):
-        x = stack1(x, 64, 3, stride1=1, name="conv2")
-        x = stack1(x, 128, 4, name="conv3")
-        x = stack1(x, 256, 23, name="conv4")
-        return stack1(x, 512, 3, name="conv5")
+        x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
+        x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
+        x = stack1(x, 256, 23, name="conv4", start_block_id=7, attention=attention)
+        return stack1(x, 512, 3, name="conv5", start_block_id=30, attention=attention)
 
     return ResNet(
         stack_fn,
@@ -739,15 +743,16 @@ def ResNet152(
     pooling=None,
     classes=1000,
     branch_model_name="resnet152",
+    attention=None,
     **kwargs,
 ):
     """Instantiates the ResNet152 architecture."""
 
     def stack_fn(x):
-        x = stack1(x, 64, 3, stride1=1, name="conv2")
-        x = stack1(x, 128, 8, name="conv3")
-        x = stack1(x, 256, 36, name="conv4")
-        return stack1(x, 512, 3, name="conv5")
+        x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
+        x = stack1(x, 128, 8, name="conv3", start_block_id=3, attention=attention)
+        x = stack1(x, 256, 36, name="conv4", start_block_id=11, attention=attention)
+        return stack1(x, 512, 3, name="conv5", start_block_id=47, attention=attention)
 
     return ResNet(
         stack_fn,
