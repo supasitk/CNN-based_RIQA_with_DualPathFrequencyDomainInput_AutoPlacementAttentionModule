@@ -1,0 +1,67 @@
+# Attention for Model configuration of Single-Branch with Input Channel "RGB"
+# This attention configuration need to corresponds with the model configuration 'OneBranch_ThreeInputChannelRGB.yaml' 
+
+attention_existence: True     # Whether to use attention [True, False]
+
+attention_of_branches:              # Attention configuration for branch(es) (#elements must be equal to 'number_of_branch')
+                                    # Specify only layer's ID needed to attach attention module (not given layer's ID imply to not need attention module)
+                                    # Format is [Layer_ID (integer), Attention_Type (string), Attention_configuration (list)]
+  1: [
+      {'layer_id': 0, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 1, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 2, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 3, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 4, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 5, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 6, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 7, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 8, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 9, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 10, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 11, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 12, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 13, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 14, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 15, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 16, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 17, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 18, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 19, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 20, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 21, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 22, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 23, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 24, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 25, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 26, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 27, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 28, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 29, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 30, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 31, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 32, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 33, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 34, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 35, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 36, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 37, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 38, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 39, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 40, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 41, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 42, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 43, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 44, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 45, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 46, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 47, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 48, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'layer_id': 49, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+     ]
+
+
+##############################################################################################################################################
+# Supported attention type(s) and configuration(s) are 
+#    1. Squeeze-and-Excitation (SE) Networks [2017] 
+#         'ChannelAttention0' -> [reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]  
+##############################################################################################################################################

@@ -250,3 +250,19 @@ def write_dataset_config_summary(ds_name, cfg):
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
     logging.info('-' * 100)
+
+def write_model_attention_config_summary(model_attn, cfg):
+    """summarize important configuration of model attention"""
+    logging.info('-' * 100)
+    logging.info('Summary of model attention configuration')
+    logging.info('-' * 100)
+    logging.info('Model Attention: {}'.format(model_attn))
+    
+    # details of configuration sepearted for each model
+    if model_attn == 'Attn_OneBranch_ThreeInputChannelRGB':
+      logging.info('Attention existence: {}'.format(cfg['attention_existence']))
+      if cfg['attention_existence']:
+        logging.info('Attention detail for each bracnch(es): {}'.format(cfg['attention_of_branches']))
+    else:
+      raise ValueError('Unknown \'{}\' model attention'.format(model_attn))
+    logging.info('-' * 100)

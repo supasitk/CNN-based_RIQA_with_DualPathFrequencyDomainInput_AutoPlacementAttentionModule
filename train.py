@@ -8,8 +8,9 @@ import numpy as np
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
-                           write_dataset_config_summary, write_model_config_summary,
-                           ProgressBar, evaluation_result_log, last_k_avg_max_min_accuracy,
+                           write_dataset_config_summary, write_model_config_summary, 
+                           write_model_attention_config_summary, ProgressBar, 
+                           evaluation_result_log, last_k_avg_max_min_accuracy,
                            evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
@@ -69,6 +70,12 @@ def main(_):
     model_cfg_path = cfg['model_config_path']
     model_cfg = load_yaml(model_cfg_path)
     write_model_config_summary(model_structure, model_cfg)
+
+    # summarize important configuration of model attention to log file
+    model_attn = cfg['model_attention']
+    model_attn_cfg_path = cfg['model_attention_config_path']
+    model_attn_cfg = load_yaml(model_attn_cfg_path)
+    write_model_attention_config_summary(model_attn, model_attn_cfg)
 
     # generate train/validation/test dataloader of the RIQA dataset
     train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
