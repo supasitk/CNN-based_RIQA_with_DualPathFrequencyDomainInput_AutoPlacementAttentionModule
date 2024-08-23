@@ -37,6 +37,7 @@ from tensorflow.python.util.tf_export import keras_export
 
 from absl import logging
 from modules.utils import Check_Layer_Not_Loaded_with_PretrainedWeight
+from modules.model.attention.attention_main import (genAttnModule) 
 
 BASE_WEIGHTS_PATH = (
     "https://storage.googleapis.com/tensorflow/keras-applications/resnet/"
@@ -301,7 +302,22 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
-    
+
+    # check if attention module used
+    if attention['attn_exist']: 
+        try:
+            # check if attention module attached to this block 
+            # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
+            # otherwise returns ValueError
+            idx = attention['attn_block_id'].index(block_id)
+            attn_block = genAttnModule(numChannel_InputFeature=filters,
+                                       attn_type=attention['attn_type'][idx],
+                                       attn_setting=attention['attn_setting'][idx],
+                                       name=name + "_attn")
+            x = attn_block(x)    
+        except ValueError:
+            pass
+
     x = Add(name=name + "_add")([shortcut, x])
     x = Activation("relu", name=name + "_out")(x)
     return x
@@ -375,6 +391,21 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_3_bn"
     )(x)
+
+    # check if attention module used
+    if attention['attn_exist']: 
+        try:
+            # check if attention module attached to this block 
+            # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
+            # otherwise returns ValueError
+            idx = attention['attn_block_id'].index(block_id)
+            attn_block = genAttnModule(numChannel_InputFeature=4*filters,
+                                       attn_type=attention['attn_type'][idx],
+                                       attn_setting=attention['attn_setting'][idx],
+                                       name=name + "_attn")
+            x = attn_block(x)    
+        except ValueError:
+            pass
 
     x = Add(name=name + "_add")([shortcut, x])
     x = Activation("relu", name=name + "_out")(x)

@@ -18,4 +18,4 @@ numLayer_of_branches:               # Number of layer(s) of the network for bran
   1: 50                             # if 'ResNet', supported number of layer(s) are [18, 34, 50, 101, 152]
 
 pretrainedWeight_of_branches:       # Pretrained weight for branch(es) (#elements must be equal to 'number_of_branch')
-  1: 'imagenet'                     # if 'ResNet [50, 101, 152]', supported pretrained weight are [null, 'imagenet']
+  1: null                     # if 'ResNet [50, 101, 152]', supported pretrained weight are [null, 'imagenet']
