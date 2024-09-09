@@ -30,5 +30,7 @@ attention_config_of_branches:       # Attention configuration for branch(es) (#e
 ##############################################################################################################################################
 # Supported attention type(s) and configuration(s) are 
 #    1. Squeeze-and-Excitation (SE) Networks [2017] 
-#         'ChannelAttention0' -> [reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]  
+#         'ChannelAttention0' -> [reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
+#    2. Learning for retinal image quality assessment with label regularization [2022]
+#         'SpatialAttention0' -> [filter (default=1), kernel_size (default=1), stride (default=1), activation (default='softplus'), epsilon (default=0.1)]  
 ##############################################################################################################################################

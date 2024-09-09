@@ -13,6 +13,19 @@ def genAttnModule(numChannel_InputFeature, attn_type, attn_setting, name=None):
                                        activation_dense1=act_d1, 
                                        activation_dense2=act_d2,
                                        name=name)
+    elif attn_type == 'SpatialAttention0':
+        # attn_setting of 'SpatialAttention0' -> list [idx 0:filter, 1:kernel_size, 2:stride, 3:activation, 4:epsilon]
+        num_filter = attn_setting[0]
+        kernel_size = attn_setting[1]
+        stride = attn_setting[2]
+        activation = attn_setting[3]
+        epsilon = attn_setting[4]
+        attn_block = SpatialAttention0(filters=num_filter,
+                                       kernel_size=kernel_size,
+                                       stride=stride,
+                                       activation=activation,
+                                       epsilon=epsilon,
+                                       name=name)
     else:
         raise ValueError('Unknown attention type \'{}\''.format(attn_type))
     

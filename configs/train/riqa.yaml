@@ -1,5 +1,5 @@
 # run info
-config_summary: 'DsEyeQsize224tr75tr25te100AugHVflipRot2e-1_Md1Bresnet50RGBimgnet_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitT-Bs32-DropRate0-Wd0-EpTr160Val1Save1-Seed0'
+config_summary: 'DsEyeQsize224tr75tr25te100AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitT-Bs32-DropRate0-Wd0-EpTr160Val1Save1-Seed0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
