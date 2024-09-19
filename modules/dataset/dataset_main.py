@@ -16,6 +16,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
         name_class = dataset_cfg['class_name']
 
         # get details of data preprocessing
+        train_portion = dataset_cfg['train_portion']
+        train_shuffle = dataset_cfg['train_shuffle']
         val_from_train = dataset_cfg['val_from_train']
         val_from_train_shuffle = dataset_cfg['val_from_train_shuffle']
         val_portion = dataset_cfg['val_portion']
@@ -95,7 +97,7 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
         img_path_dict_key = 'img_path'
         img_label_dict_key = 'img_label'
         
-        # dictionraies of image path and label for train/validation/test of dataset
+        # dictionaries of image path and label for train/validation/test of dataset
         img_path_label_dicts = gen_EyeQImgPathLabelDict(ds_num_class=num_class,
                                                         ds_parts=ds_parts, 
                                                         ds_part_dirs=prep_ds_dirs,
@@ -104,6 +106,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
                                                         img_label_col_name=img_label_col_name,
                                                         img_path_dict_key=img_path_dict_key,
                                                         img_label_dict_key=img_label_dict_key,
+                                                        train_portion=train_portion, 
+                                                        train_shuffle=train_shuffle,
                                                         val_from_train=val_from_train,
                                                         val_from_train_shuffle=val_from_train_shuffle,
                                                         val_portion=val_portion)

@@ -236,9 +236,11 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Number of classes: {}'.format(cfg['class_num']))
         logging.info('Name of classes: {}'.format(cfg['class_name']))
         logging.info('*** Data preprocessing ***')
-        logging.info('Split training data as validation data: {}'.format(cfg['val_from_train']))
-        logging.info('Shuffle training data before splitting into train and validation data: {}'.format(cfg['val_from_train_shuffle']))
-        logging.info('Validation portion from training set: {}'.format(cfg['val_portion']))
+        logging.info('Portion of training data used for training set: {}'.format(cfg['train_portion']))
+        logging.info('Shuffle training data before splitting to create the selected training set: {}'.format(cfg['train_shuffle']))
+        logging.info('Split the selected training set as validation data: {}'.format(cfg['val_from_train']))
+        logging.info('Shuffle the selected training set before splitting to create the validation set: {}'.format(cfg['val_from_train_shuffle']))
+        logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
         if cfg['train_augment']:
             logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
@@ -266,3 +268,17 @@ def write_model_attention_config_summary(model_attn, cfg):
     else:
       raise ValueError('Unknown \'{}\' model attention'.format(model_attn))
     logging.info('-' * 100)
+
+
+def write_exec_search_config_summary(cfg):
+    """summarize important configuration of search execution"""
+    logging.info('-' * 100)
+    logging.info('Summary of search execution configuration')
+    logging.info('{}'.format(cfg['config_summary']))
+    logging.info('-' * 100)
+    logging.info('*** DATASET ***')
+    logging.info('Dataset: {}'.format(cfg['dataset_name']))
+    logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
+    logging.info('*** Training Setting ***')
+    logging.info('Batch size: {}'.format(cfg['batch_size']))
+    logging.info('Seed: {}'.format(cfg['seed']))

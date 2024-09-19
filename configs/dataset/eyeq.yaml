@@ -28,9 +28,13 @@ class_num: 3                                # Number of classes
 class_name: ['Good', 'Usable', 'Reject']    # Name of classes (ID of class started with 0 from the first name)
 
 # Data preprocessing
-val_from_train: True          # whether the validation data splitted from the training data
-val_from_train_shuffle: True  # whether the train data shuffled before splitting
-val_portion: 0.25             # split (val_portion * 100)% of training data as the validation set
+train_portion: 1.0            # ratio of training data used for training set, 
+                              # training 'Fixed_NeuralNetwork_Architecture' should be '1.00' (using all training data), 
+                              # while training 'Searching_NeuralNetwork_Architecture' can be specified from '0.0' to '1.0')
+train_shuffle: True           # whether the training data shuffled before splitting to create the selected training set as 'train_portion'                              
+val_from_train: True          # whether the validation data splitted from the selected training set
+val_from_train_shuffle: True  # whether the selected training set shuffled before splitting to create the validation set
+val_portion: 0.25             # split (val_portion * 100)% of the selected training set ([train_portion * 100]% of training data)
 #-- Augmentation --#
 train_augment: True                     # whether the data augmentation for training data, if True, details of augment need to be specified
 train_augment_hflip: True               # Random horizontal flipping
