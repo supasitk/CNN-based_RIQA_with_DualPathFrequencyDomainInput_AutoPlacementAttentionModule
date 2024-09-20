@@ -10,7 +10,7 @@ model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputCha
 model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 
 # model attention
-model_attention: 'Attn_OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
+model_attention: 'Attn_OneBranch_ThreeInputChannelRGB'    # ['Attn_OneBranch_ThreeInputChannelRGB']
 model_attention_config_path: './configs/model_attention/Attn_OneBranch_ThreeInputChannelRGB.yaml'
 
 # optimizer ['SGD']

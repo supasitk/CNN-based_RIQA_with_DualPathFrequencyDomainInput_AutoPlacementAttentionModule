@@ -1,0 +1,29 @@
+# Searching Attention for Model configuration of Single-Branch with Input Channel "RGB"
+# This attention searching configuration need to corresponds with the model configuration 'OneBranch_ThreeInputChannelRGB.yaml' 
+
+number_of_attention_block:    # number of attention block attached to branch(es) (#elements must be equal to 'number_of_branch')
+  1: 16
+
+number_of_attention_type:     # number of attention type used for searching on any attention block (#elements must be equal to 'number_of_branch')
+  1: 3
+
+list_of_attention_type:       # list (#elements must be equal to 'number_of_attention_type') of attention type used for searching on any attention block (#elements must be equal to 'number_of_branch')
+  1: ['skip', 'ChannelAttention0', 'SpatialAttention0']
+
+search_config_of_attention_type:  # search configuration of each attention type for branch(es) (#elements must be equal to 'number_of_branch')
+                                  # name of attention type must match with these one on 'list_of_attention_type'
+  1: {
+      'skip': [],
+      'ChannelAttention0': {'reduction_ratio': [8, 16, 32]},
+      'SpatialAttention0': {'kernel_size': [1, 3]}
+     }
+
+##############################################################################################################################################
+# Supported attention type(s) and searching configuration(s) are
+#    1. No attention
+#         'skip' -> []
+#    2. Squeeze-and-Excitation (SE) Networks [2017] 
+#         'ChannelAttention0' -> [reduction_ratio (list of interger; default=16)]
+#    3. Learning for retinal image quality assessment with label regularization [2022]
+#         'SpatialAttention0' -> [kernel_size (list of interger, default=1)]  
+##############################################################################################################################################

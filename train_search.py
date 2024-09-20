@@ -8,10 +8,11 @@ import os
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_search_config_summary,
-                           write_dataset_config_summary)
+                           write_dataset_config_summary, write_model_config_summary,
+                           write_model_attention_search_config_summary)
 # from modules.utils import (  
-# #                            write_model_config_summary, 
-# #                           write_model_attention_config_summary, ProgressBar, 
+# #                             
+# #                            ProgressBar, 
 # #                           evaluation_result_log, last_k_avg_max_min_accuracy,
 # #                           evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
@@ -20,7 +21,7 @@ from modules.dataset.dataset_main import (gen_dataset)
 # #from modules.losses import (getLossFn)
 # #from modules.metric import (accumulated_result, compute_metric)
 
-flags.DEFINE_string('cfg_path', './configs/train_search/riqa.yaml', 'config file path')
+flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
 
 
 def main(_):
@@ -67,17 +68,17 @@ def main(_):
     ds_cfg = load_yaml(ds_cfg_path)
     write_dataset_config_summary(ds_name, ds_cfg)
 
-#     # summarize important configuration of model to log file
-#     model_structure = cfg['model_structure']
-#     model_cfg_path = cfg['model_config_path']
-#     model_cfg = load_yaml(model_cfg_path)
-#     write_model_config_summary(model_structure, model_cfg)
+    # summarize important configuration of model to log file
+    model_structure = cfg['model_structure']
+    model_cfg_path = cfg['model_config_path']
+    model_cfg = load_yaml(model_cfg_path)
+    write_model_config_summary(model_structure, model_cfg)
 
-#     # summarize important configuration of model attention to log file
-#     model_attn = cfg['model_attention']
-#     model_attn_cfg_path = cfg['model_attention_config_path']
-#     model_attn_cfg = load_yaml(model_attn_cfg_path)
-#     write_model_attention_config_summary(model_attn, model_attn_cfg)
+    # summarize important configuration of model attention search to log file
+    model_attn_search = cfg['model_attention_search']
+    model_attn_search_cfg_path = cfg['model_attention_search_config_path']
+    model_attn_search_cfg = load_yaml(model_attn_search_cfg_path)
+    write_model_attention_search_config_summary(model_attn_search, model_attn_search_cfg)
 
     # generate train/validation dataloader of the RIQA dataset 
     # (last 2 return items ('test_ds' and 'test_ds_len') ignored because they are not used for train_search)

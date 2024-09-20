@@ -38,7 +38,7 @@ else # SET_GPU_IDS_FROM_HERE=false
 fi
 
 # Arguments
-CONFIG_PATH="./configs/train_search/riqa.yaml"
+CONFIG_PATH="./configs/train_search/riqa_search.yaml"
 EXEC_PATH="train_search.py"
 
 # Run 

@@ -142,6 +142,55 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
        tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
 
 
+def write_dataset_config_summary(ds_name, cfg):
+    """summarize important configuration of dataset"""
+    logging.info('-' * 100)
+    logging.info('Summary of dataset configuration')
+    logging.info('-' * 100)
+    logging.info('Dataset name: {}'.format(ds_name))
+
+    # details of configuration sepearted for each dataset
+    if ds_name == 'EyeQ':
+        logging.info('*** Directories and files of EyePACS ***')
+        logging.info('Root directory of EyePACS dataset: {}'.format(cfg['original_dataset_root_dir']))
+        logging.info('Directory of EyePACS dataset for train: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_train_dir_name'])))
+        logging.info('Directory of EyePACS dataset for validation: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_val_dir_name'])))
+        logging.info('Directory of EyePACS dataset for test: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_test_dir_name'])))
+        logging.info('*** Directories and files of EyeQ ***')
+        logging.info('Root directory of EyeQ dataset: {}'.format(cfg['dataset_root_dir']))
+        logging.info('Directory of preprocessed dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'])))
+        logging.info('Directory of preprocessed dataset for train: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_train_dir_name'])))
+        logging.info('Directory of preprocessed dataset for validation: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_val_dir_name'])))
+        logging.info('Directory of preprocessed dataset for test: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_test_dir_name'])))
+        logging.info('Directory of original source code of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'])))
+        logging.info('Directory of train/val/test image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'])))
+        logging.info('Pathname of train image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_train_list_filename'])))
+        logging.info('Pathname of validation image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_val_list_filename'])))
+        logging.info('Pathname of test image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_test_list_filename'])))
+        logging.info('Column name of csv file for filename of image: {}'.format(cfg['dataset_csv_info_column_name_of_image_filename']))
+        logging.info('Column name of csv file for label of image: {}'.format(cfg['dataset_csv_info_column_name_of_image_label']))
+        logging.info('*** Dataset information ***')
+        logging.info('Number of classes: {}'.format(cfg['class_num']))
+        logging.info('Name of classes: {}'.format(cfg['class_name']))
+        logging.info('*** Data preprocessing ***')
+        logging.info('Portion of training data used for training set: {}'.format(cfg['train_portion']))
+        logging.info('Shuffle training data before splitting to create the selected training set: {}'.format(cfg['train_shuffle']))
+        logging.info('Split the selected training set as validation data: {}'.format(cfg['val_from_train']))
+        logging.info('Shuffle the selected training set before splitting to create the validation set: {}'.format(cfg['val_from_train_shuffle']))
+        logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
+        logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
+        if cfg['train_augment']:
+            logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
+            logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
+            logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
+            if cfg['train_augment_rotation']:
+                logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
+        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
+    else:
+        raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
+    logging.info('-' * 100)
+
+
 def write_exec_config_summary(cfg):
     """summarize important configuration of execution"""
     logging.info('-' * 100)
@@ -205,54 +254,6 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('-' * 100)
     
 
-def write_dataset_config_summary(ds_name, cfg):
-    """summarize important configuration of dataset"""
-    logging.info('-' * 100)
-    logging.info('Summary of dataset configuration')
-    logging.info('-' * 100)
-    logging.info('Dataset name: {}'.format(ds_name))
-
-    # details of configuration sepearted for each dataset
-    if ds_name == 'EyeQ':
-        logging.info('*** Directories and files of EyePACS ***')
-        logging.info('Root directory of EyePACS dataset: {}'.format(cfg['original_dataset_root_dir']))
-        logging.info('Directory of EyePACS dataset for train: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_train_dir_name'])))
-        logging.info('Directory of EyePACS dataset for validation: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_val_dir_name'])))
-        logging.info('Directory of EyePACS dataset for test: {}'.format(os.path.join(cfg['original_dataset_root_dir'], cfg['original_dataset_test_dir_name'])))
-        logging.info('*** Directories and files of EyeQ ***')
-        logging.info('Root directory of EyeQ dataset: {}'.format(cfg['dataset_root_dir']))
-        logging.info('Directory of preprocessed dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'])))
-        logging.info('Directory of preprocessed dataset for train: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_train_dir_name'])))
-        logging.info('Directory of preprocessed dataset for validation: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_val_dir_name'])))
-        logging.info('Directory of preprocessed dataset for test: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_preprocessed_dir_name'], cfg['dataset_preprocessed_test_dir_name'])))
-        logging.info('Directory of original source code of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'])))
-        logging.info('Directory of train/val/test image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'])))
-        logging.info('Pathname of train image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_train_list_filename'])))
-        logging.info('Pathname of validation image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_val_list_filename'])))
-        logging.info('Pathname of test image list of dataset: {}'.format(os.path.join(cfg['dataset_root_dir'], cfg['dataset_src_dir_name'], cfg['dataset_src_train_val_test_list_dir_name'], cfg['dataset_src_test_list_filename'])))
-        logging.info('Column name of csv file for filename of image: {}'.format(cfg['dataset_csv_info_column_name_of_image_filename']))
-        logging.info('Column name of csv file for label of image: {}'.format(cfg['dataset_csv_info_column_name_of_image_label']))
-        logging.info('*** Dataset information ***')
-        logging.info('Number of classes: {}'.format(cfg['class_num']))
-        logging.info('Name of classes: {}'.format(cfg['class_name']))
-        logging.info('*** Data preprocessing ***')
-        logging.info('Portion of training data used for training set: {}'.format(cfg['train_portion']))
-        logging.info('Shuffle training data before splitting to create the selected training set: {}'.format(cfg['train_shuffle']))
-        logging.info('Split the selected training set as validation data: {}'.format(cfg['val_from_train']))
-        logging.info('Shuffle the selected training set before splitting to create the validation set: {}'.format(cfg['val_from_train_shuffle']))
-        logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
-        logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
-        if cfg['train_augment']:
-            logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
-            logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
-            logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
-            if cfg['train_augment_rotation']:
-                logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
-        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
-    else:
-        raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
-    logging.info('-' * 100)
-
 def write_model_attention_config_summary(model_attn, cfg):
     """summarize important configuration of model attention"""
     logging.info('-' * 100)
@@ -279,6 +280,29 @@ def write_exec_search_config_summary(cfg):
     logging.info('*** DATASET ***')
     logging.info('Dataset: {}'.format(cfg['dataset_name']))
     logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ***')
+    logging.info('Model structure: {}'.format(cfg['model_structure']))
+    logging.info('Model config path: {}'.format(cfg['model_config_path']))
+    logging.info('-' * 100)
     logging.info('*** Training Setting ***')
     logging.info('Batch size: {}'.format(cfg['batch_size']))
     logging.info('Seed: {}'.format(cfg['seed']))
+
+
+def write_model_attention_search_config_summary(model_attn_search, cfg):
+    """summarize important configuration of model attention searching"""
+    logging.info('-' * 100)
+    logging.info('Summary of model attention searching configuration')
+    logging.info('-' * 100)
+    logging.info('Model Attention Search: {}'.format(model_attn_search))
+    
+    # details of configuration sepearted for each model
+    if model_attn_search == 'SearchAttn_OneBranch_ThreeInputChannelRGB':
+      logging.info('Number of attention block for each bracnch(es): {}'.format(cfg['number_of_attention_block']))
+      logging.info('Number of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['number_of_attention_type']))
+      logging.info('List of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['list_of_attention_type']))
+      logging.info('Search configuration of each attention type for branch(es): {}'.format(cfg['search_config_of_attention_type']))
+    else:
+      raise ValueError('Unknown \'{}\' model attention search'.format(model_attn_search))
+    logging.info('-' * 100)

@@ -5,13 +5,13 @@ config_summary: 'trainSearch-Seed0'
 dataset_name: 'EyeQ'  # ['EyeQ']
 dataset_config_path: './configs/dataset/eyeq.yaml'
 
-# # model
-# model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
-# model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
+# model
+model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
+model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 
-# # model attention
-# model_attention: 'Attn_OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
-# model_attention_config_path: './configs/model_attention/Attn_OneBranch_ThreeInputChannelRGB.yaml'
+# model attention search
+model_attention_search: 'SearchAttn_OneBranch_ThreeInputChannelRGB'    # ['SearchAttn_OneBranch_ThreeInputChannelRGB']
+model_attention_search_config_path: './configs/model_attention_search/SearchAttn_OneBranch_ThreeInputChannelRGB.yaml'
 
 # # optimizer ['SGD']
 # # --- SGD --- #
