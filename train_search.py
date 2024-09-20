@@ -16,7 +16,7 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_search_confi
 # #                           evaluation_result_log, last_k_avg_max_min_accuracy,
 # #                           evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
-# #from modules.model.model_main import (NNmodel)
+from modules.model_search.model_search_main import (SearchNNmodel)
 # #from modules.optimizers import (getOptimizer)
 # #from modules.losses import (getLossFn)
 # #from modules.metric import (accumulated_result, compute_metric)
@@ -90,13 +90,13 @@ def main(_):
 #     total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
 #     max_epoch = total_steps / steps_per_epoch
 
-#     # define network
-#     model = NNmodel(cfg, ds_cfg, model_cfg, model_attn_cfg)
-#     # show detail of network
-#     logging.info('-' * 30)
-#     logging.info('Network structure: {}'.format(model_structure))
-#     #model.summary(print_fn=lambda x: logging.info(x))
-#     model.summary()
+    # define network
+    snn = SearchNNmodel(cfg, ds_cfg, model_cfg, model_attn_search_cfg)
+    # show detail of network
+    # logging.info('-' * 30)
+    # logging.info('Network structure: {}'.format(model_structure))
+    # #model.summary(print_fn=lambda x: logging.info(x))
+    # snn.model.summary()
 
 #     # optimizer
 #     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
