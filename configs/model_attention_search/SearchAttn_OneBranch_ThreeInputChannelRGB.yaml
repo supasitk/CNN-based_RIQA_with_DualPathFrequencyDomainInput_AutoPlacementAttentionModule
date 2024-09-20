@@ -13,7 +13,7 @@ list_of_attention_type:       # list (#elements must be equal to 'number_of_atte
 search_config_of_attention_type:  # search configuration of each attention type for branch(es) (#elements must be equal to 'number_of_branch')
                                   # name of attention type must match with these one on 'list_of_attention_type'
   1: {
-      'skip': [],
+      'skip': {},
       'ChannelAttention0': {'reduction_ratio': [8, 16, 32]},
       'SpatialAttention0': {'kernel_size': [1, 3]}
      }
