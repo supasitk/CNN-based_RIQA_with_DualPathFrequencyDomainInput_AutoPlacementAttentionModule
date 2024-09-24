@@ -306,3 +306,13 @@ def write_model_attention_search_config_summary(model_attn_search, cfg):
     else:
       raise ValueError('Unknown \'{}\' model attention search'.format(model_attn_search))
     logging.info('-' * 100)
+
+
+def write_info_and_weight_parameter_for_attention_searching(level, info, weight):
+    """summarize information and weight parameter for attention searching"""
+    logging.info('-'*100)
+    logging.info('Summary of information and weight parameter for {}-attention_types searching'.format(level))
+    logging.info('-'*100)
+    logging.info('Information for {}-attention_types searching: {}'.format(level, info))
+    logging.info('Weight parameter for {}-attention_types searching: {}'.format(level, weight))
+    logging.info('-'*100)
