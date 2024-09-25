@@ -3,13 +3,7 @@ import tensorflow as tf
 
 from modules.model_search.structure_search import (Search_OneBranch_ThreeInputChannelRGB)
 from modules.utils import (write_info_and_weight_parameter_for_attention_searching)
-
-# define label
-label_of_num_of_attn_block = 'number_of_attention_block'
-label_of_num_of_attn_type = 'number_of_attention_type'
-label_of_list_of_attn_type = 'list_of_attention_type'
-label_of_attn_type_search_info = 'attention_type_search_info'
-label_of_weight_index = 'weight_index'
+from modules.labels import *
 
 
 class SearchNNmodel(object):
