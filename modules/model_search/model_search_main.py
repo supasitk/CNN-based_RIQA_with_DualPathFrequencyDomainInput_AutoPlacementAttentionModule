@@ -1,7 +1,7 @@
 from absl import logging
 import tensorflow as tf
 
-from modules.model_search.structure_search import (Search_OneBranch_ThreeInputChannelRGB)
+from modules.model.structure import (OneBranch_ThreeInputChannelRGB)
 from modules.utils import (write_info_and_weight_parameter_for_attention_searching)
 from modules.labels import *
 
@@ -19,13 +19,17 @@ class SearchNNmodel(object):
         # the dimension of this weight parameter is (number_of_branch, MAX(number_of_attention_block[each_branch]), MAX(number_of_attention_type[each_branch])), note that the number of this weight parameter might be created redundant (excess) that some of them might be not used, the reason is to simply create tensor with same dimension for every branches.
         # the information will be used for being detail when build and call attention type module for INTER-attention_types searching  
         self.inter_attn_search_parameters, self.inter_attn_search_infos = self._initialize_inter_attn_search_parameter_and_info()
-        write_info_and_weight_parameter_for_attention_searching('INTER', self.inter_attn_search_infos, self.inter_attn_search_parameters)
+        write_info_and_weight_parameter_for_attention_searching(label_of_inter, self.inter_attn_search_infos, self.inter_attn_search_parameters)
 
         # generate weight parameter and information for INTRA-attention_types searching to find which configurations of each attention type is the optimized option for each block attached of each branch on the model structure,
         # the dimension of this weight parameter is (number_of_branch, MAX(number_of_attention_block[each_branch]), MAX(SUM(number_of_searching_options[each_attention_type])[each_branch])), note that the number of this weight parameter might be created redundant (excess) that some of them might be not used, the reason is to simply create tensor with same dimension for every branches. 
         # the information will be used for being detail when build and call attention type module for INTRA-attention_types searching
         self.intra_attn_search_parameters, self.intra_attn_search_infos = self._initialize_intra_attn_search_parameter_and_info()
-        write_info_and_weight_parameter_for_attention_searching('INTRA', self.intra_attn_search_infos, self.intra_attn_search_parameters)
+        write_info_and_weight_parameter_for_attention_searching(label_of_intra, self.intra_attn_search_infos, self.intra_attn_search_parameters)
+
+        # dictionary for information of INTER- and INTRA-attention_types searching
+        attn_search_infos_dicts = {label_of_inter: self.inter_attn_search_infos, 
+                                   label_of_intra: self.intra_attn_search_infos}
 
         # build model
         logging.info(f'Building {self.name}...')

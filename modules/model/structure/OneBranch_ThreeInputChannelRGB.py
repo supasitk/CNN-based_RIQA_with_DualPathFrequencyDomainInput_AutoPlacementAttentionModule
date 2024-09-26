@@ -9,12 +9,13 @@ from modules.model.baseline.baseline_main import (genModelBranch)
 from modules.model.layer.CustomLayer import (BranchInput)
 
 
-def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg):
+def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None):
     # ------------------ Model Configuration ------------------ #
     input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attentionn Configuration ------------------ #
-    Branches_attn_existence, Branches_attn_config = check_and_get_model_attention_configuration(num_branch, model_attn_cfg)
+    if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
+        Branches_attn_existence, Branches_attn_config = check_and_get_model_attention_configuration(num_branch, model_attn_cfg)
 
     # ------------------ Input Layer ------------------ #
     inputs = Input([input_h_size, input_w_size, input_num_channel], name='input_image')
