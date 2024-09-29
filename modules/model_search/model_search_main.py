@@ -52,7 +52,8 @@ class SearchNNmodel(object):
         #    'attention_type_search_info': dict {
         #                                        attention_type_name (string): dict {'weight_index': integer} (for attention type #1),
         #                                        ............................................................ (for attention type #N)                                         
-        #                                       }      
+        #                                       },
+        #    'list_of_split_weights': list      
         #   }        
         self.inter_attn_search_infos = dict()
 
@@ -62,6 +63,9 @@ class SearchNNmodel(object):
         for branch_id in range(1, num_of_branch+1):
             # index of weight parameter assigned for each attention type 
             weight_idx = 0
+
+            # list of splitting number of weight parameters into groups for assigning to group of attention types (and group of unused/excess weights [if any]) for searching in order to do softmax on their values for each group during training
+            list_of_split_weights_infos_for_this_branch = list()
 
             num_of_attn_block_for_this_branch = self.model_attn_search_cfg[label_of_num_of_attn_block][branch_id]
             num_of_attn_type_for_this_branch = self.model_attn_search_cfg[label_of_num_of_attn_type][branch_id]
@@ -80,9 +84,17 @@ class SearchNNmodel(object):
                 else:
                     self.inter_attn_search_infos[branch_id][label_of_attn_type_search_info].update({attn_type: {label_of_weight_index: weight_idx}})
                 weight_idx += 1
+            
+            list_of_split_weights_infos_for_this_branch.append(num_of_attn_type_for_this_branch)
+            self.inter_attn_search_infos[branch_id].update({label_of_list_of_split_weights: list_of_split_weights_infos_for_this_branch})
 
         max_num_of_attn_block_for_any_branch = max(list_of_num_of_attn_block_for_each_branch)
         max_num_of_attn_type_for_any_branch = max(list_of_num_of_attn_type_for_each_branch)
+
+        for branch_id in range(1, num_of_branch+1):
+            remaining_num_of_excessing_weights = max_num_of_attn_type_for_any_branch - self.inter_attn_search_infos[branch_id][label_of_num_of_attn_type]
+            if remaining_num_of_excessing_weights > 0:
+                self.inter_attn_search_infos[branch_id][label_of_list_of_split_weights].append(remaining_num_of_excessing_weights)
 
         # weight parameter of inter-attention_types searching
         w_init = tf.random_normal_initializer()
@@ -121,7 +133,8 @@ class SearchNNmodel(object):
         #                                        **************************************************** (for attention type #1) *************************************************************************,
         #                                        ......................................................................................................................................................
         #                                        **************************************************** (for attention type #N) *************************************************************************,
-        #    'total_number_of_search_option_from_all_attention_type': integer,                                                                                
+        #    'total_number_of_search_option_from_all_attention_type': integer,
+        #    'list_of_split_weights': list                                                                                
         #                                       }
         #
         #   }        
@@ -133,6 +146,9 @@ class SearchNNmodel(object):
         for branch_id in range(1, num_of_branch+1):
             # total number of search option accumulated from all attention_type
             total_num_of_search_option_accumulated_from_all_attn_types_for_this_branch = 0
+
+            # list of splitting number of weight parameters into groups for assigning to each group of search options, depending on each searh option's name and its values, (and group of unused/excess weights [if any]) for searching in order to do softmax on their search option values for each group during training
+            list_of_split_weights_infos_for_this_branch = list()
 
             # index of weight parameter assigned for each of searching options of each attention type 
             weight_idx = 0
@@ -171,16 +187,23 @@ class SearchNNmodel(object):
                     
                     weight_idx += len_list_of_value_for_this_search_option_name
                     total_num_of_search_option_accumulated_from_all_search_option_name_for_this_attn_type += len_list_of_value_for_this_search_option_name
+                    list_of_split_weights_infos_for_this_branch.append(len_list_of_value_for_this_search_option_name)
 
                 self.intra_attn_search_infos[branch_id][label_of_attn_type_search_info][attn_type].update({label_of_total_num_of_all_search_option: total_num_of_search_option_accumulated_from_all_search_option_name_for_this_attn_type})
                 
                 total_num_of_search_option_accumulated_from_all_attn_types_for_this_branch += total_num_of_search_option_accumulated_from_all_search_option_name_for_this_attn_type
 
-            self.intra_attn_search_infos[branch_id].update({label_total_num_of_search_option_from_all_attn_type: total_num_of_search_option_accumulated_from_all_attn_types_for_this_branch})
+            self.intra_attn_search_infos[branch_id].update({label_of_total_num_of_search_option_from_all_attn_type: total_num_of_search_option_accumulated_from_all_attn_types_for_this_branch})
+            self.intra_attn_search_infos[branch_id].update({label_of_list_of_split_weights: list_of_split_weights_infos_for_this_branch})
             list_of_num_of_search_option_accumulated_from_all_attn_types_for_each_branch.append(total_num_of_search_option_accumulated_from_all_attn_types_for_this_branch)
 
         max_num_of_attn_block_for_any_branch = max(list_of_num_of_attn_block_for_each_branch)
         max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch = max(list_of_num_of_search_option_accumulated_from_all_attn_types_for_each_branch)
+
+        for branch_id in range(1, num_of_branch+1):
+            remaining_num_of_excessing_weights = max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch - self.intra_attn_search_infos[branch_id][label_of_total_num_of_search_option_from_all_attn_type]
+            if remaining_num_of_excessing_weights > 0:
+                self.intra_attn_search_infos[branch_id][label_of_list_of_split_weights].append(remaining_num_of_excessing_weights)
 
         # weight parameter of intra-attention_types searching
         w_init = tf.random_normal_initializer()
