@@ -93,10 +93,10 @@ def main(_):
     # define network
     snn = SearchNNmodel(cfg, ds_cfg, model_cfg, model_attn_search_cfg)
     # show detail of network
-    # logging.info('-' * 30)
-    # logging.info('Network structure: {}'.format(model_structure))
-    # #model.summary(print_fn=lambda x: logging.info(x))
-    # snn.model.summary()
+    logging.info('-' * 30)
+    logging.info('Network structure: {}'.format(model_structure))
+    #model.summary(print_fn=lambda x: logging.info(x))
+    snn.model.summary()
 
 #     # optimizer
 #     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)

@@ -34,10 +34,15 @@ class SearchNNmodel(object):
         # build model
         logging.info(f'Building {self.name}...')
         cfg_model_structure = self.cfg['model_structure']
-        # if cfg_model_structure == 'OneBranch_ThreeInputChannelRGB':
-        #     self.model = Search_OneBranch_ThreeInputChannelRGB.genModel(self.cfg, self.ds_cfg, self.model_cfg, self.model_attn_search_cfg)
-        # else:
-        #     raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
+        if cfg_model_structure == 'OneBranch_ThreeInputChannelRGB':
+            self.model = OneBranch_ThreeInputChannelRGB.genModel(cfg=self.cfg, 
+                                                                 ds_cfg=self.ds_cfg, 
+                                                                 model_cfg=self.model_cfg, 
+                                                                 model_attn_cfg=None, 
+                                                                 attn_search=True, 
+                                                                 attn_search_infos=attn_search_infos_dicts)
+        else:
+            raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
     
 
     def _initialize_inter_attn_search_parameter_and_info(self):
@@ -54,7 +59,9 @@ class SearchNNmodel(object):
         #                                        ............................................................ (for attention type #N)                                         
         #                                       },
         #    'list_of_split_weights': list      
-        #   }        
+        #   },
+        # 'maximum_number_of_attention_block_for_any_branch': integer,
+        # 'maximum_number_of_attention_type_for_any_branch': integer        
         self.inter_attn_search_infos = dict()
 
         list_of_num_of_attn_block_for_each_branch = list()
@@ -90,6 +97,8 @@ class SearchNNmodel(object):
 
         max_num_of_attn_block_for_any_branch = max(list_of_num_of_attn_block_for_each_branch)
         max_num_of_attn_type_for_any_branch = max(list_of_num_of_attn_type_for_each_branch)
+        self.inter_attn_search_infos[label_of_max_num_of_attn_block_for_any_branch] = max_num_of_attn_block_for_any_branch
+        self.inter_attn_search_infos[label_of_max_num_of_attn_type_for_any_branch] = max_num_of_attn_type_for_any_branch
 
         for branch_id in range(1, num_of_branch+1):
             remaining_num_of_excessing_weights = max_num_of_attn_type_for_any_branch - self.inter_attn_search_infos[branch_id][label_of_num_of_attn_type]
@@ -137,7 +146,9 @@ class SearchNNmodel(object):
         #    'list_of_split_weights': list                                                                                
         #                                       }
         #
-        #   }        
+        #   },
+        # 'maximum_number_of_attention_block_for_any_branch': integer,
+        # 'maximum_number_of_search_option_accumulated_from_all_attention_types_for_any_branch': integer        
         self.intra_attn_search_infos = dict()
 
         list_of_num_of_attn_block_for_each_branch = list()
@@ -199,6 +210,8 @@ class SearchNNmodel(object):
 
         max_num_of_attn_block_for_any_branch = max(list_of_num_of_attn_block_for_each_branch)
         max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch = max(list_of_num_of_search_option_accumulated_from_all_attn_types_for_each_branch)
+        self.intra_attn_search_infos[label_of_max_num_of_attn_block_for_any_branch] = max_num_of_attn_block_for_any_branch
+        self.intra_attn_search_infos[label_of_max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch] = max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch
 
         for branch_id in range(1, num_of_branch+1):
             remaining_num_of_excessing_weights = max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch - self.intra_attn_search_infos[branch_id][label_of_total_num_of_search_option_from_all_attn_type]

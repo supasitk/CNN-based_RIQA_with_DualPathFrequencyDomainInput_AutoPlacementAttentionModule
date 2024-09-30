@@ -3,10 +3,15 @@ from absl import logging
 from modules.model.structure.utils import (get_static_attention_configuration_for_branch)
 from modules.model.baseline.resnet import (ResNet18, ResNet34, ResNet50, ResNet101, ResNet152)
 
-def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, attn_search=False, attn_static_infos=None):
+def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, 
+                   attn_search=False, attn_static_infos=None, attn_inter_search_infos=None, attn_intra_search_infos=None):
     # ------------------ Attention Configuration ------------------ #
     if attn_search == False:
-        attn = get_static_attention_configuration_for_branch(attn_static_infos)    
+        attn = get_static_attention_configuration_for_branch(attn_static_infos)
+    #### for Test ####
+    else:
+        attn = {'attn_existence': False}
+    #### for Test ####    
 
     if model_name == 'ResNet':
         if num_layer == 18:
