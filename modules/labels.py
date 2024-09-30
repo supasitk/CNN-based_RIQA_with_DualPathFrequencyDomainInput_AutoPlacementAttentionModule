@@ -1,3 +1,11 @@
+# define label for static attention modules
+label_of_attn_existence = 'attn_existence'
+label_of_attn_config = 'attn_config'
+label_of_block_id = 'block_id'
+label_of_attn_type = 'attn_type'
+label_of_attn_setting = 'attn_setting'
+label_of_attn_block_id = 'attn_block_id'
+
 # define label for searching attention modules
 # -- for both INTER- and INTRA- attention types searching
 label_of_num_of_attn_block = 'number_of_attention_block'

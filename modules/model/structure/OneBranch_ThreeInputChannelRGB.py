@@ -4,7 +4,8 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import (Input, GlobalAveragePooling2D, Flatten, Dropout, Dense)
 
-from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_attention_configuration)
+from modules.labels import *
+from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_static_attention_configuration)
 from modules.model.baseline.baseline_main import (genModelBranch)
 from modules.model.layer.CustomLayer import (BranchInput)
 
@@ -13,9 +14,9 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
     # ------------------ Model Configuration ------------------ #
     input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
-    # ------------------ Model Attentionn Configuration ------------------ #
+    # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
-        Branches_attn_existence, Branches_attn_config = check_and_get_model_attention_configuration(num_branch, model_attn_cfg)
+        Branches_static_attn_existence, Branches_static_attn_config = check_and_get_model_static_attention_configuration(num_branch, model_attn_cfg)
 
     # ------------------ Input Layer ------------------ #
     inputs = Input([input_h_size, input_w_size, input_num_channel], name='input_image')
@@ -26,6 +27,12 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
     FirstBranch_idx_input_ch = Branches_idx_input_ch[FirstBranch_key] # list returned 
     FirstBranch_inputs = BranchInput(Branch_idx_input_ch=FirstBranch_idx_input_ch, 
                                      name='branch_1_input')(inputs)
+    if attn_search == False:
+        attn_static_infos = {label_of_attn_existence: Branches_static_attn_existence[FirstBranch_key],
+                             label_of_attn_config :Branches_static_attn_config[FirstBranch_key]}
+    else:
+        attn_static_infos = None
+    
     FirstBranch_model = genModelBranch(branch_id=FirstBranch_key, 
                                        branch_name=Branches_name[FirstBranch_key],
                                        input_h_size=input_h_size,
@@ -34,8 +41,8 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                                        model_name=Branches_model[FirstBranch_key], 
                                        num_layer=Branches_numLayer[FirstBranch_key],
                                        pretrained_weight=Branches_pretrainedWeight[FirstBranch_key],
-                                       attn_exist=Branches_attn_existence[FirstBranch_key],
-                                       attn_config=Branches_attn_config[FirstBranch_key])
+                                       attn_search=attn_search,
+                                       attn_static_infos=attn_static_infos)
     FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
     
     # ------------------ Feature Aggregration ------------------#

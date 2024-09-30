@@ -1,20 +1,12 @@
 from absl import logging
 
+from modules.model.structure.utils import (get_static_attention_configuration_for_branch)
 from modules.model.baseline.resnet import (ResNet18, ResNet34, ResNet50, ResNet101, ResNet152)
 
-def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, attn_exist=False, attn_config=None):
-    attn_block_id = list()
-    attn_type = list()
-    attn_setting = list()
-    if attn_exist: # using attention for this model branch
-        for attn_config_layer in attn_config: # attn_config is a list of dictionary with key: 'block_id' (interger), 'attn_type' (string), 'attn_config' (list)
-            attn_block_id.append(attn_config_layer['block_id'])
-            attn_type.append(attn_config_layer['attn_type'])
-            attn_setting.append(attn_config_layer['attn_config'])
-    attn = {'attn_exist': attn_exist,
-            'attn_block_id': attn_block_id,
-            'attn_type': attn_type,
-            'attn_setting': attn_setting}    
+def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, attn_search=False, attn_static_infos=None):
+    # ------------------ Attention Configuration ------------------ #
+    if attn_search == False:
+        attn = get_static_attention_configuration_for_branch(attn_static_infos)    
 
     if model_name == 'ResNet':
         if num_layer == 18:
