@@ -29,3 +29,12 @@ class SplitSoftmax(tf.keras.layers.Layer):
             splitsotfmax_values.append(tf.concat([self.soft_max_func(t) for t in tf.split(value[block_id], self.size_splits)], axis=0))
         
         return tf.reshape(splitsotfmax_values, [self.num_blocks, self.num_ops])
+
+
+class Skip(tf.keras.layers.Layer):
+    """Skip Layer"""
+    def __init__(self, name='Skip', **kwargs):
+        super(Skip, self).__init__(name=name, **kwargs)
+    
+    def call(self, x):
+        return x
