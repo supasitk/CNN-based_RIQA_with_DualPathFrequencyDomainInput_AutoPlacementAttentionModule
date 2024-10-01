@@ -320,19 +320,13 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
 
     # check if attention module used
     if attention[label_of_attn_search] == False:
-        if attention[label_of_attn_existence]: 
-            try:
-                # check if attention module attached to this block 
-                # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
-                # otherwise returns ValueError
-                idx = attention[label_of_attn_block_id].index(block_id)
-                attn_block = genAttnModule(numChannel_InputFeature=filters,
-                                           attn_type=attention[label_of_attn_type][idx],
-                                           attn_setting=attention[label_of_attn_setting][idx],
-                                           name=name + "_attn")
-                x = attn_block(x)    
-            except ValueError:
-                pass
+        if attention[label_of_attn_existence]:
+            attn_block = genAttnModule(block_id=block_id,
+                                       numChannel_InputFeature=filters,
+                                       attention=attention, 
+                                       name=name + "_attn")
+            if attn_block is not None:
+                x = attn_block(x)
     else:
         ################## TEST ##################
         pass
@@ -414,19 +408,13 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
 
     # check if attention module used
     if attention[label_of_attn_search] == False:
-        if attention[label_of_attn_existence]: 
-            try:
-                # check if attention module attached to this block 
-                # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
-                # otherwise returns ValueError
-                idx = attention[label_of_attn_block_id].index(block_id)
-                attn_block = genAttnModule(numChannel_InputFeature=4*filters,
-                                           attn_type=attention[label_of_attn_type][idx],
-                                           attn_setting=attention[label_of_attn_setting][idx],
-                                           name=name + "_attn")
-                x = attn_block(x)    
-            except ValueError:
-                pass
+        if attention[label_of_attn_existence]:
+            attn_block = genAttnModule(block_id=block_id,
+                                       numChannel_InputFeature=4*filters,
+                                       attention=attention, 
+                                       name=name + "_attn")
+            if attn_block is not None:
+                x = attn_block(x)
     else:
         ################## TEST ##################
         pass
