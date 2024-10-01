@@ -1,3 +1,6 @@
+# define label for both static and searching attention modules
+label_of_attn_search = 'attn_search'
+
 # define label for static attention modules
 label_of_attn_existence = 'attn_existence'
 label_of_attn_config = 'attn_config'
@@ -18,6 +21,7 @@ label_of_max_num_of_attn_block_for_any_branch = 'maximum_number_of_attention_blo
 label_of_inter = 'INTER'
 label_of_weight_index = 'weight_index'
 label_of_max_num_of_attn_type_for_any_branch ='maximum_number_of_attention_type_for_any_branch'
+label_of_inter_search_infos = 'inter_search_infos'
 # -- for only INTRA-attention types searching
 label_of_intra = 'INTRA'
 label_of_search_config_of_attn_type = 'search_config_of_attention_type'
@@ -28,3 +32,4 @@ label_of_total_num_of_all_search_option = 'total_number_of_all_search_option'
 label_of_start_weight_idx_of_search_option = 'start_weight_index_of_search_option'
 label_of_total_num_of_search_option_from_all_attn_type = 'total_number_of_search_option_from_all_attention_type'
 label_of_max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch = 'maximum_number_of_search_option_accumulated_from_all_attention_types_for_any_branch'
+label_of_intra_search_infos = 'intra_search_infos'

@@ -79,7 +79,10 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                                        attn_static_infos=FirstBranch_attn_static_infos,
                                        attn_inter_search_infos=FirstBranch_inter_attn_search_infos,
                                        attn_intra_search_infos=FirstBranch_intra_attn_search_infos)
-    FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
+    if attn_search == False:
+        FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
+    else:
+        FirstBranch_features = FirstBranch_model((FirstBranch_inputs, FirstBranch_alphas_inter_attn_weights, FirstBranch_alphas_intra_attn_weights))
     
     # ------------------ Feature Aggregration ------------------#
     all_features = GlobalAveragePooling2D()(FirstBranch_features)

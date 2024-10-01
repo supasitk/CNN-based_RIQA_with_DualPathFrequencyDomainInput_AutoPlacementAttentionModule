@@ -94,6 +94,7 @@ def ResNet(
     classes=1000,
     branch_model_name="resnet",
     classifier_activation="softmax",
+    attn_search=False,
     **kwargs,
 ):
     """Instantiates the ResNet, ResNetV2, and ResNeXt architecture.
@@ -181,6 +182,16 @@ def ResNet(
             img_input = Input(tensor=input_tensor, shape=input_shape)
         else:
             img_input = input_tensor
+    
+    if attn_search == True:
+        # input layer for weight of inter- and intra- attention types searching
+        # note that both alphas_inter_attn and alphas_intra_attn are Input of 2-dimensional weight parameter, 
+        # while defining shape of tf.keras.layers.Input by user does not need to include the batch size, 
+        # (tensorflow will automatically add extra "None" dimension for the batch size being the first dimension of Input layer and then following dimensions are as the shape defined by user),
+        # so defining this 'Input([None])' will be finally extended to 'Input([None, None])' (2 dimension) by tensorflow runtime,
+        # however, this 1st dimension of both alphas_inter_attn and alphas_intra_attn used for set of weight parameter for each block instead of the batch size in normal case
+        alphas_inter_attn = Input([None], name=branch_model_name + '_alpha_inter_attn')
+        alphas_intra_attn = Input([None], name=branch_model_name + '_alpha_intra_attn')
 
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
@@ -227,7 +238,10 @@ def ResNet(
 
     # Create model.
     #model = Model(inputs, x, name=model_name)
-    model = Model(inputs, x, name=branch_model_name)
+    if attn_search == False:
+        model = Model(inputs, x, name=branch_model_name)
+    else:
+        model = Model((inputs, alphas_inter_attn, alphas_intra_attn), x, name=branch_model_name)
 
     # Load weights.
     if weights is not None:
@@ -305,19 +319,24 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     )(x)
 
     # check if attention module used
-    if attention[label_of_attn_existence]: 
-        try:
-            # check if attention module attached to this block 
-            # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
-            # otherwise returns ValueError
-            idx = attention[label_of_attn_block_id].index(block_id)
-            attn_block = genAttnModule(numChannel_InputFeature=filters,
-                                       attn_type=attention[label_of_attn_type][idx],
-                                       attn_setting=attention[label_of_attn_setting][idx],
-                                       name=name + "_attn")
-            x = attn_block(x)    
-        except ValueError:
-            pass
+    if attention[label_of_attn_search] == False:
+        if attention[label_of_attn_existence]: 
+            try:
+                # check if attention module attached to this block 
+                # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
+                # otherwise returns ValueError
+                idx = attention[label_of_attn_block_id].index(block_id)
+                attn_block = genAttnModule(numChannel_InputFeature=filters,
+                                           attn_type=attention[label_of_attn_type][idx],
+                                           attn_setting=attention[label_of_attn_setting][idx],
+                                           name=name + "_attn")
+                x = attn_block(x)    
+            except ValueError:
+                pass
+    else:
+        ################## TEST ##################
+        pass
+        ################## TEST ##################
 
     x = Add(name=name + "_add")([shortcut, x])
     x = Activation("relu", name=name + "_out")(x)
@@ -394,19 +413,24 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     )(x)
 
     # check if attention module used
-    if attention[label_of_attn_existence]: 
-        try:
-            # check if attention module attached to this block 
-            # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
-            # otherwise returns ValueError
-            idx = attention[label_of_attn_block_id].index(block_id)
-            attn_block = genAttnModule(numChannel_InputFeature=4*filters,
-                                       attn_type=attention[label_of_attn_type][idx],
-                                       attn_setting=attention[label_of_attn_setting][idx],
-                                       name=name + "_attn")
-            x = attn_block(x)    
-        except ValueError:
-            pass
+    if attention[label_of_attn_search] == False:
+        if attention[label_of_attn_existence]: 
+            try:
+                # check if attention module attached to this block 
+                # if 'block_id' exists on list of 'attn_block_id' returns 'index' in the list which use further to get attention configuration for this block,
+                # otherwise returns ValueError
+                idx = attention[label_of_attn_block_id].index(block_id)
+                attn_block = genAttnModule(numChannel_InputFeature=4*filters,
+                                           attn_type=attention[label_of_attn_type][idx],
+                                           attn_setting=attention[label_of_attn_setting][idx],
+                                           name=name + "_attn")
+                x = attn_block(x)    
+            except ValueError:
+                pass
+    else:
+        ################## TEST ##################
+        pass
+        ################## TEST ##################
 
     x = Add(name=name + "_add")([shortcut, x])
     x = Activation("relu", name=name + "_out")(x)
@@ -647,6 +671,7 @@ def ResNet18(
         pooling,
         classes,
         branch_model_name,
+        attn_search=attention[label_of_attn_search],
         **kwargs,
     )
 
@@ -682,6 +707,7 @@ def ResNet34(
         pooling,
         classes,
         branch_model_name,
+        attn_search=attention[label_of_attn_search],
         **kwargs,
     )
 
@@ -722,6 +748,7 @@ def ResNet50(
         pooling,
         classes,
         branch_model_name,
+        attn_search=attention[label_of_attn_search],
         **kwargs,
     )
 
@@ -760,6 +787,7 @@ def ResNet101(
         pooling,
         classes,
         branch_model_name,
+        attn_search=attention[label_of_attn_search],
         **kwargs,
     )
 
@@ -798,6 +826,7 @@ def ResNet152(
         pooling,
         classes,
         branch_model_name,
+        attn_search=attention[label_of_attn_search],
         **kwargs,
     )
 

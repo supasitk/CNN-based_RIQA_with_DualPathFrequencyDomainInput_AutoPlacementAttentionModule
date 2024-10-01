@@ -1,6 +1,7 @@
 from absl import logging
 
-from modules.model.structure.utils import (get_static_attention_configuration_for_branch)
+from modules.labels import *
+from modules.model.structure.utils import (get_static_attention_configuration_for_branch, get_search_attention_configuration_for_branch)
 from modules.model.baseline.resnet import (ResNet18, ResNet34, ResNet50, ResNet101, ResNet152)
 
 def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, 
@@ -8,10 +9,8 @@ def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num
     # ------------------ Attention Configuration ------------------ #
     if attn_search == False:
         attn = get_static_attention_configuration_for_branch(attn_static_infos)
-    #### for Test ####
     else:
-        attn = {'attn_existence': False}
-    #### for Test ####    
+        attn = get_search_attention_configuration_for_branch(attn_inter_search_infos, attn_intra_search_infos)    
 
     if model_name == 'ResNet':
         if num_layer == 18:

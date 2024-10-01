@@ -50,9 +50,18 @@ def get_static_attention_configuration_for_branch(attn_static_infos):
             attn_type.append(attn_config_layer[label_of_attn_type])
             attn_setting.append(attn_config_layer[label_of_attn_config])
     
-    attn = {label_of_attn_existence: attn_exist,
+    attn = {label_of_attn_search: False,
+            label_of_attn_existence: attn_exist,
             label_of_attn_block_id: attn_block_id,
             label_of_attn_type: attn_type,
             label_of_attn_setting: attn_setting}
+
+    return attn
+
+
+def get_search_attention_configuration_for_branch(attn_inter_search_infos, attn_intra_search_infos):
+    attn = {label_of_attn_search: True,
+            label_of_inter_search_infos: attn_inter_search_infos,
+            label_of_intra_search_infos: attn_intra_search_infos}
 
     return attn
