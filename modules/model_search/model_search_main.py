@@ -4,6 +4,7 @@ import tensorflow as tf
 from modules.model.structure import (OneBranch_ThreeInputChannelRGB)
 from modules.utils import (write_info_and_weight_parameter_for_attention_searching)
 from modules.labels import *
+from modules.model.layer.CustomLayer import (SplitSoftmax)
 
 
 class SearchNNmodel(object):
@@ -43,6 +44,10 @@ class SearchNNmodel(object):
                                                                  attn_search_infos=attn_search_infos_dicts)
         else:
             raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
+
+        ########## TEST ##################
+        self.get_probability_of_attention_search_options()
+        ########## TEST ##################
     
 
     def _initialize_inter_attn_search_parameter_and_info(self):
@@ -224,3 +229,38 @@ class SearchNNmodel(object):
                                                      trainable=True, name='intra_attn_search_weights')
 
         return [self.intra_attn_search_weights], self.intra_attn_search_infos
+
+
+    def get_probability_of_attention_search_options(self):
+        """get probability of options of INTER- and INTRA-attention_types searching"""
+        
+        # calculate probability of options of both INTER- and INTRA-attention_types searching for each branch of the model
+        num_of_branch = self.model_cfg['number_of_branch']
+
+        inter_attn_search_options_prob = dict()
+        intra_attn_search_options_prob = dict() 
+
+        for branch_id in range(1, num_of_branch+1):
+            # probability of options of INTER-attenttion_types searching for this branch
+            inter_num_attn_block_this_branch = self.inter_attn_search_infos[branch_id][label_of_num_of_attn_block]
+            inter_size_splits_this_branch = self.inter_attn_search_infos[branch_id][label_of_list_of_split_weights]
+            inter_attn_search_options_prob_this_branch = SplitSoftmax(num_blocks=inter_num_attn_block_this_branch,
+                                                                      num_ops=sum(inter_size_splits_this_branch),
+                                                                      size_splits=inter_size_splits_this_branch)(self.inter_attn_search_weights[branch_id-1]) # indices of 1st dimension (its size = num_branch) of self.inter_attn_search_weights start from 0 to num_branch-1, so branch_id need to be subtracted with 1
+
+            # probability of options of INTRA-attenttion_types searching for this branch
+            intra_num_attn_block_this_branch = self.intra_attn_search_infos[branch_id][label_of_num_of_attn_block]
+            intra_size_splits_this_branch = self.intra_attn_search_infos[branch_id][label_of_list_of_split_weights]
+            intra_attn_search_options_prob_this_branch = SplitSoftmax(num_blocks=intra_num_attn_block_this_branch,
+                                                                      num_ops=sum(intra_size_splits_this_branch),
+                                                                      size_splits=intra_size_splits_this_branch)(self.intra_attn_search_weights[branch_id-1]) # indices of 1st dimension (its size = num_branch) of self.inter_attn_search_weights start from 0 to num_branch-1, so branch_id need to be subtracted with 1
+
+            inter_attn_search_options_prob[branch_id] = inter_attn_search_options_prob_this_branch
+            intra_attn_search_options_prob[branch_id] = intra_attn_search_options_prob_this_branch
+        
+        ############# TEST ############
+        print('#'*100)
+        print('inter_attn_search_options_prob: {}'.format(inter_attn_search_options_prob))
+        print('#'*100)
+        print('intra_attn_search_options_prob: {}'.format(intra_attn_search_options_prob))
+        ############# TEST ############
