@@ -26,9 +26,9 @@ from modules.labels import *
 #                       -----------------------------------------------                          # 
 #                       |                       |                     |                          #                    
 #                       v                       v                     v                          #
-#              -------------------    --------------------   -------------------                 #
-#              | Dense_r_ratio#1 |    | Dense_r_ratio#.. |   | Dense_r_ratio#N |                 #
-#              -------------------    --------------------   -------------------                 # 
+#              -------------------    --------------------   ---------------------               #
+#              | Dense_r_ratio#0 |    | Dense_r_ratio#.. |   | Dense_r_ratio#N-1 |               #
+#              -------------------    --------------------   ---------------------               # 
 #                       |                       |                     |                          #
 #           ------------------------    ------------------------   ------------------------      #
 #           |     ZeroPadding as   |    |     ZeroPadding as   |   |     ZeroPadding as   |      #
@@ -36,7 +36,7 @@ from modules.labels import *
 #           |     output size      |    |     output size      |   |     output size      |      #  
 #           ------------------------    ------------------------   ------------------------      # 
 #                       |                       |                              |                 #
-#     * alpha_r_ratio#1 |    * alpha_r_ratio#.. v            * alpha_r_ratio#N |                 #
+#     * alpha_r_ratio#0 |    * alpha_r_ratio#.. v          * alpha_r_ratio#N-1 |                 #
 #                       ----------------------> + <-----------------------------                 #
 #                                               |                                                #
 #                                               v                                                #
@@ -61,7 +61,7 @@ from modules.labels import *
 #                                    |    Attention map    |                                     #
 #                                    -----------------------                                     #
 #                                               |                                                #
-#                                               v Multiply with Input of Attn block              #
+#                                               v Multiply Input of Attn block with attn map     #
 #                                                                                                # 
 ##################################################################################################
 
@@ -70,6 +70,8 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
     """Channel Attenton block from paper 'Squeeze-and-Excitation (SE) Networks [2017]'."""
     def __init__(self, block_id, channel_output, reduction_ratio_search_infos, activation_dense1='relu', activation_dense2='sigmoid', name=None, **kwargs):
         super(ChannelAttention0_Search, self).__init__(name=name, **kwargs)
+        self.name = name
+        self.block_id = block_id
         self.ch_out = channel_output
 
         # -------- Squeeze Operation ---------- #
@@ -87,11 +89,12 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
 
         for this_r_ratio in list_of_r_ratios:
             dense1_ops_with_this_r_ratio = self._get_dense1_ops(min_r_ratios=min_value_of_r_ratios, 
-                                                                this_r_ratio=this_r_ratio)
+                                                                this_r_ratio=this_r_ratio,
+                                                                name=self.name)
 
             self.dense1_ops_with_r_ratios.append(dense1_ops_with_this_r_ratio)
 
-        # -------- Exciation_1st Activation for searching ---------- #
+        # -------- Exciation_1st Activation ---------- #
         if activation_dense1 == 'relu':
             dense1_act_func = ReLU
 
@@ -104,14 +107,29 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
 
 
     def call(self, inputs, alphas_intra_attn_weights, training=False):
-        attn = self.squeeze(inputs)
-        attn = self.dense1(attn)
-        attn = self.dense2(attn)
+        # -------- Squeeze Operation ---------- #
+        out_squeeze_op = self.squeeze(inputs)
+
+        # -------- Exciation_1st (Dense_1st) Opeartions for searching ---------- #
+        out_dense1_ops_with_r_ratios = list()
+        for dense1_op_id, dense1_op in enumerate(self.dense1_ops_with_r_ratios):
+            out_dense1_op = dense1_op(out_squeeze_op)
+            out_dense1_op = out_dense1_op * alphas_intra_attn_weights[self.block_id, self.start_weight_idx_of_r_ratios + dense1_op_id]
+
+            out_dense1_ops_with_r_ratios.append(out_dense1_op)
+        
+        mix_out_dense1_ops_with_r_ratios = tf.add_n(out_dense1_ops_with_r_ratios)
+
+        # -------- Exciation_1st Activation ---------- #
+        out_dense1_act = self.dense1_act(mix_out_dense1_ops_with_r_ratios)
+
+        # -------- Exciation_2nd (Dense_2nd) Opeartion and Activation ---------- #
+        attn = self.dense2(out_dense1_act)
         attn = tf.reshape(attn, [-1, 1, 1, self.ch_out])
         return tf.math.multiply(inputs, attn)
 
 
-    def _get_dense1_ops(self, min_r_ratios, this_r_ratio):
+    def _get_dense1_ops(self, min_r_ratios, this_r_ratio, name=None):
         # calculate how many zeros to add at the beginning and end of the padding dimension (axis 1)
         num_left_pad = 0
         num_right_pad = (self.ch_out // min_r_ratios) - (self.ch_out // this_r_ratio)
