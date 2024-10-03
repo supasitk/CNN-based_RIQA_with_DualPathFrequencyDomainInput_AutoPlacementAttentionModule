@@ -135,7 +135,7 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
         num_right_pad = (self.ch_out // min_r_ratios) - (self.ch_out // this_r_ratio)
 
         return Sequential([Dense(units=self.ch_out // this_r_ratio,
-                                 name=name + "_dense1_op"),
+                                 name=name + "_dense1_op_r" + str(this_r_ratio)),
                            Reshape([-1, 1]),
                            ZeroPadding1D(padding=(num_left_pad, num_right_pad)),
                            Reshape([-1])                        
