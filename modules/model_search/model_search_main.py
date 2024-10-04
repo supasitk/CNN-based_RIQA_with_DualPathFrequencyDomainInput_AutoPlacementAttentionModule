@@ -44,10 +44,6 @@ class SearchNNmodel(object):
                                                                  attn_search_infos=attn_search_infos_dicts)
         else:
             raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
-
-        ########## TEST ##################
-        self.get_probability_of_attention_search_options()
-        ########## TEST ##################
     
 
     def _initialize_inter_attn_search_parameter_and_info(self):
@@ -231,12 +227,17 @@ class SearchNNmodel(object):
         return [self.intra_attn_search_weights], self.intra_attn_search_infos
 
 
-    def get_probability_of_attention_search_options(self):
+    def _get_probability_of_attention_search_options(self):
         """get probability of options of INTER- and INTRA-attention_types searching"""
         
         # calculate probability of options of both INTER- and INTRA-attention_types searching for each branch of the model
         num_of_branch = self.model_cfg['number_of_branch']
 
+        # information of inter_attn_search_options_prob (dict):
+        #   {branch_id: tf.Tensor with shape=(number_of_attention_block of this branch, maximum_number_of_attention_type_for_any_branch)}
+        # 
+        # information of intra_attn_search_options_prob (dict):
+        #   {branch_id: tf.Tensor with shape=(number_of_attention_block of this branch, maximum_number_of_search_option_accumulated_from_all_attention_types_for_any_branch)}
         inter_attn_search_options_prob = dict()
         intra_attn_search_options_prob = dict() 
 
@@ -258,9 +259,17 @@ class SearchNNmodel(object):
             inter_attn_search_options_prob[branch_id] = inter_attn_search_options_prob_this_branch
             intra_attn_search_options_prob[branch_id] = intra_attn_search_options_prob_this_branch
         
-        ############# TEST ############
-        print('#'*100)
-        print('inter_attn_search_options_prob: {}'.format(inter_attn_search_options_prob))
-        print('#'*100)
-        print('intra_attn_search_options_prob: {}'.format(intra_attn_search_options_prob))
-        ############# TEST ############
+        return inter_attn_search_options_prob, intra_attn_search_options_prob
+
+
+    def write_probability_of_attention_search_options(self, filepath, train_unit_num, train_unit='epoch'):
+        """write probability of options of INTER- and INTRA-attention_types searching to file"""
+        inter_attn_search_options_prob, intra_attn_search_options_prob = self._get_probability_of_attention_search_options()
+
+        f = open(filepath, 'a')
+        f.write(f"{train_unit}_{train_unit_num}\n")
+        f.write(f"-----------------------------------------------------\n")
+        f.write(f"Probability of INTER-attention search options:{inter_attn_search_options_prob}\n")
+        f.write(f"\nProbability of INTRA-attention search options:{intra_attn_search_options_prob}\n")
+        f.write(f"-----------------------------------------------------\n")
+        f.close()            

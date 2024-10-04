@@ -42,7 +42,7 @@ def main(_):
     log_dir = './logs/train_search/' + cfg['config_summary'] + '/run_log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    logging.get_absl_handler().use_absl_log_file('training.log', log_dir)
+    logging.get_absl_handler().use_absl_log_file('training_search.log', log_dir)
 
     # summarize important configuration of search execution to log file
     write_exec_search_config_summary(cfg)
@@ -97,6 +97,11 @@ def main(_):
     logging.info('Network structure: {}'.format(model_structure))
     #model.summary(print_fn=lambda x: logging.info(x))
     snn.model.summary()
+
+    ###### TEST #######
+    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=1, train_unit='epoch')
+    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=2, train_unit='epoch')
+    ###### TEST #######
 
 #     # optimizer
 #     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
