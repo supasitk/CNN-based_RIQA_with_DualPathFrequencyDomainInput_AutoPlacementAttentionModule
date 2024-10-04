@@ -13,33 +13,45 @@ model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
 model_attention_search: 'SearchAttn_OneBranch_ThreeInputChannelRGB'    # ['SearchAttn_OneBranch_ThreeInputChannelRGB']
 model_attention_search_config_path: './configs/model_attention_search/SearchAttn_OneBranch_ThreeInputChannelRGB.yaml'
 
-# # optimizer ['SGD']
-# # --- SGD --- #
-# optimizer: 'SGD'
-# optimizer_config:
-#   'momentum': 0.9
-#   'nesterov': False
+# optimizer ['SGD']
+# --- SGD --- #
+optimizer: 'SGD'
+optimizer_config:
+  'momentum': 0.9
+  'nesterov': False
 
-# # learning rate scheduler ['Fix', 'ExponentialDecay', 'CosineDecay']
-# # --- Fix --- #
-# lr_schedule: 'Fix'
-# lr_config:
-#   'lr_init': !!float 1e-2
-# # --- ExponentialDecay --- #
-# #lr_schedule: 'ExponentialDecay' # 'decay_rate' parameter calculated from "(lr_min / lr_init) ** (1 / num_times_of_decay)""
-# #lr_config:
-# #  'lr_init': !!float 1e-2
-# #  'lr_min': !!float 1e-4
-# #  'decay_unit': 'epoch'     # 'epoch' or 'step' of decay
-# #  'decay_on_every_unit': 1
-# #  'staircase': True
-# # --- CosineDecay --- #
-# #lr_schedule: 'CosineDecay'
-# #lr_config:
-# #  'lr_init': !!float 1e-2
-# #  'lr_alpha': !!float 0.0    # minimum learning rate (lr_min) value for decay as a fraction of initial_learning_rate (lr_init),  
-#                               # lr_min=lr_alpha * lr_init, e.g., for lr_init=0.01 (1e-2), set lr_aplha=0.01 if lr_min=0.0001 (1e-4) needed 
+# optimizer of architecture search ['Adam']
+# --- Adam --- #
+arch_optimizer: 'Adam'
+arch_optimizer_config:
+  'beta_1': 0.5
+  'beta_2': 0.999
 
+# learning rate scheduler ['Fix', 'ExponentialDecay', 'CosineDecay']
+# --- Fix --- #
+lr_schedule: 'Fix'
+lr_config:
+  'lr_init': !!float 1e-2
+# --- ExponentialDecay --- #
+#lr_schedule: 'ExponentialDecay' # 'decay_rate' parameter calculated from "(lr_min / lr_init) ** (1 / num_times_of_decay)""
+#lr_config:
+#  'lr_init': !!float 1e-2
+#  'lr_min': !!float 1e-4
+#  'decay_unit': 'epoch'     # 'epoch' or 'step' of decay
+#  'decay_on_every_unit': 1
+#  'staircase': True
+# --- CosineDecay --- #
+#lr_schedule: 'CosineDecay'
+#lr_config:
+#  'lr_init': !!float 1e-2
+#  'lr_alpha': !!float 0.0    # minimum learning rate (lr_min) value for decay as a fraction of initial_learning_rate (lr_init),  
+                              # lr_min=lr_alpha * lr_init, e.g., for lr_init=0.01 (1e-2), set lr_aplha=0.01 if lr_min=0.0001 (1e-4) needed 
+
+# learning rate scheduler of architecture search ['Fix']
+# --- Fix --- #
+arch_lr_schedule: 'Fix'
+arch_lr_config:
+  'lr_init': !!float 6e-4
 
 # # loss function ['SparseCategoricalCrossentropy']
 # # --- SparseCategoricalCrossentropy --- #
@@ -52,7 +64,8 @@ model_attention_search_config_path: './configs/model_attention_search/SearchAttn
 # training setting
 batch_size: 32
 dropout_rate: 0.0
-# weights_decay: null   # [null or float]
+weights_decay: null   # [null or float]
+arch_weights_decay: !!float 1e-3   # [null or float]
 # train_unit: 'epoch'     # 'epoch' or 'step' of training
 # max_train_unit: 160
 # val_unit: 'epoch'       # 'epoch' or 'step' of validation
