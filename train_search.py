@@ -107,21 +107,24 @@ def main(_):
     # loss function
     criterion = getLossFn(cfg)
 
-#     # load checkpoint
-#     checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
-#     if not os.path.exists(checkpoint_dir):
-#         os.makedirs(checkpoint_dir)
-#     checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
-# #                                     optimizer=optimizer,
-#                                      model=model)
-#     manager = tf.train.CheckpointManager(checkpoint=checkpoint,
-#                                          directory=checkpoint_dir,
-#                                          max_to_keep=3)
-#     if manager.latest_checkpoint:
-#         checkpoint.restore(manager.latest_checkpoint)
-#         logging.info('[*] Load ckpt from {} at step {}.'.format(manager.latest_checkpoint, checkpoint.step.numpy()))
-#     else:
-#         logging.info("[*] Training from scratch.")
+    # load checkpoint
+    checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary']
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
+#                                     optimizer=optimizer,
+#                                     arch_optimizer=arch_optimizer,
+                                     model=snn.model,
+                                     alphas_inter=snn.inter_attn_search_weights,
+                                     alphas_intra=snn.intra_attn_search_weights)
+    manager = tf.train.CheckpointManager(checkpoint=checkpoint,
+                                         directory=checkpoint_dir,
+                                         max_to_keep=3)
+    if manager.latest_checkpoint:
+        checkpoint.restore(manager.latest_checkpoint)
+        logging.info('[*] Load ckpt from {} at step {}.'.format(manager.latest_checkpoint, checkpoint.step.numpy()))
+    else:
+        logging.info("[*] Training from scratch.")
 
 #     # define training step function for model
 #     @tf.function
