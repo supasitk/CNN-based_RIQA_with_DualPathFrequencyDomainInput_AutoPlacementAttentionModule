@@ -262,12 +262,12 @@ class SearchNNmodel(object):
         return inter_attn_search_options_prob, intra_attn_search_options_prob
 
 
-    def write_probability_of_attention_search_options(self, filepath, train_unit_num, train_unit='epoch'):
+    def write_probability_of_attention_search_options(self, filepath, step, steps_per_epoch):
         """write probability of options of INTER- and INTRA-attention_types searching to file"""
         inter_attn_search_options_prob, intra_attn_search_options_prob = self._get_probability_of_attention_search_options()
 
         f = open(filepath, 'a')
-        f.write(f"{train_unit}_{train_unit_num}\n")
+        f.write(f"Step: {step} (Epoch: {step/steps_per_epoch})\n")
         f.write(f"-----------------------------------------------------\n")
         f.write(f"Probability of INTER-attention search options:{inter_attn_search_options_prob}\n")
         f.write(f"\nProbability of INTRA-attention search options:{intra_attn_search_options_prob}\n")

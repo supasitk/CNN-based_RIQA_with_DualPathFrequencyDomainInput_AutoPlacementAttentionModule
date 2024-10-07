@@ -142,6 +142,12 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
        tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
 
 
+def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, step, lr=None):
+  with summary_writer.as_default():
+    tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
+    tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+
+
 def write_dataset_config_summary(ds_name, cfg):
     """summarize important configuration of dataset"""
     logging.info('-' * 100)
@@ -204,6 +210,10 @@ def write_exec_config_summary(cfg):
     logging.info('*** MODEL ***')
     logging.info('Model structure: {}'.format(cfg['model_structure']))
     logging.info('Model config path: {}'.format(cfg['model_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ATTENTION ***')
+    logging.info('Model attention structure: {}'.format(cfg['model_attention']))
+    logging.info('Model attention config path: {}'.format(cfg['model_attention_config_path']))
     logging.info('-' * 100)
     logging.info('*** OPTIMIZER ***')
     logging.info('Optimizer: {}'.format(cfg['optimizer']))
@@ -285,6 +295,10 @@ def write_exec_search_config_summary(cfg):
     logging.info('Model structure: {}'.format(cfg['model_structure']))
     logging.info('Model config path: {}'.format(cfg['model_config_path']))
     logging.info('-' * 100)
+    logging.info('*** MODEL ATTENTION SEARCH ***')
+    logging.info('Model attention search structure: {}'.format(cfg['model_attention_search']))
+    logging.info('Model attention search config path: {}'.format(cfg['model_attention_search_config_path']))
+    logging.info('-' * 100)
     logging.info('*** OPTIMIZER ***')
     logging.info('Optimizer: {}'.format(cfg['optimizer']))
     logging.info('Optimizer configuration: {}'.format(cfg['optimizer_config']))
@@ -312,6 +326,8 @@ def write_exec_search_config_summary(cfg):
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Starting number of training unit for architecture search: {}'.format(cfg['start_arch_search_train_unit']))
+    logging.info('Save unit: {}'.format(cfg['save_unit']))
+    logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))
 
 
