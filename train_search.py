@@ -17,7 +17,7 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_search_confi
 # #                           evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model_search.model_search_main import (SearchNNmodel)
-# #from modules.optimizers import (getOptimizer)
+from modules.optimizers import (getOptimizer)
 # #from modules.losses import (getLossFn)
 # #from modules.metric import (accumulated_result, compute_metric)
 
@@ -84,11 +84,11 @@ def main(_):
     # (last 2 return items ('test_ds' and 'test_ds_len') ignored because they are not used for train_search)
     train_ds, train_ds_len, val_ds, val_ds_len, _, _ = gen_dataset(ds_name, ds_cfg, cfg)
     
-#     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
-#     train_batch_size = int(cfg['batch_size'])
-#     steps_per_epoch = train_ds_len // train_batch_size
-#     total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
-#     max_epoch = total_steps / steps_per_epoch
+    # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
+    train_batch_size = int(cfg['batch_size'])
+    steps_per_epoch = train_ds_len // train_batch_size
+    total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
+    max_epoch = total_steps / steps_per_epoch
 
     # define network
     snn = SearchNNmodel(cfg, ds_cfg, model_cfg, model_attn_search_cfg)
@@ -98,13 +98,11 @@ def main(_):
     #model.summary(print_fn=lambda x: logging.info(x))
     snn.model.summary()
 
-    ###### TEST #######
-    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=1, train_unit='epoch')
-    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=2, train_unit='epoch')
-    ###### TEST #######
+    # optimizer
+    optimizer = getOptimizer(cfg, total_steps, steps_per_epoch, name='optimizer', arch_search=False)
 
-#     # optimizer
-#     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
+    # optimizer of architecture search
+    arch_optimizer = getOptimizer(cfg, total_steps, steps_per_epoch, name='arch_optimizer', arch_search=True)
 
 #     # loss function
 #     criterion = getLossFn(cfg)
@@ -139,6 +137,11 @@ def main(_):
 #     @tf.function
 #     def val_test_step(inputs):
 #         return model(inputs, training=False)
+
+    ###### TEST #######
+    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=1, train_unit='epoch')
+    snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=2, train_unit='epoch')
+    ###### TEST #######
 
 #     # training loop
 #     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)

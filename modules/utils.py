@@ -305,6 +305,8 @@ def write_exec_search_config_summary(cfg):
     logging.info('Batch size: {}'.format(cfg['batch_size']))
     logging.info('Weight decay: {}'.format(cfg['weights_decay']))
     logging.info('Weight decay of Architecture Search: {}'.format(cfg['arch_weights_decay']))
+    logging.info('Training unit: {}'.format(cfg['train_unit']))
+    logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))
 
 
