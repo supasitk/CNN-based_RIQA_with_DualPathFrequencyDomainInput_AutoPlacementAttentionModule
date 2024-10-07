@@ -126,6 +126,8 @@ def main(_):
     else:
         logging.info("[*] Training from scratch.")
 
+    logging.info('[*] Searching model after {} {}.'.format(cfg['start_arch_search_train_unit'], cfg['train_unit']))
+
 #     # define training step function for model
 #     @tf.function
 #     def train_step(inputs, labels):

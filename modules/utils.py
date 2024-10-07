@@ -311,6 +311,7 @@ def write_exec_search_config_summary(cfg):
     logging.info('Weight decay of Architecture Search: {}'.format(cfg['arch_weights_decay']))
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
+    logging.info('Starting number of training unit for architecture search: {}'.format(cfg['start_arch_search_train_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))
 
 

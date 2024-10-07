@@ -68,6 +68,7 @@ weights_decay: null   # [null or float]
 arch_weights_decay: !!float 1e-3   # [null or float]
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 90
+start_arch_search_train_unit: 9
 # val_unit: 'epoch'       # 'epoch' or 'step' of validation
 # val_on_every_unit: 1
 # val_last_k_accuracy: 5
