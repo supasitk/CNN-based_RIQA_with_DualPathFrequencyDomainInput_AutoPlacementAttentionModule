@@ -18,7 +18,7 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_search_confi
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.optimizers import (getOptimizer)
-# #from modules.losses import (getLossFn)
+from modules.losses import (getLossFn)
 # #from modules.metric import (accumulated_result, compute_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
@@ -104,8 +104,8 @@ def main(_):
     # optimizer of architecture search
     arch_optimizer = getOptimizer(cfg, total_steps, steps_per_epoch, name='arch_optimizer', arch_search=True)
 
-#     # loss function
-#     criterion = getLossFn(cfg)
+    # loss function
+    criterion = getLossFn(cfg)
 
 #     # load checkpoint
 #     checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
