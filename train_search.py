@@ -128,20 +128,26 @@ def main(_):
 
     logging.info('[*] Searching model after {} {}.'.format(cfg['start_arch_search_train_unit'], cfg['train_unit']))
 
-#     # define training step function for model
-#     @tf.function
-#     def train_step(inputs, labels):
-#         with tf.GradientTape() as tape:
-#             logits = model(inputs, training=True)
-#             loss = criterion(labels, logits)
-#             grads = tape.gradient(loss, model.trainable_variables)
-#         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-#         return logits, loss
+    # define training step function for weights of model's computational operations 
+    @tf.function
+    def train_step(inputs, labels):
+        with tf.GradientTape() as tape:
+            logits = snn.model((inputs, *snn.inter_attn_search_weights, *snn.intra_attn_search_weights), training=True)
+            loss = criterion(labels, logits)
+        grads = tape.gradient(loss, snn.model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, snn.model.trainable_variables))
+        return logits, loss
     
-#     # define validation and test step function for model
-#     @tf.function
-#     def val_test_step(inputs):
-#         return model(inputs, training=False)
+    # define training step function for weights of model's architecture searching 
+    @tf.function
+    def arch_train_step(inputs, labels):
+        with tf.GradientTape() as tape:
+            logits = snn.model((inputs, *snn.inter_attn_search_weights, *snn.intra_attn_search_weights), training=True)
+            loss = criterion(labels, logits)
+        attn_search_weights = snn.inter_attn_search_weights + snn.intra_attn_search_weight # combination of lists (concatenate the two lists into one list)
+        grads = tape.gradient(loss, attn_search_weights)
+        arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
+        return loss
 
     ###### TEST #######
     snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', train_unit_num=1, train_unit='epoch')

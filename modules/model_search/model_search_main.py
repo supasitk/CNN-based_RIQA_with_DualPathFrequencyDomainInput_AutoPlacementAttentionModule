@@ -254,7 +254,7 @@ class SearchNNmodel(object):
             intra_size_splits_this_branch = self.intra_attn_search_infos[branch_id][label_of_list_of_split_weights]
             intra_attn_search_options_prob_this_branch = SplitSoftmax(num_blocks=intra_num_attn_block_this_branch,
                                                                       num_ops=sum(intra_size_splits_this_branch),
-                                                                      size_splits=intra_size_splits_this_branch)(self.intra_attn_search_weights[branch_id-1]) # indices of 1st dimension (its size = num_branch) of self.inter_attn_search_weights start from 0 to num_branch-1, so branch_id need to be subtracted with 1
+                                                                      size_splits=intra_size_splits_this_branch)(self.intra_attn_search_weights[branch_id-1]) # indices of 1st dimension (its size = num_branch) of self.intra_attn_search_weights start from 0 to num_branch-1, so branch_id need to be subtracted with 1
 
             inter_attn_search_options_prob[branch_id] = inter_attn_search_options_prob_this_branch
             intra_attn_search_options_prob[branch_id] = intra_attn_search_options_prob_this_branch

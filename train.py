@@ -122,7 +122,7 @@ def main(_):
         with tf.GradientTape() as tape:
             logits = model(inputs, training=True)
             loss = criterion(labels, logits)
-            grads = tape.gradient(loss, model.trainable_variables)
+        grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return logits, loss
     
