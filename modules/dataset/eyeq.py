@@ -130,7 +130,7 @@ def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_
     return transform_data
 
 
-def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True):
+def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True, train_search=False):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -140,7 +140,7 @@ def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_
     num_img = num_img_label
     dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
 
-    if train_val_test == 'train':
+    if ((train_val_test == 'train') or ((train_val_test == 'validation') and (train_search == True))):
         dataset = dataset.repeat()
 
     if shuffle:
