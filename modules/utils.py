@@ -117,16 +117,16 @@ def evaluation_result_log(eval_mode, eval_loss, eval_result, epoch_num=None):
                ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
 
 
-def last_k_avg_max_min_accuracy(acc_list, curr_num_val, k):
-  """calculate last k average accuracy"""
+def last_k_avg_max_min_metric(metric_list, curr_num_val, k):
+  """calculate last k average/max/mix metric of validation"""
   if curr_num_val < k:
     k = curr_num_val
   else:
     # in case of restoring from checkpoint 
-    if len(acc_list) < k:
-      k = len(acc_list)
+    if len(metric_list) < k:
+      k = len(metric_list)
 
-  return np.mean(acc_list[-k:]), np.amax(acc_list[-k:]), np.amin(acc_list[-k:])
+  return np.mean(metric_list[-k:]), np.amax(metric_list[-k:]), np.amin(metric_list[-k:])
 
 
 def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False, lr=None):
@@ -235,7 +235,7 @@ def write_exec_config_summary(cfg):
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Validation unit: {}'.format(cfg['val_unit']))
     logging.info('Validation on every unit: {}'.format(cfg['val_on_every_unit']))
-    logging.info('Validation last k accuracy: {}'.format(cfg['val_last_k_accuracy']))
+    logging.info('Validation last k metrics: {}'.format(cfg['val_last_k_metrics']))
     logging.info('Save unit: {}'.format(cfg['save_unit']))
     logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
     logging.info('Seed: {}'.format(cfg['seed']))

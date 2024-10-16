@@ -57,7 +57,7 @@ train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
 val_unit: 'epoch'       # 'epoch' or 'step' of validation
 val_on_every_unit: 1
-val_last_k_accuracy: 5
+val_last_k_metrics: 5
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight
 save_on_every_unit: 1
 seed: 0

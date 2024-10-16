@@ -10,7 +10,7 @@ import tensorflow as tf
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
                            write_dataset_config_summary, write_model_config_summary, 
                            write_model_attention_config_summary, ProgressBar, 
-                           evaluation_result_log, last_k_avg_max_min_accuracy,
+                           evaluation_result_log, last_k_avg_max_min_metric,
                            evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
@@ -138,8 +138,9 @@ def main(_):
     train_accumulated_results = accumulated_result()
     val_accumulated_results = accumulated_result()
     val_on_every_step = int(cfg['val_on_every_unit']) if cfg['val_unit'] == 'step' else int(cfg['val_on_every_unit'] * steps_per_epoch)
+    val_loss_list = []
     val_acc_list = []
-    val_last_k_accuracy = int(cfg['val_last_k_accuracy'])
+    val_last_k_metrics = int(cfg['val_last_k_metrics'])
     val_best_acc = 0.
     val_best_acc_step = 0
     test_accumulated_results = accumulated_result()
@@ -208,14 +209,19 @@ def main(_):
 
             evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_best_val_acc=is_current_val_best_acc)
 
+            val_loss_list.append(val_loss)
+            val_last_k_avg_loss, val_last_k_max_loss, val_last_k_min_loss = last_k_avg_max_min_metric(val_loss_list,
+                                                                                                      int(steps/val_on_every_step),
+                                                                                                      val_last_k_metrics)  
             val_acc_list.append(current_val_acc)
-            val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_accuracy(val_acc_list, 
-                                                                                                     int(steps/val_on_every_step), 
-                                                                                                     val_last_k_accuracy)
+            val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_metric(val_acc_list, 
+                                                                                                   int(steps/val_on_every_step), 
+                                                                                                   val_last_k_metrics)
             logging.info(str("[Validation - epoch {}]".format((steps / steps_per_epoch))) +
                          str(" New best validation accuracy: {}".format(is_current_val_best_acc)) +
-                         str(", Last {:d} avg|max|min validation accuracy: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_accuracy, val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc)) +
-                         str(", Best validation accuracy: {:0.4f} @ epoch {:0.2f} [step {:d}]".format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step)))
+                         str(", Last {:d} avg|max|min validation accuracy: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_metrics, val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc)) +
+                         str(", Best validation accuracy: {:0.4f} @ epoch {:0.2f} [step {:d}]".format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step)) +
+                         str(", Last {:d} avg|max|min validation loss: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_metrics, val_last_k_avg_loss, val_last_k_max_loss, val_last_k_min_loss)))
         
         # check if checkpoint
         if steps % save_on_every_step == 0:
