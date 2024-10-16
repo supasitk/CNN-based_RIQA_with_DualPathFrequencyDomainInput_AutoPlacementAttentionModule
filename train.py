@@ -16,7 +16,7 @@ from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (getLossFn)
-from modules.metric import (accumulated_result, compute_metric)
+from modules.metric import (accumulated_result, compute_metric, record_top_N_validation_for_specific_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
 
@@ -138,8 +138,14 @@ def main(_):
     train_accumulated_results = accumulated_result()
     val_accumulated_results = accumulated_result()
     val_on_every_step = int(cfg['val_on_every_unit']) if cfg['val_unit'] == 'step' else int(cfg['val_on_every_unit'] * steps_per_epoch)
-    val_loss_list = []
-    val_acc_list = []
+    val_metrics_for_find_top_N_val = cfg['val_metrics_for_find_top_N_val']
+    val_top_N = cfg['val_top_N']
+    top_N_validation_on_metrics = dict()
+    val_metrics_list = dict()
+    for metric in val_metrics_for_find_top_N_val:
+        top_N_validation_on_metrics[metric] = record_top_N_validation_for_specific_metric(N=val_top_N, 
+                                                                                          metric=metric)
+        val_metrics_list[metric] = list()
     val_last_k_metrics = int(cfg['val_last_k_metrics'])
     val_best_acc = 0.
     val_best_acc_step = 0
@@ -189,8 +195,19 @@ def main(_):
                                              val_accumulated_results.accum_y_pred, 
                                              class_names)
             evaluation_result_log('Validation', val_loss, val_eval_result, (steps / steps_per_epoch))
-            current_val_acc = np.mean(val_eval_result['Accuracy'])
             
+            
+            
+            current_val_loss = val_loss
+            current_val_acc = np.mean(val_eval_result['Accuracy'])
+            current_val_macroPrecision = np.mean(val_eval_result['Precision'])
+            current_val_macroSensitivity = np.mean(val_eval_result['Sensitivity'])
+            current_val_macroF1 = np.mean(val_eval_result['F1'])
+
+
+
+
+
             # check if best accuracy of validation
             is_current_val_best_acc = False 
             if current_val_acc > val_best_acc:
@@ -207,22 +224,33 @@ def main(_):
                 model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
                 model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
 
+
+
+
+            current_val_info = {'Epoch': steps / steps_per_epoch,
+                                'Loss': current_val_loss,
+                                'Accuracy': current_val_acc,
+                                'macroPrecision': current_val_macroPrecision,
+                                'macroSensitivity': current_val_macroSensitivity,
+                                'macroF1': current_val_macroF1
+                               }
+            logging.info('[Validation - epoch {}]: '.format((steps / steps_per_epoch)))
+            for metric in val_metrics_for_find_top_N_val:
+                top_N_validation_on_metrics[metric].update_top_N_validation(current_val_info)
+                logging.info('\tNew top-{} Validation of {} found: {}'.format(val_top_N, metric, top_N_validation_on_metrics[metric].is_current_val_metric_value_better))
+                top_N_validation_on_metrics[metric].show_top_N_validation()
+
+                val_metrics_list[metric].append(current_val_info[metric])
+                val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric = last_k_avg_max_min_metric(val_metrics_list[metric],
+                                                                                                                int(steps/val_on_every_step),
+                                                                                                                val_last_k_metrics)
+                logging.info('\tLast {:d} avg|max|min validation {}: {:0.4f}|{:0.4f}|{:0.4f}\n'.format(val_last_k_metrics, metric, val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric))
+
+
+
             evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_best_val_acc=is_current_val_best_acc)
 
-            val_loss_list.append(val_loss)
-            val_last_k_avg_loss, val_last_k_max_loss, val_last_k_min_loss = last_k_avg_max_min_metric(val_loss_list,
-                                                                                                      int(steps/val_on_every_step),
-                                                                                                      val_last_k_metrics)  
-            val_acc_list.append(current_val_acc)
-            val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_metric(val_acc_list, 
-                                                                                                   int(steps/val_on_every_step), 
-                                                                                                   val_last_k_metrics)
-            logging.info(str("[Validation - epoch {}]".format((steps / steps_per_epoch))) +
-                         str(" New best validation accuracy: {}".format(is_current_val_best_acc)) +
-                         str(", Last {:d} avg|max|min validation accuracy: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_metrics, val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc)) +
-                         str(", Best validation accuracy: {:0.4f} @ epoch {:0.2f} [step {:d}]".format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step)) +
-                         str(", Last {:d} avg|max|min validation loss: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_metrics, val_last_k_avg_loss, val_last_k_max_loss, val_last_k_min_loss)))
-        
+    
         # check if checkpoint
         if steps % save_on_every_step == 0:
             manager.save()

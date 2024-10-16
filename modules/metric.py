@@ -1,3 +1,6 @@
+from absl import logging
+import sys
+import operator
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import (accuracy_score, f1_score, confusion_matrix,
@@ -83,3 +86,65 @@ def compute_metric(y_true, y_prob, y_pred, class_names):
     }
 
     return output
+
+
+class record_top_N_validation_for_specific_metric(object):
+  # dictionary for metrics information of validation
+  MIN_FLOAT = sys.float_info.min
+  MAX_FLOAT = sys.float_info.max
+
+  val_infos_dict = {'Epoch': None,
+                    'Loss': MAX_FLOAT,
+                    'Accuracy': MIN_FLOAT,
+                    'macroPrecision': MIN_FLOAT,
+                    'macroSensitivity': MIN_FLOAT,
+                    'macroF1': MIN_FLOAT
+                   }
+
+
+  def __init__(self, N, metric):
+    # metric used for finding top-N validation
+    self.metric = metric
+    self.N = N
+
+    # comparison operator of metric
+    if self.metric == 'Loss': # if given loss is LESS than MAXIMUM (lowest rank) loss of top-N validation recored previously, 
+                              # then appending this validation information to self.top_N_val_list, sorting it in ASCENDING [smallest to largest] order (lower loss is better), and finally getting only Top-N validation recorded to self.top_N_val_list
+      self.comparison_op = operator.lt
+      self.max_or_min_op = max
+      self.sorted_reverse = False
+    elif self.metric == 'Accuracy': # if given accuracy is GREATER than MINIMUM (lowest rank) accuracy of top-N validation recored previously,
+                                    # then appending this validation information to self.top_N_val_list, sorting it in DESCENDING [largest to smallest] order (greater accuracy is better), and finally getting only Top-N validation recorded to self.top_N_val_list
+      self.comparison_op = operator.gt
+      self.max_or_min_op = min
+      self.sorted_reverse = True 
+    else:
+      raise ValueError('Unknown \'{}\' metric of validation'.format(metric))
+
+    # list of recording top-N validation (lower index is better validation [rank #1 to #N = index #0 to #N-1])
+    self.top_N_val_list = [self.val_infos_dict for _ in range(N)]
+
+
+  def update_top_N_validation(self, curr_val_info):
+    curr_val_metric_value = curr_val_info[self.metric]
+    lowestRankTopN_val_metric_value = self.max_or_min_op(self.top_N_val_list, key=lambda x: x[self.metric])[self.metric]
+    self.is_current_val_metric_value_better = False
+    
+    if self.comparison_op(curr_val_metric_value, lowestRankTopN_val_metric_value):
+      self.is_current_val_metric_value_better = True
+      temp_top_N_val_list = self.top_N_val_list
+      temp_top_N_val_list.append(curr_val_info)
+      sorted_temp_top_N_val_list = sorted(temp_top_N_val_list, key=lambda x: x[self.metric], reverse=self.sorted_reverse)
+      self.top_N_val_list = sorted_temp_top_N_val_list[:self.N]
+
+  
+  def show_top_N_validation(self):
+    logging.info('\tTop-{} validation of {}:'.format(self.N, self.metric))
+    for rank, val_info in enumerate(self.top_N_val_list):
+      logging.info(str("\t\tRank #{}: ".format(rank+1)) +
+                   str("Epoch {}".format(val_info['Epoch'])) + 
+                   ', Loss: ' + str("{:0.4f}".format(val_info['Loss'])) +
+                   ', Accuracy: ' + str("{:0.4f}".format(val_info['Accuracy'])) +
+                   ', macroPrecision: ' + str("{:0.4f}".format(val_info['macroPrecision'])) +
+                   ', macroSensitivity: ' + str("{:0.4f}".format(val_info['macroSensitivity'])) +
+                   ', macroF1: ' + str("{:0.4f}".format(val_info['macroF1'])))

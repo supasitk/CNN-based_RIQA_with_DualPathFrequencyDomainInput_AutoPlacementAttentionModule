@@ -235,6 +235,8 @@ def write_exec_config_summary(cfg):
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Validation unit: {}'.format(cfg['val_unit']))
     logging.info('Validation on every unit: {}'.format(cfg['val_on_every_unit']))
+    logging.info('Validation metrics used for find top-N validation (each metric considered separately): {}'.format(cfg['val_metrics_for_find_top_N_val']))
+    logging.info('top-N Validation recorded on each metric: {}'.format(cfg['val_top_N']))
     logging.info('Validation last k metrics: {}'.format(cfg['val_last_k_metrics']))
     logging.info('Save unit: {}'.format(cfg['save_unit']))
     logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))

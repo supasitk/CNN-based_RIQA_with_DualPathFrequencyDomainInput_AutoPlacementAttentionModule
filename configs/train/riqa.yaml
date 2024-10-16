@@ -57,6 +57,8 @@ train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
 val_unit: 'epoch'       # 'epoch' or 'step' of validation
 val_on_every_unit: 1
+val_metrics_for_find_top_N_val: ['Loss', 'Accuracy'] # metrics ['Loss', 'Accuracy'] of validation used for find top-N validation (each metric considered separately)
+val_top_N: 3            # top-N validation recorded on each metric in 'val_metrics_for_find_top_N_val' 
 val_last_k_metrics: 5
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight
 save_on_every_unit: 1
