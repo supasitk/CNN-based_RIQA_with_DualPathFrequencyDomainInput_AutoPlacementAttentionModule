@@ -147,9 +147,18 @@ def main(_):
                                                                                           metric=metric)
         val_metrics_list[metric] = list()
     val_last_k_metrics = int(cfg['val_last_k_metrics'])
+    save_weights_dir = checkpoint_dir + '/weights/'
+    if not os.path.exists(save_weights_dir):
+        os.makedirs(save_weights_dir)
+    suffix_saving_onlyWeights_filename = '_onlyWeights.weights.h5'
+    suffix_saving_modelWithWeights_filename = '_ModelWithWeights.keras'
+
+    ###############
     val_best_acc = 0.
     val_best_acc_step = 0
     test_accumulated_results = accumulated_result()
+    ###############
+    
     class_names = ds_cfg['class_name']
     summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'])
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
@@ -185,6 +194,7 @@ def main(_):
 
         # check if validation
         if (steps % val_on_every_step) == 0 and steps > 1:
+            # run validation and record its results
             val_accumulated_results.reset()
             for val_inputs, val_input_paths, val_labels in val_ds:
                 val_logits = val_test_step(val_inputs)
@@ -196,13 +206,64 @@ def main(_):
                                              class_names)
             evaluation_result_log('Validation', val_loss, val_eval_result, (steps / steps_per_epoch))
             
-            
-            
+            # summarize information of validation result
+            current_epoch = steps / steps_per_epoch
             current_val_loss = val_loss
             current_val_acc = np.mean(val_eval_result['Accuracy'])
             current_val_macroPrecision = np.mean(val_eval_result['Precision'])
             current_val_macroSensitivity = np.mean(val_eval_result['Sensitivity'])
             current_val_macroF1 = np.mean(val_eval_result['F1'])
+
+            current_val_info = {'Epoch': current_epoch,
+                                'Loss': current_val_loss,
+                                'Accuracy': current_val_acc,
+                                'macroPrecision': current_val_macroPrecision,
+                                'macroSensitivity': current_val_macroSensitivity,
+                                'macroF1': current_val_macroF1
+                               }
+
+            # check if the current validation information is better than the previous top-N validation for each metric,
+            # if yes (for each metric), updating new top-N validation of the metric and save weights of model.
+            # also, showing average/max/min value for each metric from last K validation 
+            logging.info('[Validation - epoch {}]: '.format((current_epoch)))
+            for metric in val_metrics_for_find_top_N_val:
+                # check if updating new top-N validation of this metric
+                top_N_validation_on_metrics[metric].update_top_N_validation(current_val_info)
+                logging.info('\tNew top-{} Validation of {} found: {}'.format(val_top_N, metric, top_N_validation_on_metrics[metric].is_current_val_metric_value_better))
+                top_N_validation_on_metrics[metric].show_top_N_validation()
+
+                # check if save weights of model
+                if top_N_validation_on_metrics[metric].is_current_val_metric_value_better == True:
+                    weight_filepath = f"{save_weights_dir}/EP{current_epoch}{suffix_saving_onlyWeights_filename}"
+                    model_filepath = f"{save_weights_dir}/EP{current_epoch}{suffix_saving_modelWithWeights_filename}"
+                    if not os.path.exists(weight_filepath): # avoid duplicate saving from different metrics
+                        model.save_weights(weight_filepath)
+                    if not os.path.exists(model_filepath): # avoid duplicate saving from different metrics
+                        model.save(model_filepath)
+
+                # showing average/max/min value for each metric from last K validation
+                val_metrics_list[metric].append(current_val_info[metric])
+                val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric = last_k_avg_max_min_metric(val_metrics_list[metric],
+                                                                                                                int(steps/val_on_every_step),
+                                                                                                                val_last_k_metrics)
+                logging.info('\tLast {:d} avg|max|min validation {}: {:0.4f}|{:0.4f}|{:0.4f}\n'.format(val_last_k_metrics, metric, val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric))
+
+            # delete the previous saved weights of model which are not in the current top-N validation of every metrics
+            list_epoch_num_in_topN_val_from_every_metrics = list()
+            for metric in val_metrics_for_find_top_N_val:
+                list_epoch_num_in_topN_val_of_this_metric = top_N_validation_on_metrics[metric].get_epoch_number_in_top_N_validation()
+                list_epoch_num_in_topN_val_from_every_metrics.extend(list_epoch_num_in_topN_val_of_this_metric)
+            
+            list_epoch_num_in_topN_val_from_every_metrics = list(set(list_epoch_num_in_topN_val_from_every_metrics)) # remove duplicate of epoch numbers
+
+            list_saved_onlyWeights_filename = [f"EP{ep_num}{suffix_saving_onlyWeights_filename}" for ep_num in list_epoch_num_in_topN_val_from_every_metrics] 
+            list_saved_modelWithWeights_filename = [f"EP{ep_num}{suffix_saving_modelWithWeights_filename}" for ep_num in list_epoch_num_in_topN_val_from_every_metrics]
+            list_saved_onlyWeights_modelWithWeights_filename = list_saved_onlyWeights_filename + list_saved_modelWithWeights_filename
+
+            for filename in os.listdir(save_weights_dir):
+                if filename not in list_saved_onlyWeights_modelWithWeights_filename:
+                    os.remove(save_weights_dir + filename)
+
 
 
 
@@ -224,31 +285,12 @@ def main(_):
                 model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
                 model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
 
-
-
-
-            current_val_info = {'Epoch': steps / steps_per_epoch,
-                                'Loss': current_val_loss,
-                                'Accuracy': current_val_acc,
-                                'macroPrecision': current_val_macroPrecision,
-                                'macroSensitivity': current_val_macroSensitivity,
-                                'macroF1': current_val_macroF1
-                               }
-            logging.info('[Validation - epoch {}]: '.format((steps / steps_per_epoch)))
-            for metric in val_metrics_for_find_top_N_val:
-                top_N_validation_on_metrics[metric].update_top_N_validation(current_val_info)
-                logging.info('\tNew top-{} Validation of {} found: {}'.format(val_top_N, metric, top_N_validation_on_metrics[metric].is_current_val_metric_value_better))
-                top_N_validation_on_metrics[metric].show_top_N_validation()
-
-                val_metrics_list[metric].append(current_val_info[metric])
-                val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric = last_k_avg_max_min_metric(val_metrics_list[metric],
-                                                                                                                int(steps/val_on_every_step),
-                                                                                                                val_last_k_metrics)
-                logging.info('\tLast {:d} avg|max|min validation {}: {:0.4f}|{:0.4f}|{:0.4f}\n'.format(val_last_k_metrics, metric, val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric))
-
-
-
             evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_best_val_acc=is_current_val_best_acc)
+
+
+
+
+
 
     
         # check if checkpoint

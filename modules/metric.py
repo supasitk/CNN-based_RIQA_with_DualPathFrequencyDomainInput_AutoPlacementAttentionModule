@@ -148,3 +148,9 @@ class record_top_N_validation_for_specific_metric(object):
                    ', macroPrecision: ' + str("{:0.4f}".format(val_info['macroPrecision'])) +
                    ', macroSensitivity: ' + str("{:0.4f}".format(val_info['macroSensitivity'])) +
                    ', macroF1: ' + str("{:0.4f}".format(val_info['macroF1'])))
+
+  
+  def get_epoch_number_in_top_N_validation(self):
+    list_ep_num_in_topN_val = [val_info['Epoch'] for val_info in self.top_N_val_list if val_info['Epoch'] is not None]
+    
+    return list_ep_num_in_topN_val
