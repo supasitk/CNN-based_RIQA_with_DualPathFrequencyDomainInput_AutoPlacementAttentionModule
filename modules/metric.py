@@ -154,3 +154,42 @@ class record_top_N_validation_for_specific_metric(object):
     list_ep_num_in_topN_val = [val_info['Epoch'] for val_info in self.top_N_val_list if val_info['Epoch'] is not None]
     
     return list_ep_num_in_topN_val
+
+
+class record_N_test_for_specific_val_metric(object):
+  # dictionary for metrics information of test
+  # test_infos_dict = {'Val_Rank': None,
+  #                    'Loss': None,
+  #                    'Accuracy': None,
+  #                    'macroPrecision': None,
+  #                    'macroSensitivity': None,
+  #                    'macroF1': None
+  #                   }
+
+
+  def __init__(self, N, val_metric):
+    # validation metric used for test
+    self.val_metric = val_metric
+    self.N = N
+    
+    # list of recording N test infos from top-N validation metric
+    self.N_test_list = [None for _ in range(N)]
+  
+
+  def update_N_test(self, curr_test_info, rank):
+    self.N_test_list[rank] = curr_test_info
+
+  
+  def show_best_test(self):
+    # sorting N test (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
+    # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
+    sorted_N_test_list = sorted(self.N_test_list, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
+    
+    self.best_test = sorted_N_test_list[0]
+
+    logging.info(str("\tFrom {} validation Rank #{}:".format(self.val_metric, self.best_test['Val_Rank'])) +
+                 ' Loss: ' + str("{:0.4f}".format(self.best_test['Loss'])) +
+                 ', Accuracy: ' + str("{:0.4f}".format(self.best_test['Accuracy'])) +
+                 ', macroPrecision: ' + str("{:0.4f}".format(self.best_test['macroPrecision'])) +
+                 ', macroSensitivity: ' + str("{:0.4f}".format(self.best_test['macroSensitivity'])) +
+                 ', macroF1: ' + str("{:0.4f}".format(self.best_test['macroF1'])))

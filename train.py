@@ -16,7 +16,8 @@ from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (getLossFn)
-from modules.metric import (accumulated_result, compute_metric, record_top_N_validation_for_specific_metric)
+from modules.metric import (accumulated_result, compute_metric, 
+                            record_top_N_validation_for_specific_metric, record_N_test_for_specific_val_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
 
@@ -142,23 +143,20 @@ def main(_):
     val_top_N = cfg['val_top_N']
     top_N_validation_on_metrics = dict()
     val_metrics_list = dict()
+    N_test_on_val_metrics = dict()
     for metric in val_metrics_for_find_top_N_val:
         top_N_validation_on_metrics[metric] = record_top_N_validation_for_specific_metric(N=val_top_N, 
                                                                                           metric=metric)
         val_metrics_list[metric] = list()
+        N_test_on_val_metrics[metric] = record_N_test_for_specific_val_metric(N=val_top_N, 
+                                                                              val_metric=metric)
     val_last_k_metrics = int(cfg['val_last_k_metrics'])
     save_weights_dir = checkpoint_dir + '/weights/'
     if not os.path.exists(save_weights_dir):
         os.makedirs(save_weights_dir)
     suffix_saving_onlyWeights_filename = '_onlyWeights.weights.h5'
     suffix_saving_modelWithWeights_filename = '_ModelWithWeights.keras'
-
-    ###############
-    val_best_acc = 0.
-    val_best_acc_step = 0
     test_accumulated_results = accumulated_result()
-    ###############
-    
     class_names = ds_cfg['class_name']
     summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'])
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
@@ -264,22 +262,6 @@ def main(_):
                 if filename not in list_saved_onlyWeights_modelWithWeights_filename:
                     os.remove(save_weights_dir + filename)
 
-            # check if best accuracy of validation
-            is_current_val_best_acc = False 
-            if current_val_acc > val_best_acc:
-                is_current_val_best_acc = True
-                # delete last best weight of validation
-                last_best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
-                last_best_val_acc_model_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras"
-                if os.path.exists(last_best_val_acc_weight_filepath):
-                    os.remove(last_best_val_acc_weight_filepath)
-                if os.path.exists(last_best_val_acc_model_filepath):
-                    os.remove(last_best_val_acc_model_filepath)
-                val_best_acc = current_val_acc
-                val_best_acc_step = steps
-                model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
-                model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
-
             evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, val_metrics=val_metrics_for_find_top_N_val, topN_val_on_metrics=top_N_validation_on_metrics)
 
         # check if checkpoint
@@ -290,26 +272,98 @@ def main(_):
     manager.save()
     logging.info('-' * 50)
     logging.info('[*] End of training and Save ckpt file at {}'.format(manager.latest_checkpoint))
-    
+
     # test
-    # evaluate the best weight of validating model with test dataset
-    best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
+    # evaluate the top-N weight of validating model from every validation metrics with test dataset
     logging.info('-' * 50)
-    logging.info('Evaluating the best weight [val_acc: {:0.4f} @ epoch/step: {:0.2f}/{:d} ] of validating model with test dataset...'.format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step))
-    logging.info('Load the best weight @ {}'.format(best_val_acc_weight_filepath))
-    # load the best weight into model
-    model.load_weights(best_val_acc_weight_filepath)
-    test_accumulated_results.reset()
-    for test_inputs, test_input_paths, test_labels in test_ds:
-        test_logits = val_test_step(test_inputs)
-        test_accumulated_results.update(test_input_paths, test_labels, test_logits)
-    test_loss = criterion(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
-    test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
-                                      test_accumulated_results.accum_y_prob, 
-                                      test_accumulated_results.accum_y_pred, 
-                                      class_names)
-    evaluation_result_log('Test', test_loss, test_eval_result, (steps / steps_per_epoch))
-    evaluation_result_writer(summary_writer, 'test', test_loss, test_eval_result, steps)
+    logging.info('[Test]')
+    logging.info('-' * 50)
+    for metric in val_metrics_for_find_top_N_val:
+        logging.info('-' * 50)
+        logging.info('Top-{} {} validation:'.format(val_top_N, metric))
+        for rank in range(val_top_N):
+            val_epoch_num = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Epoch']
+            val_loss = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Loss']
+            val_acc = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Accuracy']
+            val_macroPrecision = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroPrecision']
+            val_macroSensitivity = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroSensitivity']
+            val_macroF1 = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroF1']
+            logging.info('\tRank#{} with validation infos (epoch: {}, loss: {:0.4f}, accuracy: {:0.4f}, macroPrecision: {:0.4f}, macroSensitivity: {:0.4f}, macroF1: {:0.4f}):'.format(rank+1, val_epoch_num, val_loss, val_acc, val_macroPrecision, val_macroSensitivity, val_macroF1))
+            
+            # load weight into model
+            weight_filepath = f"{save_weights_dir}/EP{val_epoch_num}{suffix_saving_onlyWeights_filename}"
+            model.load_weights(weight_filepath)
+            logging.info('\tLoad the weight @ {}'.format(weight_filepath))
+
+            # evaluate with test dataset
+            test_accumulated_results.reset()
+            for test_inputs, test_input_paths, test_labels in test_ds:
+                test_logits = val_test_step(test_inputs)
+                test_accumulated_results.update(test_input_paths, test_labels, test_logits)
+            test_loss = criterion(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
+            test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
+                                              test_accumulated_results.accum_y_prob, 
+                                              test_accumulated_results.accum_y_pred, 
+                                              class_names)
+            
+            # test infos
+            test_acc = np.mean(test_eval_result['Accuracy'])
+            test_macroPrecision = np.mean(test_eval_result['Precision'])
+            test_macroSensitivity = np.mean(test_eval_result['Sensitivity'])
+            test_macroF1 = np.mean(test_eval_result['F1'])
+            logging.info(str("\t\t[Test infos]:") + 
+                         ' Loss: ' + str("{:0.4f}".format(test_loss)) +
+                         ', Accuracy: ' + str("{:0.4f}".format(test_acc)) +
+                         ', macroPrecision: ' + str("{:0.4f}".format(test_macroPrecision)) +
+                         ', macroSensitivity: ' + str("{:0.4f}".format(test_macroSensitivity)) +
+                         ', macroF1: ' + str("{:0.4f}".format(test_macroF1)))
+            
+            # record test infos
+            current_test_info = {'Val_Rank': rank+1,
+                                 'Loss': test_loss,
+                                 'Accuracy': test_acc,
+                                 'macroPrecision': test_macroPrecision,
+                                 'macroSensitivity': test_macroSensitivity,
+                                 'macroF1': test_macroF1
+                                }
+            N_test_on_val_metrics[metric].update_N_test(curr_test_info=current_test_info, rank=rank)
+    
+    # find the best test for each validation metrics 
+    logging.info('-' * 50)
+    logging.info('[Test Summary]')
+    logging.info('-' * 50)
+    list_best_test_of_val_metrics = list()
+    for metric in val_metrics_for_find_top_N_val:
+        logging.info('-' * 50)
+        logging.info('Best Test of {} validation:'.format(metric))
+        N_test_on_val_metrics[metric].show_best_test()
+
+        best_test_of_this_val_metric = N_test_on_val_metrics[metric].best_test
+        best_test_of_this_val_metric.update({'Val_Metric': metric})
+        list_best_test_of_val_metrics.append(best_test_of_this_val_metric)
+
+    # find the best test among every validation metrics
+    logging.info('-' * 50)
+    logging.info('Best Test of every validation metrics:')
+    # sorting best test from every validation metrics (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
+    # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
+    sorted_list_best_test_of_val_metrics = sorted(list_best_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
+    final_best_test = sorted_list_best_test_of_val_metrics[0]
+    logging.info(str("\tFrom {} validation Rank #{}:".format(final_best_test['Val_Metric'], final_best_test['Val_Rank'])) +
+                 ' Loss: ' + str("{:0.4f}".format(final_best_test['Loss'])) +
+                 ', Accuracy: ' + str("{:0.4f}".format(final_best_test['Accuracy'])) +
+                 ', macroPrecision: ' + str("{:0.4f}".format(final_best_test['macroPrecision'])) +
+                 ', macroSensitivity: ' + str("{:0.4f}".format(final_best_test['macroSensitivity'])) +
+                 ', macroF1: ' + str("{:0.4f}".format(final_best_test['macroF1'])))
+
+    # record best test infos
+    best_test_eval_result = {'Loss': final_best_test['Loss'],
+                             'Accuracy': final_best_test['Accuracy'],
+                             'Precision': final_best_test['macroPrecision'],
+                             'Sensitivity': final_best_test['macroSensitivity'],
+                             'F1': final_best_test['macroF1']
+                            }
+    evaluation_result_writer(summary_writer, 'test', best_test_eval_result['Loss'], best_test_eval_result, steps)
 
     # write execution summary
     logging.info('-' * 100)
