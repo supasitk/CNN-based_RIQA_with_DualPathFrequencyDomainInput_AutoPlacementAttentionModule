@@ -129,17 +129,22 @@ def last_k_avg_max_min_metric(metric_list, curr_num_val, k):
   return np.mean(metric_list[-k:]), np.amax(metric_list[-k:]), np.amin(metric_list[-k:])
 
 
-def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False, lr=None):
+def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, val_metrics=None, topN_val_on_metrics=None, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
     tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
     tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
     tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
-    if eval_mode == 'validation' and is_best_val_acc:
-       tf.summary.scalar(f"accuracy/{eval_mode}/best_accuracy", np.mean(eval_result['Accuracy']), step=step)
     if eval_mode == 'train':
-       tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+      tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+    if eval_mode == 'validation':
+      for metric in val_metrics:
+        top1_metric_of_val = topN_val_on_metrics[metric].top_N_val_list[0][metric]
+        if metric == 'Loss':
+          tf.summary.scalar(f"loss/{eval_mode}/top-1_criterion_loss", top1_metric_of_val, step=step)
+        elif metric == 'Accuracy':
+          tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
 
 
 def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, step, lr=None):

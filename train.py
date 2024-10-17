@@ -264,11 +264,6 @@ def main(_):
                 if filename not in list_saved_onlyWeights_modelWithWeights_filename:
                     os.remove(save_weights_dir + filename)
 
-
-
-
-
-
             # check if best accuracy of validation
             is_current_val_best_acc = False 
             if current_val_acc > val_best_acc:
@@ -285,14 +280,8 @@ def main(_):
                 model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
                 model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
 
-            evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_best_val_acc=is_current_val_best_acc)
+            evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, val_metrics=val_metrics_for_find_top_N_val, topN_val_on_metrics=top_N_validation_on_metrics)
 
-
-
-
-
-
-    
         # check if checkpoint
         if steps % save_on_every_step == 0:
             manager.save()
