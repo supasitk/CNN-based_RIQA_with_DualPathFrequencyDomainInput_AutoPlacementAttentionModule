@@ -113,8 +113,8 @@ class record_top_N_validation_for_specific_metric(object):
       self.comparison_op = operator.lt
       self.max_or_min_op = max
       self.sorted_reverse = False
-    elif self.metric == 'Accuracy': # if given accuracy is GREATER than MINIMUM (lowest rank) accuracy of top-N validation recored previously,
-                                    # then appending this validation information to self.top_N_val_list, sorting it in DESCENDING [largest to smallest] order (greater accuracy is better), and finally getting only Top-N validation recorded to self.top_N_val_list
+    elif ((self.metric == 'Accuracy') or (self.metric == 'macroF1')): # if given accuracy/macroF1 is GREATER than MINIMUM (lowest rank) accuracy/macroF1 of top-N validation recored previously,
+                                                                      # then appending this validation information to self.top_N_val_list, sorting it in DESCENDING [largest to smallest] order (greater accuracy is better), and finally getting only Top-N validation recorded to self.top_N_val_list
       self.comparison_op = operator.gt
       self.max_or_min_op = min
       self.sorted_reverse = True 
