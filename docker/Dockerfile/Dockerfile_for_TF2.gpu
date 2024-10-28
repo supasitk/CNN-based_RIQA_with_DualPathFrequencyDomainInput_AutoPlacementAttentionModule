@@ -24,4 +24,5 @@ RUN pip install \
     graphviz \ 
     scikit-learn \ 
     scikit-image \ 
-    dlib
+    dlib \
+    niet
