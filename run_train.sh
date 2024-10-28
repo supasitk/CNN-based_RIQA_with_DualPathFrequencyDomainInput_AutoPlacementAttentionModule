@@ -39,7 +39,12 @@ fi
 
 # Arguments
 CONFIG_PATH="./configs/train/riqa.yaml"
+SEED_NUM=$(niet "seed_num" $CONFIG_PATH)
+SEED_START=$(niet "seed_start" $CONFIG_PATH)
 EXEC_PATH="train.py"
 
-# Run 
-python $EXEC_PATH --alsologtostderr --cfg_path=$CONFIG_PATH
+# Run
+for (( SEED=$SEED_START; SEED<=($SEED_START + $SEED_NUM - 1); SEED++ ))
+do
+    python $EXEC_PATH --alsologtostderr --cfg_path=$CONFIG_PATH --seed=$SEED
+done

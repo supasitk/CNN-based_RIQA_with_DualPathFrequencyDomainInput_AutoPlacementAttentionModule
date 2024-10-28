@@ -20,10 +20,14 @@ from modules.metric import (accumulated_result, compute_metric,
                             record_top_N_validation_for_specific_metric, record_N_test_for_specific_val_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
+flags.DEFINE_integer('seed', 0, 'seed number')
 
 
 def main(_):
-    #load execution configuration
+    # seed number
+    seed = FLAGS.seed
+
+    # load execution configuration
     cfg = load_yaml(FLAGS.cfg_path)
 
     # add path of directory containing this python file to PYTHONPATH list
@@ -37,7 +41,7 @@ def main(_):
     logger.disabled = True
     logger.setLevel(logging.FATAL)
     # set up logger configuration for logging training and validation details
-    log_dir = './logs/train/' + cfg['config_summary'] + '/run_log/'
+    log_dir = './logs/train/' + cfg['config_summary'] + f"/seed{seed}" + '/run_log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     logging.get_absl_handler().use_absl_log_file('training.log', log_dir)
@@ -51,9 +55,9 @@ def main(_):
     # Set seed
     # Sets all random seeds for the program (Python, NumPy, and TensorFlow).
     # You can use this utility to make almost any Keras program fully deterministic.
-    if cfg['seed'] != None:
-        tf.keras.utils.set_random_seed(cfg['seed'])
-        logging.info('Seed {} is used.'.format(cfg['seed']))
+    if seed != None:
+        tf.keras.utils.set_random_seed(seed)
+        logging.info('Seed {} is used.'.format(seed))
     else:
         logging.info('Seed is not set.')
     
@@ -102,7 +106,7 @@ def main(_):
     criterion = getLossFn(cfg)
 
     # load checkpoint
-    checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
+    checkpoint_dir = './checkpoints/train/' + cfg['config_summary'] + f"/seed{seed}/"
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
@@ -158,7 +162,7 @@ def main(_):
     suffix_saving_modelWithWeights_filename = '_ModelWithWeights.keras'
     test_accumulated_results = accumulated_result()
     class_names = ds_cfg['class_name']
-    summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'])
+    summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'] + f"/seed{seed}/")
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
 
     logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))

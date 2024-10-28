@@ -245,7 +245,8 @@ def write_exec_config_summary(cfg):
     logging.info('Validation last k metrics: {}'.format(cfg['val_last_k_metrics']))
     logging.info('Save unit: {}'.format(cfg['save_unit']))
     logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
-    logging.info('Seed: {}'.format(cfg['seed']))
+    logging.info('Number of seed used: {}'.format(cfg['seed_num']))
+    logging.info('Start seed number: {}'.format(cfg['seed_start']))
 
 
 def write_model_config_summary(model_structure, cfg):

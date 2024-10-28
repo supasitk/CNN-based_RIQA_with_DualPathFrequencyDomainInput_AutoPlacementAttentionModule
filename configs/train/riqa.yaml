@@ -1,5 +1,5 @@
 # run info
-config_summary: 'Tr_DsEyeQsize224tr75tr25te100AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitT-Bs32-DropRate0-Wd0-EpTr160Val1Save1-Seed0'
+config_summary: 'Tr_DsEyeQsize224tr75tr25te100AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_AttnCA0b0-15_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitT-Bs32-DropRate0-Wd0-EpTr160Val1LAt3Save1-5s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -62,4 +62,5 @@ val_top_N: 3            # top-N validation recorded on each metric in 'val_metri
 val_last_k_metrics: 5
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight
 save_on_every_unit: 1
-seed: 0
+seed_num: 5     # number of seed used
+seed_start: 0   # start seed number (execution run 'seed_num' times with different seeds: 'seed_start', 'seed_start'+1, 'seed_start'+2, ..., 'seed_start'+'seed_num'-1)
