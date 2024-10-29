@@ -336,7 +336,8 @@ def write_exec_search_config_summary(cfg):
     logging.info('Starting number of training unit for architecture search: {}'.format(cfg['start_arch_search_train_unit']))
     logging.info('Save unit: {}'.format(cfg['save_unit']))
     logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
-    logging.info('Seed: {}'.format(cfg['seed']))
+    logging.info('Number of seed used: {}'.format(cfg['seed_num']))
+    logging.info('Start seed number: {}'.format(cfg['seed_start']))
 
 
 def write_model_attention_search_config_summary(model_attn_search, cfg):

@@ -1,5 +1,5 @@
 # run info
-config_summary: 'TrS_DsEyeQsize224trP0.5valFtrP0.5AugHVflipRot2e-1_Md1Bresnet50RGBnoPreWattnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixInit1e-2-OpSadam1B5e-1_2B999e-3-LrSfixInit6e-4-LossSCCElogitT-Bs32-DropRate0-Wd0-WdS1e-3-EpTr90Search9Save1-Seed0'
+config_summary: 'TrS_DsEyeQs224trP0.5valFtrP0.5AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_AttnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixI1e-2-OpSadam1B5e-1_2B999e-3-LrSfixI6e-4-LossSCCElogitT-Bs32-DR0-Wd0-WdS1e-3-EpTr90Search9Save1-5s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -71,4 +71,5 @@ max_train_unit: 90
 start_arch_search_train_unit: 9
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight
 save_on_every_unit: 1
-seed: 0
+seed_num: 5     # number of seed used
+seed_start: 0   # start seed number (execution run 'seed_num' times with different seeds: 'seed_start', 'seed_start'+1, 'seed_start'+2, ..., 'seed_start'+'seed_num'-1)

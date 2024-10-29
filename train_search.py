@@ -18,9 +18,13 @@ from modules.losses import (getLossFn)
 from modules.metric import (accumulated_result, compute_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
+flags.DEFINE_integer('seed', 0, 'seed number')
 
 
 def main(_):
+    # seed number
+    seed = FLAGS.seed
+
     # load execution configuration
     cfg = load_yaml(FLAGS.cfg_path)
 
@@ -35,7 +39,7 @@ def main(_):
     logger.disabled = True
     logger.setLevel(logging.FATAL)
     # set up logger configuration for logging training and validation details
-    log_dir = './logs/train_search/' + cfg['config_summary'] + '/run_log/'
+    log_dir = './logs/train_search/' + cfg['config_summary'] + f"/seed{seed}" + '/run_log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     logging.get_absl_handler().use_absl_log_file('training_search.log', log_dir)
@@ -49,9 +53,9 @@ def main(_):
     # Set seed
     # Sets all random seeds for the program (Python, NumPy, and TensorFlow).
     # You can use this utility to make almost any Keras program fully deterministic.
-    if cfg['seed'] != None:
-        tf.keras.utils.set_random_seed(cfg['seed'])
-        logging.info('Seed {} is used.'.format(cfg['seed']))
+    if seed != None:
+        tf.keras.utils.set_random_seed(seed)
+        logging.info('Seed {} is used.'.format(seed))
     else:
         logging.info('Seed is not set.')
     
@@ -104,7 +108,7 @@ def main(_):
     criterion = getLossFn(cfg)
 
     # load checkpoint
-    checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary']
+    checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary'] + f"/seed{seed}/"
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
@@ -154,7 +158,7 @@ def main(_):
                            checkpoint.step.numpy() % steps_per_epoch)
     train_accumulated_results = accumulated_result()
     class_names = ds_cfg['class_name']
-    summary_writer = tf.summary.create_file_writer('./logs/train_search/' + cfg['config_summary'])
+    summary_writer = tf.summary.create_file_writer('./logs/train_search/' + cfg['config_summary'] + f"/seed{seed}/")
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
     iter_val_ds = iter(val_ds)
 
