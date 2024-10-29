@@ -1,5 +1,5 @@
 # run info
-config_summary: 'TrS_DsEyeQs224trP0.5valFtrP0.5AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_AttnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixI1e-2-OpSadam1B5e-1_2B999e-3-LrSfixI6e-4-LossSCCElogitT-Bs32-DR0-Wd0-WdS1e-3-EpTr90Search9Save1-5s0'
+config_summary: 'TrS_DsEyeQs224trP0.5valFtrP0.5AugHVflipRot2e-1_Md1Bresnet50RGBnoPreW_AttnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixI1e-2-OpSadam1B5e-1_2B999e-3-LrSfixI6e-4-LossSCCElogitT-Bs32-DR0-Wd0-WdS1e-3-Gclip5-EpTr90Search9Save1-5s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -66,6 +66,7 @@ batch_size: 32
 dropout_rate: 0.0
 weights_decay: null   # [null or float]
 arch_weights_decay: !!float 1e-3   # [null or float]
+arch_grad_clip_norm: 5.0  # [null or float]
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 90
 start_arch_search_train_unit: 9

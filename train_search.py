@@ -149,6 +149,8 @@ def main(_):
             loss = criterion(labels, logits)
         attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
         grads = tape.gradient(loss, attn_search_weights)
+        if cfg['arch_grad_clip_norm'] != None:
+            grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
         arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
         return loss
 
