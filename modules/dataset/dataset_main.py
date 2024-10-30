@@ -7,7 +7,7 @@ from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
 from modules.dataset.eyeq import (gen_EyeQImgPathLabelDict, gen_EyeQdataset)
 
-def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False):
+def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=None):
     """Generate train/validation/test dataloader of the dataset"""
 
     if dataset_name == 'EyeQ': # Eye Quality (EyeQ) dataset
@@ -110,7 +110,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False):
                                                         train_shuffle=train_shuffle,
                                                         val_from_train=val_from_train,
                                                         val_from_train_shuffle=val_from_train_shuffle,
-                                                        val_portion=val_portion)
+                                                        val_portion=val_portion,
+                                                        seed=seed)
 
         # !------ [2nd step] ------!
         ds_dataloaders = list()
@@ -143,7 +144,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False):
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
                                                            batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder,
-                                                           train_search=train_search)
+                                                           train_search=train_search,
+                                                           seed=seed)
             ds_dataloaders.append(ds_dataloader)
             ds_num_imgs.append(total_num_img)
             logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))

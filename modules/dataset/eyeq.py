@@ -20,7 +20,7 @@ def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_labe
 
 
 def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key, 
-                             train_portion, train_shuffle, val_from_train, val_from_train_shuffle, val_portion):
+                             train_portion, train_shuffle, val_from_train, val_from_train_shuffle, val_portion, seed=None):
     """Create dictionaries of image path and label for train/validation/test of dataset"""
     # train and validation dataset
     train_img_path_label_dict = _EyeQimgPathLabelDict(ds_part_dir=ds_part_dirs[ds_parts['train']], 
@@ -37,7 +37,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
             indices_of_this_class_train_img_path_label_dict = np.where(np.array(train_img_path_label_dict[img_label_dict_key]) == class_id)[0]
         
             if train_shuffle:
-                np.random.shuffle(indices_of_this_class_train_img_path_label_dict)
+                indices_of_this_class_train_img_path_label_dict = tf.random.shuffle(indices_of_this_class_train_img_path_label_dict, seed=seed)
         
             num_train_img_of_this_class = len(indices_of_this_class_train_img_path_label_dict)
             indices_of_this_class_for_train, _ = np.split(indices_of_this_class_train_img_path_label_dict, 
@@ -57,7 +57,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
             indices_of_this_class_train_img_path_label_dict = np.where(np.array(train_img_path_label_dict[img_label_dict_key]) == class_id)[0]
                         
             if val_from_train_shuffle:
-                np.random.shuffle(indices_of_this_class_train_img_path_label_dict)
+                indices_of_this_class_train_img_path_label_dict = tf.random.shuffle(indices_of_this_class_train_img_path_label_dict, seed=seed)
             
             num_train_img_of_this_class = len(indices_of_this_class_train_img_path_label_dict)
             indices_of_this_class_for_val, indices_of_this_class_for_train = np.split(indices_of_this_class_train_img_path_label_dict, 
@@ -87,12 +87,13 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
                                                      img_path_dict_key=img_path_dict_key,
                                                      img_label_dict_key=img_label_dict_key) 
 
-    # shuffle train dataset
+    # train dataset
     zipped_train_img_path_label_dict = list(zip(train_img_path_label_dict[img_path_dict_key], train_img_path_label_dict[img_label_dict_key]))
-    random.shuffle(zipped_train_img_path_label_dict)
-    shuffled_train_img_path, shuffled_train_img_label = zip(*zipped_train_img_path_label_dict)
-    train_img_path_label_dict[img_path_dict_key] = list(shuffled_train_img_path)
-    train_img_path_label_dict[img_label_dict_key] = list(shuffled_train_img_label)
+    # if train_shuffle:
+    #     random.shuffle(zipped_train_img_path_label_dict)
+    train_img_path, train_img_label = zip(*zipped_train_img_path_label_dict)
+    train_img_path_label_dict[img_path_dict_key] = list(train_img_path)
+    train_img_path_label_dict[img_label_dict_key] = list(train_img_label)
 
     # dictionary of image path and label for train/validation/test of dataset
     img_path_label_dicts = {ds_parts['train']: train_img_path_label_dict, 
@@ -102,16 +103,16 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim):
+def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
         if augment_infos['hflip']:
-            data_augmentation.add(layers.RandomFlip('horizontal'))
+            data_augmentation.add(layers.RandomFlip('horizontal', seed=seed))
         if augment_infos['vflip']:
-            data_augmentation.add(layers.RandomFlip('vertical'))
+            data_augmentation.add(layers.RandomFlip('vertical', seed=seed))
         if augment_infos['rotation']:
-            data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor']))    
+            data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor'], seed=seed))    
 
     def transform_data(img_path, img_label):
         img = tf.io.read_file(img_path)
@@ -130,7 +131,7 @@ def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_
     return transform_data
 
 
-def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True, train_search=False):
+def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True, train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -144,10 +145,10 @@ def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_
         dataset = dataset.repeat()
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=num_img)
+        dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim),
+                _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

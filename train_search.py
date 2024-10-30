@@ -82,7 +82,7 @@ def main(_):
 
     # generate train/validation dataloader of the RIQA dataset 
     # (last 2 return items ('test_ds' and 'test_ds_len') ignored because they are not used for train_search)
-    train_ds, train_ds_len, val_ds, val_ds_len, _, _ = gen_dataset(ds_name, ds_cfg, cfg, train_search=True)
+    train_ds, train_ds_len, val_ds, val_ds_len, _, _ = gen_dataset(ds_name, ds_cfg, cfg, train_search=True, seed=seed)
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])

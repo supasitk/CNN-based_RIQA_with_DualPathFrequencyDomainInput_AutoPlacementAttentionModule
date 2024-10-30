@@ -83,7 +83,7 @@ def main(_):
     write_model_attention_config_summary(model_attn, model_attn_cfg)
 
     # generate train/validation/test dataloader of the RIQA dataset
-    train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
+    train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg, seed=seed)
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
