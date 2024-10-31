@@ -180,16 +180,21 @@ class record_N_test_for_specific_val_metric(object):
     self.N_test_list[rank] = curr_test_info
 
   
-  def show_best_test(self):
+  def show_best_worst_test(self):
     # sorting N test (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
     # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
     sorted_N_test_list = sorted(self.N_test_list, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
     
     self.best_test = sorted_N_test_list[0]
+    self.worst_test = sorted_N_test_list[self.N - 1]
 
-    logging.info(str("\tFrom {} validation Rank #{}:".format(self.val_metric, self.best_test['Val_Rank'])) +
-                 ' Loss: ' + str("{:0.4f}".format(self.best_test['Loss'])) +
-                 ', Accuracy: ' + str("{:0.4f}".format(self.best_test['Accuracy'])) +
-                 ', macroPrecision: ' + str("{:0.4f}".format(self.best_test['macroPrecision'])) +
-                 ', macroSensitivity: ' + str("{:0.4f}".format(self.best_test['macroSensitivity'])) +
-                 ', macroF1: ' + str("{:0.4f}".format(self.best_test['macroF1'])))
+    list_test = [('Best', self.best_test), ('Worst', self.worst_test)]
+
+    for level, test in list_test:
+      logging.info('{} Test of {} validation:'.format(level, self.val_metric))
+      logging.info(str("\tFrom {} validation Rank #{}:".format(self.val_metric, test['Val_Rank'])) +
+                   ' Loss: ' + str("{:0.4f}".format(test['Loss'])) +
+                   ', Accuracy: ' + str("{:0.4f}".format(test['Accuracy'])) +
+                   ', macroPrecision: ' + str("{:0.4f}".format(test['macroPrecision'])) +
+                   ', macroSensitivity: ' + str("{:0.4f}".format(test['macroSensitivity'])) +
+                   ', macroF1: ' + str("{:0.4f}".format(test['macroF1'])))

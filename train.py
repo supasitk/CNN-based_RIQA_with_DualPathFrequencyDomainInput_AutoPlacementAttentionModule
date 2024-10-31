@@ -332,33 +332,45 @@ def main(_):
                                 }
             N_test_on_val_metrics[metric].update_N_test(curr_test_info=current_test_info, rank=rank)
     
-    # find the best test for each validation metrics 
+    # find the best/worst test for each validation metrics 
     logging.info('-' * 50)
     logging.info('[Test Summary]')
     logging.info('-' * 50)
     list_best_test_of_val_metrics = list()
+    list_worst_test_of_val_metrics = list()
     for metric in val_metrics_for_find_top_N_val:
         logging.info('-' * 50)
-        logging.info('Best Test of {} validation:'.format(metric))
-        N_test_on_val_metrics[metric].show_best_test()
+        N_test_on_val_metrics[metric].show_best_worst_test()
 
         best_test_of_this_val_metric = N_test_on_val_metrics[metric].best_test
         best_test_of_this_val_metric.update({'Val_Metric': metric})
         list_best_test_of_val_metrics.append(best_test_of_this_val_metric)
 
-    # find the best test among every validation metrics
+        worst_test_of_this_val_metric = N_test_on_val_metrics[metric].worst_test
+        worst_test_of_this_val_metric.update({'Val_Metric': metric})
+        list_worst_test_of_val_metrics.append(worst_test_of_this_val_metric)
+
+    # find the best/worst test among every validation metrics
     logging.info('-' * 50)
-    logging.info('Best Test of every validation metrics:')
     # sorting best test from every validation metrics (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
     # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
     sorted_list_best_test_of_val_metrics = sorted(list_best_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
     final_best_test = sorted_list_best_test_of_val_metrics[0]
-    logging.info(str("\tFrom {} validation Rank #{}:".format(final_best_test['Val_Metric'], final_best_test['Val_Rank'])) +
-                 ' Loss: ' + str("{:0.4f}".format(final_best_test['Loss'])) +
-                 ', Accuracy: ' + str("{:0.4f}".format(final_best_test['Accuracy'])) +
-                 ', macroPrecision: ' + str("{:0.4f}".format(final_best_test['macroPrecision'])) +
-                 ', macroSensitivity: ' + str("{:0.4f}".format(final_best_test['macroSensitivity'])) +
-                 ', macroF1: ' + str("{:0.4f}".format(final_best_test['macroF1'])))
+    # sorting worst test from every validation metrics (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
+    # and sorting it in ASCENDING (reverse=False) [smallest to largest] order (less accuracy/macroF1 is worse)
+    sorted_list_worst_test_of_val_metrics = sorted(list_worst_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=False)
+    final_worst_test = sorted_list_worst_test_of_val_metrics[0]
+
+    list_final_test = [('Best', final_best_test), ('Worst', final_worst_test)]
+
+    for level, final_test in list_final_test:
+        logging.info('{} Test of every validation metrics:'.format(level))
+        logging.info(str("\tFrom {} validation Rank #{}:".format(final_test['Val_Metric'], final_test['Val_Rank'])) +
+                     ' Loss: ' + str("{:0.4f}".format(final_test['Loss'])) +
+                     ', Accuracy: ' + str("{:0.4f}".format(final_test['Accuracy'])) +
+                     ', macroPrecision: ' + str("{:0.4f}".format(final_test['macroPrecision'])) +
+                     ', macroSensitivity: ' + str("{:0.4f}".format(final_test['macroSensitivity'])) +
+                     ', macroF1: ' + str("{:0.4f}".format(final_test['macroF1'])))
 
     # record best test infos
     best_test_eval_result = {'Loss': final_best_test['Loss'],
