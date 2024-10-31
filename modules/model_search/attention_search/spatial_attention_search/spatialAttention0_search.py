@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import (Conv2D, GlobalMaxPool2D)
 
 from modules.labels import *
+from modules.initializers import *
 
 ##################################################################################################
 # Support SEARCH options: 'kernel_size' (list of integer)                                        #
@@ -11,8 +12,9 @@ from modules.labels import *
 
 class SpatialAttention0_Search(tf.keras.layers.Layer):
     """Spatial Attenton block from paper 'Learning for retinal image quality assessment with label regularization [2022]'."""
-    def __init__(self, block_id, kernel_size_search_infos, filters=1, stride=1, activation='softplus', epsilon=0.1, name=None, **kwargs):
+    def __init__(self, block_id, kernel_size_search_infos, filters=1, stride=1, activation='softplus', epsilon=0.1, seed=None, name=None, **kwargs):
         super(SpatialAttention0_Search, self).__init__(name=name, **kwargs)
+        self.seed = seed
         self.name = name
         self.block_id = block_id
 
@@ -30,6 +32,7 @@ class SpatialAttention0_Search(tf.keras.layers.Layer):
                                                     strides=stride,
                                                     padding="SAME",
                                                     activation=activation,
+                                                    kernel_initializer=CONV2D_KERNEL_INIT(seed=seed),
                                                     name=name + "_conv_k" + str(this_kernel_size))
             
             self.conv_ops_with_kernel_sizes.append(conv_ops_with_this_kernel_size)

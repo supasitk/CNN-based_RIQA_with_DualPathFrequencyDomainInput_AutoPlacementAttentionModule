@@ -37,6 +37,7 @@ from tensorflow.python.util.tf_export import keras_export
 
 from absl import logging
 from modules.labels import *
+from modules.initializers import *
 from modules.utils import Check_Layer_Not_Loaded_with_PretrainedWeight
 from modules.model.attention.attention_main import (genAttnModule)
 from modules.model_search.attention_search.attention_search_main import (AttentionSearchModule) 
@@ -96,6 +97,7 @@ def ResNet(
     branch_model_name="resnet",
     classifier_activation="softmax",
     attn_search=False,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet, ResNetV2, and ResNeXt architecture.
@@ -199,7 +201,7 @@ def ResNet(
     x = ZeroPadding2D(padding=((3, 3), (3, 3)), name="conv1_pad")(
         img_input
     )
-    x = Conv2D(64, 7, strides=2, use_bias=use_bias, name="conv1_conv")(x)
+    x = Conv2D(64, 7, strides=2, use_bias=use_bias, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name="conv1_conv")(x)
 
     if not preact:
         x = BatchNormalization(
@@ -226,7 +228,7 @@ def ResNet(
         x = GlobalAveragePooling2D(name="avg_pool")(x)
         imagenet_utils.validate_activation(classifier_activation, weights)
         x = Dense(
-            classes, activation=classifier_activation, name="predictions"
+            classes, activation=classifier_activation, kernel_initializer=DENSE_KERNEL_INIT(seed=seed), name="predictions"
         )(x)
     else:
         if pooling == "avg":
@@ -281,7 +283,7 @@ def ResNet(
     return model
 
 
-def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None):
+def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None, seed=None):
     """A residual block for ResNet[18/34].
 
     Args:
@@ -300,7 +302,7 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
 
     if conv_shortcut:    
         shortcut = Conv2D(
-            filters, 1, strides=stride, name=name + "_0_conv"
+            filters, 1, strides=stride, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_0_conv"
         )(x)
         shortcut = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name=name + "_0_bn"
@@ -309,7 +311,7 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
         shortcut = x
 
     x = Conv2D(
-        filters, kernel_size, strides=stride, padding="SAME", name=name + "_1_conv"
+        filters, kernel_size, strides=stride, padding="SAME", kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_1_conv"
     )(x)
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
@@ -317,7 +319,7 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     x = Activation("relu", name=name + "_1_relu")(x)
 
     x = Conv2D(
-        filters, kernel_size, padding="SAME", name=name + "_2_conv"
+        filters, kernel_size, padding="SAME", kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_2_conv"
     )(x)
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
@@ -328,14 +330,16 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
         if attention[label_of_attn_existence]:
             attn_block = genAttnModule(block_id=block_id,
                                        numChannel_InputFeature=filters,
-                                       attention=attention, 
+                                       attention=attention,
+                                       seed=seed, 
                                        name=name + "_attn")
             if attn_block is not None:
                 x = attn_block(x)
     else:
         attn_block = AttentionSearchModule(block_id=block_id,
                                            numChannel_InputFeature=filters,
-                                           attention=attention, 
+                                           attention=attention,
+                                           seed=seed, 
                                            name=name + "_attn_search")
         x = attn_block(x, alphas_inter_attn_weights, alphas_intra_attn_weights)
 
@@ -344,7 +348,7 @@ def block0(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     return x
 
 
-def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None, start_block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None):
+def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None, start_block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None, seed=None):
     """A set of stacked residual blocks.
 
     Args:
@@ -359,15 +363,15 @@ def stack0(x, filters, blocks, stride1=2, conv_shortcut1=True, name=None, start_
     Returns:
       Output tensor for the stacked blocks.
     """
-    x = block0(x, filters, stride=stride1, conv_shortcut=conv_shortcut1, name=name + "_block1", block_id=start_block_id, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+    x = block0(x, filters, stride=stride1, conv_shortcut=conv_shortcut1, name=name + "_block1", block_id=start_block_id, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
     for i in range(2, blocks + 1):
         x = block0(
-            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights
+            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed
         )
     return x
 
 
-def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None):
+def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None, seed=None):
     """A residual block for ResNet[50/101/152].
 
     Args:
@@ -386,7 +390,7 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
 
     if conv_shortcut:
         shortcut = Conv2D(
-            4 * filters, 1, strides=stride, name=name + "_0_conv"
+            4 * filters, 1, strides=stride, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_0_conv"
         )(x)
         shortcut = BatchNormalization(
             axis=bn_axis, epsilon=1.001e-5, name=name + "_0_bn"
@@ -394,21 +398,21 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     else:
         shortcut = x
 
-    x = Conv2D(filters, 1, strides=stride, name=name + "_1_conv")(x)
+    x = Conv2D(filters, 1, strides=stride, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_1_conv")(x)
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_1_bn"
     )(x)
     x = Activation("relu", name=name + "_1_relu")(x)
 
     x = Conv2D(
-        filters, kernel_size, padding="SAME", name=name + "_2_conv"
+        filters, kernel_size, padding="SAME", kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_2_conv"
     )(x)
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_2_bn"
     )(x)
     x = Activation("relu", name=name + "_2_relu")(x)
 
-    x = Conv2D(4 * filters, 1, name=name + "_3_conv")(x)
+    x = Conv2D(4 * filters, 1, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name=name + "_3_conv")(x)
     x = BatchNormalization(
         axis=bn_axis, epsilon=1.001e-5, name=name + "_3_bn"
     )(x)
@@ -418,14 +422,16 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
         if attention[label_of_attn_existence]:
             attn_block = genAttnModule(block_id=block_id,
                                        numChannel_InputFeature=4*filters,
-                                       attention=attention, 
+                                       attention=attention,
+                                       seed=seed, 
                                        name=name + "_attn")
             if attn_block is not None:
                 x = attn_block(x)
     else:
         attn_block = AttentionSearchModule(block_id=block_id,
                                            numChannel_InputFeature=4*filters,
-                                           attention=attention, 
+                                           attention=attention,
+                                           seed=seed, 
                                            name=name + "_attn_search")
         x = attn_block(x, alphas_inter_attn_weights, alphas_intra_attn_weights)
 
@@ -434,7 +440,7 @@ def block1(x, filters, kernel_size=3, stride=1, conv_shortcut=True, name=None, b
     return x
 
 
-def stack1(x, filters, blocks, stride1=2, name=None, start_block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None):
+def stack1(x, filters, blocks, stride1=2, name=None, start_block_id=None, attention=None, alphas_inter_attn_weights=None, alphas_intra_attn_weights=None, seed=None):
     """A set of stacked residual blocks.
 
     Args:
@@ -447,10 +453,10 @@ def stack1(x, filters, blocks, stride1=2, name=None, start_block_id=None, attent
     Returns:
       Output tensor for the stacked blocks.
     """
-    x = block1(x, filters, stride=stride1, name=name + "_block1", block_id=start_block_id, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+    x = block1(x, filters, stride=stride1, name=name + "_block1", block_id=start_block_id, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
     for i in range(2, blocks + 1):
         x = block1(
-            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights
+            x, filters, conv_shortcut=False, name=name + "_block" + str(i), block_id=start_block_id + i - 1, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed
         )
     return x
 
@@ -646,6 +652,7 @@ def ResNet18(
     classes=1000,
     branch_model_name="resnet18",
     attention=None,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet18 architecture."""
@@ -653,16 +660,16 @@ def ResNet18(
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention)
-            x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention)
-            x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention)
-            return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention)
+            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention, seed=seed)
+            x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention, seed=seed)
+            return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
 
     return ResNet(
         stack_fn,
@@ -677,6 +684,7 @@ def ResNet18(
         classes,
         branch_model_name,
         attn_search=attn_search,
+        seed=seed,
         **kwargs,
     )
 
@@ -690,6 +698,7 @@ def ResNet34(
     classes=1000,
     branch_model_name="resnet34",
     attention=None,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet34 architecture."""
@@ -697,16 +706,16 @@ def ResNet34(
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention)
-            x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
-            x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention)
-            return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention)
+            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention, seed=seed)
+            x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention, seed=seed)
+            return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
 
     return ResNet(
         stack_fn,
@@ -721,6 +730,7 @@ def ResNet34(
         classes,
         branch_model_name,
         attn_search=attn_search,
+        seed=seed,
         **kwargs,
     )
 
@@ -739,6 +749,7 @@ def ResNet50(
     classes=1000,
     branch_model_name="resnet50",
     attention=None,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet50 architecture."""
@@ -746,16 +757,16 @@ def ResNet50(
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
-            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
-            x = stack1(x, 256, 6, name="conv4", start_block_id=7, attention=attention)
-            return stack1(x, 512, 3, name="conv5", start_block_id=13, attention=attention)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, seed=seed)
+            x = stack1(x, 256, 6, name="conv4", start_block_id=7, attention=attention, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=13, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 256, 6, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            return stack1(x, 512, 3, name="conv5", start_block_id=13, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 256, 6, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=13, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
 
     return ResNet(
         stack_fn,
@@ -770,6 +781,7 @@ def ResNet50(
         classes,
         branch_model_name,
         attn_search=attn_search,
+        seed=seed,
         **kwargs,
     )
 
@@ -786,6 +798,7 @@ def ResNet101(
     classes=1000,
     branch_model_name="resnet101",
     attention=None,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet101 architecture."""
@@ -793,16 +806,16 @@ def ResNet101(
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
-            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention)
-            x = stack1(x, 256, 23, name="conv4", start_block_id=7, attention=attention)
-            return stack1(x, 512, 3, name="conv5", start_block_id=30, attention=attention)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, seed=seed)
+            x = stack1(x, 256, 23, name="conv4", start_block_id=7, attention=attention, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=30, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 256, 23, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            return stack1(x, 512, 3, name="conv5", start_block_id=30, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 256, 23, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=30, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
 
     return ResNet(
         stack_fn,
@@ -817,6 +830,7 @@ def ResNet101(
         classes,
         branch_model_name,
         attn_search=attn_search,
+        seed=seed,
         **kwargs,
     )
 
@@ -833,6 +847,7 @@ def ResNet152(
     classes=1000,
     branch_model_name="resnet152",
     attention=None,
+    seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet152 architecture."""
@@ -840,16 +855,16 @@ def ResNet152(
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention)
-            x = stack1(x, 128, 8, name="conv3", start_block_id=3, attention=attention)
-            x = stack1(x, 256, 36, name="conv4", start_block_id=11, attention=attention)
-            return stack1(x, 512, 3, name="conv5", start_block_id=47, attention=attention)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack1(x, 128, 8, name="conv3", start_block_id=3, attention=attention, seed=seed)
+            x = stack1(x, 256, 36, name="conv4", start_block_id=11, attention=attention, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=47, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 128, 8, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            x = stack1(x, 256, 36, name="conv4", start_block_id=11, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
-            return stack1(x, 512, 3, name="conv5", start_block_id=47, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights)
+            x = stack1(x, 64, 3, stride1=1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 128, 8, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack1(x, 256, 36, name="conv4", start_block_id=11, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            return stack1(x, 512, 3, name="conv5", start_block_id=47, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
 
     return ResNet(
         stack_fn,
@@ -864,6 +879,7 @@ def ResNet152(
         classes,
         branch_model_name,
         attn_search=attn_search,
+        seed=seed,
         **kwargs,
     )
 

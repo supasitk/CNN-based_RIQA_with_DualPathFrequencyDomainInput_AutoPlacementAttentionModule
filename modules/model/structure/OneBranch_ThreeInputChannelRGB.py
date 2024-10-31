@@ -5,12 +5,13 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import (Input, GlobalAveragePooling2D, Flatten, Dropout, Dense)
 
 from modules.labels import *
+from modules.initializers import *
 from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_static_attention_configuration)
 from modules.model.baseline.baseline_main import (genModelBranch)
 from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax)
 
 
-def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None):
+def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
     input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
@@ -78,7 +79,8 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                                        attn_search=attn_search,
                                        attn_static_infos=FirstBranch_attn_static_infos,
                                        attn_inter_search_infos=FirstBranch_inter_attn_search_infos,
-                                       attn_intra_search_infos=FirstBranch_intra_attn_search_infos)
+                                       attn_intra_search_infos=FirstBranch_intra_attn_search_infos,
+                                       seed=seed)
     if attn_search == False:
         FirstBranch_features = FirstBranch_model(FirstBranch_inputs)
     else:
@@ -87,8 +89,8 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
     # ------------------ Feature Aggregration ------------------#
     all_features = GlobalAveragePooling2D()(FirstBranch_features)
     all_features = Flatten()(all_features)
-    all_features = Dropout(dropout_rate)(all_features)
-    logits = Dense(num_class, name='logits')(all_features)
+    all_features = Dropout(dropout_rate, seed=seed)(all_features)
+    logits = Dense(num_class, kernel_initializer=DENSE_KERNEL_INIT(seed=seed), name='logits')(all_features)
 
     if attn_search == False:
         return Model(inputs, logits, name=cfg['model_structure'])

@@ -9,12 +9,13 @@ from modules.model.layer.CustomLayer import (SplitSoftmax)
 
 class SearchNNmodel(object):
     """Searching Neural Network Model"""
-    def __init__(self, cfg, ds_cfg, model_cfg, model_attn_search_cfg, name='SearchNNmodel'):
+    def __init__(self, cfg, ds_cfg, model_cfg, model_attn_search_cfg, name='SearchNNmodel', seed=None):
         self.cfg = cfg
         self.ds_cfg = ds_cfg 
         self.model_cfg = model_cfg 
         self.model_attn_search_cfg = model_attn_search_cfg 
         self.name = name
+        self.seed = seed
 
         # generate weight parameter and information for INTER-attention_types searching to find which attention type module is the optimized option (selecting the optimized attention type among all attention types searched) for each block attached of each branch on the model structure,
         # the dimension of this weight parameter is (number_of_branch, MAX(number_of_attention_block[each_branch]), MAX(number_of_attention_type[each_branch])), note that the number of this weight parameter might be created redundant (excess) that some of them might be not used, the reason is to simply create tensor with same dimension for every branches.
@@ -41,7 +42,8 @@ class SearchNNmodel(object):
                                                                  model_cfg=self.model_cfg, 
                                                                  model_attn_cfg=None, 
                                                                  attn_search=True, 
-                                                                 attn_search_infos=attn_search_infos_dicts)
+                                                                 attn_search_infos=attn_search_infos_dicts,
+                                                                 seed=self.seed)
         else:
             raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
     
@@ -107,7 +109,7 @@ class SearchNNmodel(object):
                 self.inter_attn_search_infos[branch_id][label_of_list_of_split_weights].append(remaining_num_of_excessing_weights)
 
         # weight parameter of inter-attention_types searching
-        w_init = tf.random_normal_initializer()
+        w_init = tf.random_normal_initializer(seed=self.seed)
         self.inter_attn_search_weights = tf.Variable(initial_value=1e-3 * w_init(shape=[num_of_branch, max_num_of_attn_block_for_any_branch, max_num_of_attn_type_for_any_branch], dtype='float32'),
                                                      trainable=True, name='inter_attn_search_weights')
         
@@ -220,7 +222,7 @@ class SearchNNmodel(object):
                 self.intra_attn_search_infos[branch_id][label_of_list_of_split_weights].append(remaining_num_of_excessing_weights)
 
         # weight parameter of intra-attention_types searching
-        w_init = tf.random_normal_initializer()
+        w_init = tf.random_normal_initializer(seed=self.seed)
         self.intra_attn_search_weights = tf.Variable(initial_value=1e-3 * w_init(shape=[num_of_branch, max_num_of_attn_block_for_any_branch, max_num_of_search_option_accumulated_from_all_attn_types_for_any_branch], dtype='float32'),
                                                      trainable=True, name='intra_attn_search_weights')
 

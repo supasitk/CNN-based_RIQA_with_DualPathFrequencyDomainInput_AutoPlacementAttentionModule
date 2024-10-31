@@ -3,6 +3,7 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.layers import (GlobalAveragePooling2D, Dense, Reshape, ZeroPadding1D, ReLU)
 
 from modules.labels import *
+from modules.initializers import *
 
 ##################################################################################################
 # Support SEARCH options: 'reduction_ratio' (list of integer)                                    #
@@ -68,8 +69,9 @@ from modules.labels import *
 
 class ChannelAttention0_Search(tf.keras.layers.Layer):
     """Channel Attenton block from paper 'Squeeze-and-Excitation (SE) Networks [2017]'."""
-    def __init__(self, block_id, channel_output, reduction_ratio_search_infos, activation_dense1='relu', activation_dense2='sigmoid', name=None, **kwargs):
+    def __init__(self, block_id, channel_output, reduction_ratio_search_infos, activation_dense1='relu', activation_dense2='sigmoid', seed=None, name=None, **kwargs):
         super(ChannelAttention0_Search, self).__init__(name=name, **kwargs)
+        self.seed = seed
         self.name = name
         self.block_id = block_id
         self.ch_out = channel_output
@@ -90,6 +92,7 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
         for this_r_ratio in list_of_r_ratios:
             dense1_ops_with_this_r_ratio = self._get_dense1_ops(min_r_ratios=min_value_of_r_ratios, 
                                                                 this_r_ratio=this_r_ratio,
+                                                                seed=self.seed,
                                                                 name=self.name)
 
             self.dense1_ops_with_r_ratios.append(dense1_ops_with_this_r_ratio)
@@ -103,6 +106,7 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
         # -------- Exciation_2nd (Dense_2nd) Opeartion and Activation ---------- #
         self.dense2 = Dense(units=channel_output,
                             activation=activation_dense2,
+                            kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
                             name=name + "_dense2_op_act")
 
 
@@ -129,12 +133,13 @@ class ChannelAttention0_Search(tf.keras.layers.Layer):
         return tf.math.multiply(inputs, attn)
 
 
-    def _get_dense1_ops(self, min_r_ratios, this_r_ratio, name=None):
+    def _get_dense1_ops(self, min_r_ratios, this_r_ratio, seed=None, name=None):
         # calculate how many zeros to add at the beginning and end of the padding dimension (axis 1)
         num_left_pad = 0
         num_right_pad = (self.ch_out // min_r_ratios) - (self.ch_out // this_r_ratio)
 
         return Sequential([Dense(units=self.ch_out // this_r_ratio,
+                                 kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
                                  name=name + "_dense1_op_r" + str(this_r_ratio)),
                            Reshape([-1, 1]),
                            ZeroPadding1D(padding=(num_left_pad, num_right_pad)),

@@ -3,7 +3,7 @@ from modules.model.attention.channel_attention.se import (ChannelAttention0)
 from modules.model.attention.spatial_attention.spatialAttention0 import (SpatialAttention0)
 
 
-def genAttnModule(block_id, numChannel_InputFeature, attention, name=None):
+def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=None):
     attn_block = None
                                        
     try:
@@ -24,6 +24,7 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None):
                                            reduction_ratio=r_ratio, 
                                            activation_dense1=act_d1, 
                                            activation_dense2=act_d2,
+                                           seed=seed,
                                            name=name)
     
         elif attn_type == 'SpatialAttention0':
@@ -39,6 +40,7 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None):
                                            stride=stride,
                                            activation=activation,
                                            epsilon=epsilon,
+                                           seed=seed,
                                            name=name)
     
         else:

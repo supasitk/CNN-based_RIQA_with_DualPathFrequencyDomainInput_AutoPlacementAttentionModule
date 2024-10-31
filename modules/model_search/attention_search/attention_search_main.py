@@ -8,12 +8,13 @@ from modules.model_search.attention_search.spatial_attention_search.spatialAtten
 
 class AttentionSearchModule(tf.keras.layers.Layer):
     """Module contains operations of searching inter- and intra-attention types for the model"""
-    def __init__(self, block_id, numChannel_InputFeature, attention, name=None, **kwargs):
+    def __init__(self, block_id, numChannel_InputFeature, attention, seed=None, name=None, **kwargs):
         super(AttentionSearchModule, self).__init__(name=name, **kwargs)
         self.block_id = block_id
         self.numChannel_InputFeature = numChannel_InputFeature
         self.attention = attention
         self.name = name
+        self.seed = seed
 
         # get list of attention types for INTER-attention_types searching to find which attention type module is the optimized option 
         # (selecting the optimized attention type among all attention types searched) for attaching to this block
@@ -41,6 +42,7 @@ class AttentionSearchModule(tf.keras.layers.Layer):
                 intra_ops_of_this_attn_type = ChannelAttention0_Search(block_id=self.block_id, 
                                                                        channel_output=self.numChannel_InputFeature, 
                                                                        reduction_ratio_search_infos=r_ratio_search_infos,
+                                                                       seed=seed,
                                                                        name=self.name)
             
             elif attn_type == 'SpatialAttention0':
@@ -54,7 +56,8 @@ class AttentionSearchModule(tf.keras.layers.Layer):
                                                                     search_option_name=k_size)
 
                 intra_ops_of_this_attn_type = SpatialAttention0_Search(block_id=self.block_id, 
-                                                                       kernel_size_search_infos=k_size_search_infos, 
+                                                                       kernel_size_search_infos=k_size_search_infos,
+                                                                       seed=seed, 
                                                                        name=self.name)
             
             else:

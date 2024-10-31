@@ -5,7 +5,7 @@ from modules.model.structure.utils import (get_static_attention_configuration_fo
 from modules.model.baseline.resnet import (ResNet18, ResNet34, ResNet50, ResNet101, ResNet152)
 
 def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num_channel, model_name, num_layer, pretrained_weight, 
-                   attn_search=False, attn_static_infos=None, attn_inter_search_infos=None, attn_intra_search_infos=None):
+                   attn_search=False, attn_static_infos=None, attn_inter_search_infos=None, attn_intra_search_infos=None, seed=None):
     # ------------------ Attention Configuration ------------------ #
     if attn_search == False:
         attn = get_static_attention_configuration_for_branch(attn_static_infos)
@@ -31,7 +31,8 @@ def genModelBranch(branch_id, branch_name, input_h_size, input_w_size, input_num
                                  input_shape=(input_h_size, input_w_size, input_num_channel),
                                  pooling=None,
                                  branch_model_name=f'branch_{branch_id}_{branch_name}',
-                                 attention=attn)
+                                 attention=attn,
+                                 seed=seed)
     else:
         raise ValueError('Unknown model \'{}\''.format(model_name))
 
