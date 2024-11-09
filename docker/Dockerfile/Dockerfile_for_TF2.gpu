@@ -17,6 +17,7 @@ RUN pip install \
     tensorflow-model-optimization \ 
     tensorflow_datasets \
     tensorflow[and-cuda] \
+    tensorflow-io \
     numpy \
     opencv-python \
     PyYAML \ 
