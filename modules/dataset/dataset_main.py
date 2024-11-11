@@ -148,8 +148,15 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=N
                                                            seed=seed)
             ds_dataloaders.append(ds_dataloader)
             ds_num_imgs.append(total_num_img)
-            logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
-
+            logging.info('Create \'{}\' dataloader containing {} images (Number and portion of data for each class are below)'.format(v_ds_part, total_num_img))
+            # show number and portion of data for each class of dataset
+            assert num_class == len(name_class)
+            str_num_and_portion_of_data_for_classes_of_ds = ""
+            for class_id, class_name in enumerate(name_class):
+                num_input_of_this_class = v_img_path_label_dict[img_label_dict_key].count(class_id)
+                portion_input_of_this_class = num_input_of_this_class / total_num_img * 100
+                str_num_and_portion_of_data_for_classes_of_ds += f"{name_class[class_id]} [{num_input_of_this_class} ({portion_input_of_this_class:.2f}%)], "
+            logging.info('\t{}'.format(str_num_and_portion_of_data_for_classes_of_ds))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))
 
