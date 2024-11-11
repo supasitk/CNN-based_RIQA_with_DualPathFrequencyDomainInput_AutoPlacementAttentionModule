@@ -191,12 +191,16 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
         if cfg['train_augment']:
-            logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
-            logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
-            logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
-            if cfg['train_augment_rotation']:
-                logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
+          logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
+          logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
+          logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
+          if cfg['train_augment_rotation']:
+              logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
         logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
+        logging.info('Random oversampling for training data: {}'.format(cfg['train_random_oversampling']))
+        if cfg['train_random_oversampling']:
+          logging.info('Train random oversampling - Type: {}'.format(cfg['train_random_oversampling_type']))
+          logging.info('Train random oversampling - Weight: {}'.format(cfg['train_random_oversampling_weight']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
     logging.info('-' * 100)

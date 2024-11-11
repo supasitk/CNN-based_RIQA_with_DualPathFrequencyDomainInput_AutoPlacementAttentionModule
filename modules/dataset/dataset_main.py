@@ -128,11 +128,19 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=N
                     augment_infos.update([('rotation', dataset_cfg['train_augment_rotation'])])
                     augment_infos.update([('rotation_factor', dataset_cfg['train_augment_rotation_factor'])])
                 drop_remainder = True
+                oversampling = dataset_cfg['train_random_oversampling']
+                oversampling_infos = None
+                if oversampling:
+                    oversampling_infos = dict()
+                    oversampling_infos.update([('type', dataset_cfg['train_random_oversampling_type'])])
+                    oversampling_infos.update([('weight', dataset_cfg['train_random_oversampling_weight'])])
             else:
                 shuffle = False
                 augment = False
                 augment_infos = None
                 drop_remainder = False
+                oversampling = False
+                oversampling_infos = None
 
             ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, 
                                                            img_path_label_dict=v_img_path_label_dict,
@@ -144,6 +152,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=N
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
                                                            batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder,
+                                                           oversampling=oversampling, 
+                                                           oversampling_infos=oversampling_infos,
                                                            train_search=train_search,
                                                            seed=seed)
             ds_dataloaders.append(ds_dataloader)
