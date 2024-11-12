@@ -142,7 +142,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=N
                 oversampling = False
                 oversampling_infos = None
 
-            ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, 
+            ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
+                                                           train_val_test=v_ds_part, 
                                                            img_path_label_dict=v_img_path_label_dict,
                                                            img_path_dict_key=img_path_dict_key,
                                                            img_label_dict_key=img_label_dict_key,

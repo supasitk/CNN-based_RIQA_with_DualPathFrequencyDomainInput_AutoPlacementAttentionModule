@@ -44,5 +44,5 @@ train_augment_rotation_factor: 0.2      # Fraction of 2 Pi of rotation results i
 resized_image_dim: 224       # Dimension of resized image for input to model
 #-- Random Oversampling --#
 train_random_oversampling: True         # whether oversample the minority classes for training data, if True, details of random sampling need to be specified
-train_random_oversampling_type: 'WeightedProportionEveryClassOnEachBatch' # ['WeightedProportionEveryClassOnEachBatch' -> Each batch has number of input for each class as weighted proportion defined]
-train_random_oversampling_weight: null  # for 'WeightedProportionEveryClassOnEachBatch', 'null' means EQUAL proportion for every class; otherwise 'list of proportion for each class' is specified (sum need to be 1.0), e.g., [0.5, 0.3, 0.2] for 3 classes
+train_random_oversampling_type: 'WeightedProbabilityEveryClassOnEachBatch' # ['WeightedProbabilityEveryClassOnEachBatch' -> Each batch has number of input for each class as weighted probability defined]
+train_random_oversampling_weight: null  # for 'WeightedProbabilityEveryClassOnEachBatch', 'null' means uniform distribution across classes; otherwise 'list of probability for each class (in order)' is specified (sum need to be 1.0), e.g., [0.5, 0.3, 0.2] for 3 classes (weight[i] represents probability to sample from class[i])

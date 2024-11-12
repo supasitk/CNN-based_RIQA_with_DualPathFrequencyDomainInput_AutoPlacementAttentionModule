@@ -131,16 +131,45 @@ def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_
     return transform_data
 
 
-def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, 
-                    drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
+def gen_EyeQdataset(ds_num_class, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, 
+                    batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
     if num_img_path != num_img_label:
         raise ValueError('Number of image path ({}) and label ({}) of \'{}\' dataset are not equal'.format(num_img_path, num_img_label, train_val_test))
-
     num_img = num_img_label
-    dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
+
+    if oversampling:
+        if oversampling_infos['type'] == 'WeightedProbabilityEveryClassOnEachBatch':
+            # split whole (all class) data into each specfic-class (each class) data, then create list of dataloader for each specific-class data
+            list_dataloader_for_each_specific_class_data = list()
+            for class_id in range(ds_num_class):
+                # -- split whole (all class) data into this specfic-class data
+                indices_of_this_class_in_ds_img_path_label_dict = np.where(np.array(img_path_label_dict[img_label_dict_key]) == class_id)[0]
+                num_img_of_this_class = len(indices_of_this_class_in_ds_img_path_label_dict)
+
+                this_class_img_path_label_dict = {img_path_dict_key: list(), img_label_dict_key: list()}
+                this_class_img_path_label_dict[img_path_dict_key].extend(np.take(np.array(img_path_label_dict[img_path_dict_key]), indices_of_this_class_in_ds_img_path_label_dict))
+                this_class_img_path_label_dict[img_label_dict_key].extend(np.take(np.array(img_path_label_dict[img_label_dict_key]), indices_of_this_class_in_ds_img_path_label_dict))
+
+                # -- create dataloader for this specific-class data
+                this_class_dataset = tf.data.Dataset.from_tensor_slices((this_class_img_path_label_dict[img_path_dict_key], this_class_img_path_label_dict[img_label_dict_key]))
+                if shuffle:
+                    this_class_dataset = this_class_dataset.shuffle(buffer_size=num_img_of_this_class, seed=seed)
+                this_class_dataset = this_class_dataset.repeat()
+
+                # -- add this specific-class dataloader to list of dataloader for each specific-class data
+                list_dataloader_for_each_specific_class_data.append(this_class_dataset)
+            
+            # create the final dataloader contains every specific-class dataloaders with given probability (weight) of sampling for each specific-class data
+            dataset = tf.data.Dataset.sample_from_datasets(datasets=list_dataloader_for_each_specific_class_data, 
+                                                           weights=oversampling_infos['weight'],
+                                                           seed=seed)
+        else:
+            raise ValueError('Unknown \'{}\' type of random oversampling'.format(oversampling_infos['type']))
+    else:
+        dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
 
     if ((train_val_test == 'train') or ((train_val_test == 'validation') and (train_search == True))):
         dataset = dataset.repeat()
