@@ -87,7 +87,7 @@ def main(_):
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
-    steps_per_epoch = train_ds_len // train_batch_size
+    steps_per_epoch = train_ds_len['total_num_img'] // train_batch_size
     total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
     max_epoch = total_steps / steps_per_epoch
 
