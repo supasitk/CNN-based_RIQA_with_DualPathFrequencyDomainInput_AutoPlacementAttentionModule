@@ -192,7 +192,7 @@ class record_N_test_for_specific_val_metric(object):
 
     for level, test in list_test:
       logging.info('{} Test of {} validation:'.format(level, self.val_metric))
-      logging.info(str("\tFrom {} validation Rank #{}:".format(self.val_metric, test['Val_Rank'])) +
+      logging.info(str("\tFrom {} validation Rank #{} (epoch: {}):".format(self.val_metric, test['Val_Rank'], test['Val_Epoch'])) +
                    ' Loss: ' + str("{:0.4f}".format(test['Loss'])) +
                    ', Accuracy: ' + str("{:0.4f}".format(test['Accuracy'])) +
                    ', macroPrecision: ' + str("{:0.4f}".format(test['macroPrecision'])) +

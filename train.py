@@ -324,6 +324,7 @@ def main(_):
             
             # record test infos
             current_test_info = {'Val_Rank': rank+1,
+                                 'Val_Epoch': val_epoch_num,
                                  'Loss': test_loss,
                                  'Accuracy': test_acc,
                                  'macroPrecision': test_macroPrecision,
@@ -365,7 +366,7 @@ def main(_):
 
     for level, final_test in list_final_test:
         logging.info('{} Test of every validation metrics:'.format(level))
-        logging.info(str("\tFrom {} validation Rank #{}:".format(final_test['Val_Metric'], final_test['Val_Rank'])) +
+        logging.info(str("\tFrom {} validation Rank #{} (epoch: {}):".format(final_test['Val_Metric'], final_test['Val_Rank'], final_test['Val_Epoch'])) +
                      ' Loss: ' + str("{:0.4f}".format(final_test['Loss'])) +
                      ', Accuracy: ' + str("{:0.4f}".format(final_test['Accuracy'])) +
                      ', macroPrecision: ' + str("{:0.4f}".format(final_test['macroPrecision'])) +
