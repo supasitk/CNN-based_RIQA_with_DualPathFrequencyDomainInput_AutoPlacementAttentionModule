@@ -14,7 +14,7 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_search_confi
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.optimizers import (getOptimizer)
-from modules.losses import (getLossFn)
+from modules.losses import (LossFn)
 from modules.metric import (accumulated_result, compute_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
@@ -123,7 +123,7 @@ def main(_):
     arch_optimizer = getOptimizer(cfg, total_steps, steps_per_epoch, name='arch_optimizer', arch_search=True)
 
     # loss function
-    criterion = getLossFn(cfg)
+    criterion = LossFn(cfg, ds_cfg)
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary'] + f"/seed{seed}/"
@@ -154,7 +154,7 @@ def main(_):
     def train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion(labels, logits)
+            loss = criterion.compute_loss(labels, logits)
         grads = tape.gradient(loss, snn.model.trainable_variables)
         optimizer.apply_gradients(zip(grads, snn.model.trainable_variables))
         return logits, loss
@@ -164,7 +164,7 @@ def main(_):
     def arch_train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion(labels, logits)
+            loss = criterion.compute_loss(labels, logits)
         attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
         grads = tape.gradient(loss, attn_search_weights)
         if cfg['arch_grad_clip_norm'] != None:
@@ -207,7 +207,7 @@ def main(_):
 
         # check if end each epoch of train
         if steps % steps_per_epoch == 0:
-            loss = criterion(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
                                                train_accumulated_results.accum_y_prob,
                                                train_accumulated_results.accum_y_pred, 

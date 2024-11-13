@@ -41,13 +41,18 @@ lr_config:
                               # lr_min=lr_alpha * lr_init, e.g., for lr_init=0.01 (1e-2), set lr_aplha=0.01 if lr_min=0.0001 (1e-4) needed 
 
 
-# loss function ['SparseCategoricalCrossentropy']
+# loss function ['SparseCategoricalCrossentropy', 'SparseCategoricalCrossentropyWithLabelSmoothing']
 # --- SparseCategoricalCrossentropy --- #
 loss_fn: 'SparseCategoricalCrossentropy'    
 loss_fn_config:
   'from_logits': True
   'reduction': 'sum_over_batch_size'
-
+# --- SparseCategoricalCrossentropyWithLabelSmoothing --- #
+#loss_fn: 'SparseCategoricalCrossentropyWithLabelSmoothing'    
+#loss_fn_config:
+#  'from_logits': True
+#  'reduction': 'sum_over_batch_size'
+#  'label_smoothing': 0.1
 
 # training setting
 batch_size: 32

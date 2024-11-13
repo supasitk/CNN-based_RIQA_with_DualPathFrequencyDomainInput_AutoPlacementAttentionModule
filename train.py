@@ -15,7 +15,7 @@ from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summa
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
-from modules.losses import (getLossFn)
+from modules.losses import (LossFn)
 from modules.metric import (accumulated_result, compute_metric, 
                             record_top_N_validation_for_specific_metric, record_N_test_for_specific_val_metric)
 
@@ -121,7 +121,7 @@ def main(_):
     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
 
     # loss function
-    criterion = getLossFn(cfg)
+    criterion = LossFn(cfg, ds_cfg)
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train/' + cfg['config_summary'] + f"/seed{seed}/"
@@ -144,7 +144,7 @@ def main(_):
     def train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = model(inputs, training=True)
-            loss = criterion(labels, logits)
+            loss = criterion.compute_loss(labels, logits)
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return logits, loss
@@ -203,7 +203,7 @@ def main(_):
 
         # check if end each epoch of train
         if steps % steps_per_epoch == 0:
-            loss = criterion(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
                                                train_accumulated_results.accum_y_prob,
                                                train_accumulated_results.accum_y_pred, 
@@ -219,7 +219,7 @@ def main(_):
             for val_inputs, val_input_paths, val_labels in val_ds:
                 val_logits = val_test_step(val_inputs)
                 val_accumulated_results.update(val_input_paths, val_labels, val_logits)
-            val_loss = criterion(np.array(val_accumulated_results.accum_y_true), np.array(val_accumulated_results.accum_y_logit))
+            val_loss = criterion.compute_loss(np.array(val_accumulated_results.accum_y_true), np.array(val_accumulated_results.accum_y_logit))
             val_eval_result = compute_metric(val_accumulated_results.accum_y_true, 
                                              val_accumulated_results.accum_y_prob, 
                                              val_accumulated_results.accum_y_pred, 
@@ -322,7 +322,7 @@ def main(_):
             for test_inputs, test_input_paths, test_labels in test_ds:
                 test_logits = val_test_step(test_inputs)
                 test_accumulated_results.update(test_input_paths, test_labels, test_logits)
-            test_loss = criterion(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
+            test_loss = criterion.compute_loss(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
             test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
                                               test_accumulated_results.accum_y_prob, 
                                               test_accumulated_results.accum_y_pred, 

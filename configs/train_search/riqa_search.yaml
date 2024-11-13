@@ -53,12 +53,18 @@ arch_lr_schedule: 'Fix'
 arch_lr_config:
   'lr_init': !!float 6e-4
 
-# loss function ['SparseCategoricalCrossentropy']
+# loss function ['SparseCategoricalCrossentropy', 'SparseCategoricalCrossentropyWithLabelSmoothing']
 # --- SparseCategoricalCrossentropy --- #
 loss_fn: 'SparseCategoricalCrossentropy'    
 loss_fn_config:
   'from_logits': True
   'reduction': 'sum_over_batch_size'
+# --- SparseCategoricalCrossentropyWithLabelSmoothing --- #
+#loss_fn: 'SparseCategoricalCrossentropyWithLabelSmoothing'    
+#loss_fn_config:
+#  'from_logits': True
+#  'reduction': 'sum_over_batch_size'
+#  'label_smoothing': 0.1
 
 
 # training setting
