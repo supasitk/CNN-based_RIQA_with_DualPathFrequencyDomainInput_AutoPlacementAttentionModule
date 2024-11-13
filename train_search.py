@@ -86,7 +86,25 @@ def main(_):
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
-    steps_per_epoch = train_ds_len['total_num_img'] // train_batch_size
+    # whether using random oversampling 
+    # (non-oversampling uses 'number_of_train_data (total_num_img)' as 'one_epoch' while 
+    #  oversampling uses 'number_of_majority-class_train_data' as 'one_epoch')
+    using_oversampling = ds_cfg['train_random_oversampling']
+    if using_oversampling:
+        dict_key_list_num_img_of_each_class_id = 'list_num_img_of_each_class_id'
+        prob_sampling_each_class_on_each_batch = ds_cfg['train_random_oversampling_weight']
+        num_class = ds_cfg['class_num']
+
+        idx_majority_class = np.argmax(train_ds_len[dict_key_list_num_img_of_each_class_id])
+        if prob_sampling_each_class_on_each_batch == None:  # uniform distribution across classes
+            prob_sampling_majority_class_on_each_batch = 1.0 / num_class
+        else:
+            prob_sampling_majority_class_on_each_batch = prob_sampling_each_class_on_each_batch[idx_majority_class]
+
+        steps_per_epoch = int(np.ceil(train_ds_len[dict_key_list_num_img_of_each_class_id][idx_majority_class] / (train_batch_size * prob_sampling_majority_class_on_each_batch))) 
+    else:
+        steps_per_epoch = int(np.ceil(train_ds_len['total_num_img'] / train_batch_size))
+    
     total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
     max_epoch = total_steps / steps_per_epoch
 
