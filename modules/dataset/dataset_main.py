@@ -7,7 +7,7 @@ from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
 from modules.dataset.eyeq import (gen_EyeQImgPathLabelDict, gen_EyeQdataset)
 
-def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=None):
+def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=False, seed=None):
     """Generate train/validation/test dataloader of the dataset"""
 
     if dataset_name == 'EyeQ': # Eye Quality (EyeQ) dataset
@@ -143,6 +143,7 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg, train_search=False, seed=N
                 oversampling_infos = None
 
             ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
+                                                           ds_input_types=model_cfg['input_types_for_model'],
                                                            train_val_test=v_ds_part, 
                                                            img_path_label_dict=v_img_path_label_dict,
                                                            img_path_dict_key=img_path_dict_key,

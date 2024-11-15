@@ -2,8 +2,9 @@ import os
 import random
 import numpy as np
 import tensorflow as tf
+import tensorflow_io as tfio
 
-from tensorflow.keras import layers
+from tensorflow.keras.layers import (RandomFlip, RandomRotation, Rescaling)
 
 
 def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key):
@@ -103,21 +104,32 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim, seed=None):
+def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
         if augment_infos['hflip']:
-            data_augmentation.add(layers.RandomFlip('horizontal', seed=seed))
+            data_augmentation.add(RandomFlip('horizontal', seed=seed))
         if augment_infos['vflip']:
-            data_augmentation.add(layers.RandomFlip('vertical', seed=seed))
+            data_augmentation.add(RandomFlip('vertical', seed=seed))
         if augment_infos['rotation']:
-            data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor'], seed=seed))    
+            data_augmentation.add(RandomRotation(augment_infos['rotation_factor'], seed=seed))    
 
     def transform_data(img_path, img_label):
         img = tf.io.read_file(img_path)
-        # decode image to tensor with type uint8 having values in the range [0, 255]
+        # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
         img = tf.io.decode_image(img, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
+        # generate and concatenate types of image input needed for model 
+        list_img_types = list()
+        for img_type in ds_input_types:
+            if img_type == 'RGB':
+                this_img_type = img
+            elif img_type == 'YCbCr':
+                this_img_type = tfio.experimental.color.rgb_to_ycbcr(img)
+            else:
+                raise ValueError('Generated type of image \'{}\' is unknown'.format(img_type))
+            list_img_types.append(this_img_type)
+        img = tf.concat(list_img_types, axis=-1)
         # convert image from type uint8 to float32 which the values are normalized by 255 (MAX value of the input dtype, uint8),
         # and return values in the range [0,1]
         img = tf.image.convert_image_dtype(img, tf.dtypes.float32)
@@ -125,14 +137,14 @@ def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_
         if augment:
             img = data_augmentation(img)
         # rescale an input in the [0, 1] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
-        img = layers.Rescaling(scale=2, offset=-1)(img)
+        img = Rescaling(scale=2, offset=-1)(img)
         
         return img, img_path, img_label
     return transform_data
 
 
-def gen_EyeQdataset(ds_num_class, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, 
-                    batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
+def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, 
+                    resized_img_dim, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -178,7 +190,7 @@ def gen_EyeQdataset(ds_num_class, train_val_test, img_path_label_dict, img_path_
         dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim, seed=seed),
+                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

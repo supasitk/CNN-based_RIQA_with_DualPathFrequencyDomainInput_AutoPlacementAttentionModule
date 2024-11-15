@@ -259,20 +259,16 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('Summary of model configuration')
     logging.info('-' * 100)
     logging.info('Model Structure: {}'.format(model_structure))
-    
-    # details of configuration sepearted for each model
-    if model_structure == 'OneBranch_ThreeInputChannelRGB':
-      logging.info('*** Input Channel ***')
-      logging.info('Number of input channel of dataset: {}'.format(cfg['number_of_input_channel']))
-      logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
-      logging.info('*** Detail of branch ***')
-      logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
-      logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
-      logging.info('Neural network for branch(es): {}'.format(cfg['model_of_branches']))
-      logging.info('Number of layer for branch(es): {}'.format(cfg['numLayer_of_branches']))
-      logging.info('Pretrained weight for branch(es): {}'.format(cfg['pretrainedWeight_of_branches']))
-    else:
-      raise ValueError('Unknown \'{}\' model'.format(model_structure))
+    logging.info('*** Detail of Input ***')
+    logging.info('Input type for model: {}'.format(cfg['input_types_for_model']))
+    logging.info('Number of input channel of input (data) tensor for model: {}'.format(cfg['number_of_input_channel']))
+    logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
+    logging.info('*** Detail of branch ***')
+    logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
+    logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
+    logging.info('Neural network for branch(es): {}'.format(cfg['model_of_branches']))
+    logging.info('Number of layer for branch(es): {}'.format(cfg['numLayer_of_branches']))
+    logging.info('Pretrained weight for branch(es): {}'.format(cfg['pretrainedWeight_of_branches']))
     logging.info('-' * 100)
     
 
@@ -282,14 +278,9 @@ def write_model_attention_config_summary(model_attn, cfg):
     logging.info('Summary of model attention configuration')
     logging.info('-' * 100)
     logging.info('Model Attention: {}'.format(model_attn))
-    
-    # details of configuration sepearted for each model
-    if model_attn == 'Attn_OneBranch_ThreeInputChannelRGB':
-      logging.info('Attention existence: {}'.format(cfg['attention_existence']))
-      if cfg['attention_existence']:
-        logging.info('Attention configuration for each bracnch(es): {}'.format(cfg['attention_config_of_branches']))
-    else:
-      raise ValueError('Unknown \'{}\' model attention'.format(model_attn))
+    logging.info('Attention existence: {}'.format(cfg['attention_existence']))
+    if cfg['attention_existence']:
+      logging.info('Attention configuration for each bracnch(es): {}'.format(cfg['attention_config_of_branches']))
     logging.info('-' * 100)
 
 
@@ -351,15 +342,10 @@ def write_model_attention_search_config_summary(model_attn_search, cfg):
     logging.info('Summary of model attention searching configuration')
     logging.info('-' * 100)
     logging.info('Model Attention Search: {}'.format(model_attn_search))
-    
-    # details of configuration sepearted for each model
-    if model_attn_search == 'SearchAttn_OneBranch_ThreeInputChannelRGB':
-      logging.info('Number of attention block for each bracnch(es): {}'.format(cfg['number_of_attention_block']))
-      logging.info('Number of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['number_of_attention_type']))
-      logging.info('List of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['list_of_attention_type']))
-      logging.info('Search configuration of each attention type for branch(es): {}'.format(cfg['search_config_of_attention_type']))
-    else:
-      raise ValueError('Unknown \'{}\' model attention search'.format(model_attn_search))
+    logging.info('Number of attention block for each bracnch(es): {}'.format(cfg['number_of_attention_block']))
+    logging.info('Number of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['number_of_attention_type']))
+    logging.info('List of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['list_of_attention_type']))
+    logging.info('Search configuration of each attention type for branch(es): {}'.format(cfg['search_config_of_attention_type']))
     logging.info('-' * 100)
 
 
