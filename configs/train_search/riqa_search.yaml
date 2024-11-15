@@ -6,12 +6,12 @@ dataset_name: 'EyeQ'  # ['EyeQ']
 dataset_config_path: './configs/dataset/eyeq.yaml'
 
 # model
-model_structure: 'OneBranch_ThreeInputChannelRGB'    # ['OneBranch_ThreeInputChannelRGB']
-model_config_path: './configs/model/OneBranch_ThreeInputChannelRGB.yaml'
+model_structure: 'OneBranch_ThreeInputChannelRGB'    # summary description of model structure
+model_config_path: './configs/model/model.yaml'
 
 # model attention search
-model_attention_search: 'SearchAttn_OneBranch_ThreeInputChannelRGB'    # ['SearchAttn_OneBranch_ThreeInputChannelRGB']
-model_attention_search_config_path: './configs/model_attention_search/SearchAttn_OneBranch_ThreeInputChannelRGB.yaml'
+model_attention_search: 'SearchAttn_OneBranch_ThreeInputChannelRGB'    # summary description of model attention search
+model_attention_search_config_path: './configs/model_attention_search/model_attention_search.yaml'
 
 # optimizer ['SGD']
 # --- SGD --- #

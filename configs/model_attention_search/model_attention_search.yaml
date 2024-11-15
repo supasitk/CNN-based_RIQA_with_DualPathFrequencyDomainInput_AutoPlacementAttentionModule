@@ -1,5 +1,5 @@
-# Searching Attention for Model configuration of Single-Branch with Input Channel "RGB"
-# This attention searching configuration need to corresponds with the model configuration 'OneBranch_ThreeInputChannelRGB.yaml' 
+# Searching Attention configuration for model 
+# This attention searching configuration need to corresponds with the model configuration 'model.yaml' 
 
 number_of_attention_block:    # number of attention block attached to branch(es) (#elements must be equal to 'number_of_branch')
   1: 16

@@ -1,7 +1,7 @@
 from absl import logging
 import tensorflow as tf
 
-from modules.model.structure import (OneBranch_ThreeInputChannelRGB)
+from modules.model.structure import (model_structure)
 from modules.utils import (write_info_and_weight_parameter_for_attention_searching)
 from modules.labels import *
 from modules.model.layer.CustomLayer import (SplitSoftmax)
@@ -34,19 +34,16 @@ class SearchNNmodel(object):
                                    label_of_intra: self.intra_attn_search_infos}
 
         # build model
-        logging.info(f'Building {self.name}...')
         cfg_model_structure = self.cfg['model_structure']
-        if cfg_model_structure == 'OneBranch_ThreeInputChannelRGB':
-            self.model = OneBranch_ThreeInputChannelRGB.genModel(cfg=self.cfg, 
-                                                                 ds_cfg=self.ds_cfg, 
-                                                                 model_cfg=self.model_cfg, 
-                                                                 model_attn_cfg=None, 
-                                                                 attn_search=True, 
-                                                                 attn_search_infos=attn_search_infos_dicts,
-                                                                 seed=self.seed)
-        else:
-            raise ValueError('Unknown \'{}\' model'.format(cfg_model_structure))
-    
+        logging.info(f'Building {self.name}: {cfg_model_structure} ...')
+        self.model = model_structure.genModel(cfg=self.cfg,
+                                              ds_cfg=self.ds_cfg, 
+                                              model_cfg=self.model_cfg, 
+                                              model_attn_cfg=None, 
+                                              attn_search=True, 
+                                              attn_search_infos=attn_search_infos_dicts, 
+                                              seed=self.seed)
+        
 
     def _initialize_inter_attn_search_parameter_and_info(self):
         num_of_branch = self.model_cfg['number_of_branch']

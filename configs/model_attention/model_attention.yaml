@@ -1,5 +1,5 @@
-# Attention for Model configuration of Single-Branch with Input Channel "RGB"
-# This attention configuration need to corresponds with the model configuration 'OneBranch_ThreeInputChannelRGB.yaml' 
+# Attention configuration for model
+# This attention configuration need to corresponds with the model configuration 'model.yaml' 
 
 attention_existence:    # Whether to use attention [True, False] (#elements must be equal to 'number_of_branch')
   1: True  
