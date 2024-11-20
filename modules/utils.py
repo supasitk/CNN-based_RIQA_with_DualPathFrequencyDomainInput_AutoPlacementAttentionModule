@@ -266,10 +266,7 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('Transformation of input for each bracnch(es): {}'.format(cfg['input_transformation_for_branches']))
     logging.info('*** Detail of branch ***')
     logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
-    logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
-    logging.info('Neural network for branch(es): {}'.format(cfg['model_of_branches']))
-    logging.info('Number of layer for branch(es): {}'.format(cfg['numLayer_of_branches']))
-    logging.info('Pretrained weight for branch(es): {}'.format(cfg['pretrainedWeight_of_branches']))
+    logging.info('Neural network configurations of branch(es): {}'.format(cfg['NN_config_of_branch']))
     logging.info('-' * 100)
     
 

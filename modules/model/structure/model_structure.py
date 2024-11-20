@@ -13,7 +13,7 @@ from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax)
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_transformation, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_transformation, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -77,13 +77,10 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                                                                 name=f'branch_{ThisBranch_key}_alpha_intra_attention_weights_SplitSoftmax')(alphas_intra_attn[ThisBranch_key-1]) # indices of 1st dimension (its size = num_branch) of alphas_intra_attn start from 0 to num_branch-1, so NthBranch_key need to be subtracted with 1
         
         ThisBranch_model = genModelBranch(branch_id=ThisBranch_key, 
-                                          branch_name=Branches_name[ThisBranch_key],
+                                          branch_NN_configs=Branches_NN_configs[ThisBranch_key],
                                           input_h_size=input_h_size,
                                           input_w_size=input_w_size,
                                           input_num_channel=len(ThisBranch_idx_input_ch), 
-                                          model_name=Branches_model[ThisBranch_key], 
-                                          num_layer=Branches_numLayer[ThisBranch_key],
-                                          pretrained_weight=Branches_pretrainedWeight[ThisBranch_key],
                                           attn_search=attn_search,
                                           attn_static_infos=ThisBranch_attn_static_infos,
                                           attn_inter_search_infos=ThisBranch_inter_attn_search_infos,

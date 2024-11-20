@@ -13,14 +13,19 @@ input_transformation_for_branches:            # transformation of input for each
 # Branch detail
 number_of_branch: 1                 # number of model's branch(es)
 
-name_of_branches:                   # name of model's branch(es) (#elements must be equal to 'number_of_branch')
-  1: 'ResNet50_RGB'
+NN_config_of_branch:                # Neural network configurations for branch(es) (#elements must be equal to 'number_of_branch')
+                                    #   'name' -> name of model's branch
+                                    #   'model' -> Neural network for branch (Supported neural network(s) are ['ResNet'])
+                                    #   'model_infos' -> informations of neural network for branch (see below for more details)
+  1: {
+      'name': 'ResNet50_RGB',
+      'model': 'ResNet',
+      'model_infos': {'numLayer': 50, 'pretrainedWeight': null}
+     }
 
-model_of_branches:                  # Neural network for branch(es) (#elements must be equal to 'number_of_branch') 
-  1: 'ResNet'                       # Supported neural network(s) are ['ResNet']
-
-numLayer_of_branches:               # Number of layer(s) of the network for branch(es) (#elements must be equal to 'number_of_branch')
-  1: 50                             # if 'ResNet', supported number of layer(s) are [18, 34, 50, 101, 152]
-
-pretrainedWeight_of_branches:       # Pretrained weight for branch(es) (#elements must be equal to 'number_of_branch')
-  1: null                           # if 'ResNet [50, 101, 152]', supported pretrained weight are [null, 'imagenet']
+##############################################################################################################################################
+# Supported model informations of neural network for branch are
+#    1. 'ResNet':
+#         'numLayer' -> [18, 34, 50, 101, 152],
+#         'pretrainedWeight' -> [null, 'imagenet' (only 50, 101, 152)] 
+##############################################################################################################################################
