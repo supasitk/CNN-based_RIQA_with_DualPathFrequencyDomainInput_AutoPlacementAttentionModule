@@ -2,7 +2,7 @@ from absl import logging
 import tensorflow as tf
 
 from tensorflow.keras import Model
-from tensorflow.keras.layers import (Input, Concatenate, GlobalAveragePooling2D, Flatten, Dropout, Dense)
+from tensorflow.keras.layers import (Input, Lambda, Concatenate, GlobalAveragePooling2D, Flatten, Dropout, Dense)
 
 from modules.labels import *
 from modules.initializers import *
@@ -13,7 +13,7 @@ from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax)
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_transformation, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -43,6 +43,13 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
         ThisBranch_idx_input_ch = Branches_idx_input_ch[ThisBranch_key] # list returned 
         ThisBranch_inputs = BranchInput(Branch_idx_input_ch=ThisBranch_idx_input_ch, 
                                         name=f'branch_{ThisBranch_key}_input')(inputs)
+        ThisBranch_input_transform = Branches_input_transformation[ThisBranch_key]
+        if ThisBranch_input_transform == 'RGB':
+            pass
+        elif ThisBranch_input_transform == 'YUV':
+            ThisBranch_inputs = Lambda(lambda x: tf.image.rgb_to_yuv(x), name=f'branch_{ThisBranch_key}_input_transform_RGBtoYUV')(ThisBranch_inputs)
+        else:
+            raise ValueError('Unknown \'{}\' transformation of input for branch of model'.format(ThisBranch_input_transform))
         # -- attention
         if attn_search == False:
             ThisBranch_attn_static_infos = {label_of_attn_existence: Branches_static_attn_existence[ThisBranch_key],

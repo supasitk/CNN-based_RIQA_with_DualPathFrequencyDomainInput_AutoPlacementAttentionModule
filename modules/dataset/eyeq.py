@@ -116,30 +116,26 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
             data_augmentation.add(RandomRotation(augment_infos['rotation_factor'], seed=seed))    
 
     def transform_data(img_path, img_label):
-        img = tf.io.read_file(img_path)
-        # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
-        img = tf.io.decode_image(img, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
-        # generate and concatenate types of image input needed for model 
-        list_img_types = list()
-        for img_type in ds_input_types:
-            if img_type == 'RGB':
-                this_img_type = img
-            elif img_type == 'YCbCr':
-                this_img_type = tfio.experimental.color.rgb_to_ycbcr(img)
+        list_input_types = list()
+        for input_type in ds_input_types:
+            if input_type == 'RGB':
+                this_input_type = tf.io.read_file(img_path)
+                # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
+                this_input_type = tf.io.decode_image(this_input_type, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
             else:
-                raise ValueError('Generated type of image \'{}\' is unknown'.format(img_type))
-            list_img_types.append(this_img_type)
-        img = tf.concat(list_img_types, axis=-1)
-        # convert image from type uint8 to float32 which the values are normalized by 255 (MAX value of the input dtype, uint8),
-        # and return values in the range [0,1]
-        img = tf.image.convert_image_dtype(img, tf.dtypes.float32)
-        img = tf.image.resize(img, [resized_img_dim, resized_img_dim])
+                raise ValueError('Input type of data \'{}\' is unknown'.format(input_type))
+            # get and concatenate types of input needed for model 
+            list_input_types.append(this_input_type)
+        inputs = tf.concat(list_input_types, axis=-1)
+        # resize
+        inputs = tf.image.resize(inputs, [resized_img_dim, resized_img_dim])
+        # augmentation
         if augment:
-            img = data_augmentation(img)
-        # rescale an input in the [0, 1] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
-        img = Rescaling(scale=2, offset=-1)(img)
+            inputs = data_augmentation(inputs)
+        # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
+        inputs = Rescaling(scale=1./127.5, offset=-1)(inputs)
         
-        return img, img_path, img_label
+        return inputs, img_path, img_label
     return transform_data
 
 

@@ -1,13 +1,14 @@
 # Model configuration
 
 # Input detail
-input_types_for_model: ['RGB']                # list of input type(s) for model (supported types are ['RGB', 'YCbCr']),
-                                              # the input type(s) generated as transforming dataset during train/val/test [original type of input is 'RGB'], 
-                                              # and then they are concatenated (IN ORDER as the list) to one input tensor for model, 
+input_types_for_model: ['RGB']                # list of input type(s) for model (supported types are ['RGB']),
+                                              # the input type(s) are concatenated (IN ORDER as the list) to one input tensor for model, 
                                               # so each branch of model will gather subset of channels from the tensor for its execution
 number_of_input_channel: 3                    # number of input channel of data (input) tensor for the model (must be equal to 'summation of number of channel for each input type')
 indices_of_input_channel_for_branches:        # indices of input channel(s) for each branch(es) [#elements must be equal to 'number_of_branch'] 
-  1: [0,1,2]                                  
+  1: [0,1,2]
+input_transformation_for_branches:            # transformation of input for each branch(es) [#elements must be equal to 'number_of_branch'] 
+  1: 'RGB'                                    # supported transformation are ['RGB' (not transformed if input type is 'RGB'), 'YUV']                      
 
 # Branch detail
 number_of_branch: 1                 # number of model's branch(es)

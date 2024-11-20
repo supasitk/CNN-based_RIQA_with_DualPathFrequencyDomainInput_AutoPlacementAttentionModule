@@ -263,6 +263,7 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('Input type for model: {}'.format(cfg['input_types_for_model']))
     logging.info('Number of input channel of input (data) tensor for model: {}'.format(cfg['number_of_input_channel']))
     logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
+    logging.info('Transformation of input for each bracnch(es): {}'.format(cfg['input_transformation_for_branches']))
     logging.info('*** Detail of branch ***')
     logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
     logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))

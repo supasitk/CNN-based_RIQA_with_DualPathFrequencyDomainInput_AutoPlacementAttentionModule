@@ -9,6 +9,9 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     Branches_idx_input_ch = model_cfg['indices_of_input_channel_for_branches'] # dictionary returned
     if len(Branches_idx_input_ch) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of index set \'{}\' of input channel for branches'.format(num_branch, len(Branches_idx_input_ch)))
+    Branches_input_transformation = model_cfg['input_transformation_for_branches'] # dictionary returned
+    if len(Branches_input_transformation) != num_branch:
+        raise ValueError('Number of branch \'{}\' not equal to number of input transformation list \'{}\' for branches'.format(num_branch, len(Branches_input_transformation)))
     Branches_name = model_cfg['name_of_branches'] # dictionary returned
     if len(Branches_name) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of name list \'{}\' for branches'.format(num_branch, len(Branches_name)))
@@ -24,7 +27,7 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     dropout_rate = cfg['dropout_rate']
     num_class = ds_cfg['class_num']
 
-    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class
+    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_transformation, Branches_name, Branches_model, Branches_numLayer, Branches_pretrainedWeight, dropout_rate, num_class
 
 
 def check_and_get_model_static_attention_configuration(num_branch, model_attn_cfg):
