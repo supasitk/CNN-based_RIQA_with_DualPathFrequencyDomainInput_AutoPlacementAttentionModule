@@ -121,7 +121,7 @@ def main(_):
     optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
 
     # loss function
-    criterion = LossFn(cfg, ds_cfg)
+    criterion = LossFn(cfg, ds_cfg, train_ds_len)
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train/' + cfg['config_summary'] + f"/seed{seed}/"
@@ -144,7 +144,7 @@ def main(_):
     def train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = model(inputs, training=True)
-            loss = criterion.compute_loss(labels, logits)
+            loss = criterion.compute_loss(labels, logits, training=True)
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return logits, loss
@@ -203,7 +203,7 @@ def main(_):
 
         # check if end each epoch of train
         if steps % steps_per_epoch == 0:
-            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit), training=True)
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
                                                train_accumulated_results.accum_y_prob,
                                                train_accumulated_results.accum_y_pred, 

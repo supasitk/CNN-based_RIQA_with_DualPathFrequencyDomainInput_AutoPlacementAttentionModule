@@ -123,7 +123,7 @@ def main(_):
     arch_optimizer = getOptimizer(cfg, total_steps, steps_per_epoch, name='arch_optimizer', arch_search=True)
 
     # loss function
-    criterion = LossFn(cfg, ds_cfg)
+    criterion = LossFn(cfg, ds_cfg, train_ds_len)
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary'] + f"/seed{seed}/"
@@ -154,7 +154,7 @@ def main(_):
     def train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion.compute_loss(labels, logits)
+            loss = criterion.compute_loss(labels, logits, training=True)
         grads = tape.gradient(loss, snn.model.trainable_variables)
         optimizer.apply_gradients(zip(grads, snn.model.trainable_variables))
         return logits, loss
@@ -164,7 +164,7 @@ def main(_):
     def arch_train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion.compute_loss(labels, logits)
+            loss = criterion.compute_loss(labels, logits, training=True)
         attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
         grads = tape.gradient(loss, attn_search_weights)
         if cfg['arch_grad_clip_norm'] != None:
@@ -207,7 +207,7 @@ def main(_):
 
         # check if end each epoch of train
         if steps % steps_per_epoch == 0:
-            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit), training=True)
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
                                                train_accumulated_results.accum_y_prob,
                                                train_accumulated_results.accum_y_pred, 

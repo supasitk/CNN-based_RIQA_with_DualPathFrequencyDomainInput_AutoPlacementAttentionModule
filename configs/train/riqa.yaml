@@ -1,5 +1,5 @@
 # run info
-config_summary: 'Tr_DsEyeQrs224tr75tr25te100AugHVflipRot2e-1TrOStWPECEBnone_Md1Bresnet50RGBnoPreW_AttnCA0b0-15_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitT-Bs32-DropRate0-Wd0-EpTr160Val1LAFt5Save1-10s0'
+config_summary: 'Tr_DsEyeQrs224tr75tr25te100AugHVflipRot2e-1TrOStWPECEBnone_Md1Bresnet50RGBnoPreW_AttnCA0b0-15_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitTcwF-Bs32-DropRate0-Wd0-EpTr160Val1LAFt5Save1-10s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -47,11 +47,13 @@ loss_fn: 'SparseCategoricalCrossentropy'
 loss_fn_config:
   'from_logits': True
   'reduction': 'sum_over_batch_size'
+  'train_with_class_weight': False
 # --- SparseCategoricalCrossentropyWithLabelSmoothing --- #
 #loss_fn: 'SparseCategoricalCrossentropyWithLabelSmoothing'    
 #loss_fn_config:
 #  'from_logits': True
 #  'reduction': 'sum_over_batch_size'
+#  'train_with_class_weight': False
 #  'label_smoothing': 0.1
 
 # training setting
