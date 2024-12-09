@@ -50,10 +50,11 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         then concatenates the results together,
         the Output layer's size is [B , H / tile_size_x, W / tile_size_y, C * num_selected_freq]
     """
-    def __init__(self, num_freq=64, freq_selection=None, tile_size_x=8, tile_size_y=8, name='Depthwise_DCT2d', **kwargs):
+    def __init__(self, num_freq=64, freq_selection=None, num_selected_freq=64, tile_size_x=8, tile_size_y=8, name='Depthwise_DCT2d', **kwargs):
         super(Depthwise_DCT2d, self).__init__(name=name, **kwargs)
         self.num_freq = num_freq
-        self.freq_selection = freq_selection 
+        self.freq_selection = freq_selection
+        self.num_selected_freq = num_selected_freq 
         self.tile_size_x = tile_size_x 
         self.tile_size_y = tile_size_y
         self.name = name
@@ -63,6 +64,7 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         self.in_channel = input_shape[-1]
         
         freq_idxs_u, freq_idxs_v = self._get_freq_indices(self.num_freq, self.freq_selection)
+        assert (self.num_selected_freq == len(freq_idxs_u)) and (self.num_selected_freq == len(freq_idxs_v))
         # fixed DCT filters init
         self.weight = tf.Variable(initial_value=self._get_dct_filter(self.tile_size_x, self.tile_size_y, freq_idxs_u, freq_idxs_v, self.in_channel),
                                   trainable=False)
