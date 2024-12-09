@@ -30,7 +30,8 @@ NN_config_of_branch:                # Neural network configurations for branch(e
   1: {
       'name': 'ResNet50_RGB',
       'model': 'ResNet',
-      'model_infos': {'numLayer': 50, 'pretrainedWeight': null}
+      'model_infos': {'numLayer': 50, 'pretrainedWeight': null},
+      'input_shape': {'H': 224, 'W': 224, 'C': 3}
      }
 
 ##############################################################################################################################################

@@ -44,8 +44,10 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
         ThisBranch_idx_input_ch = Branches_idx_input_ch[ThisBranch_key] # list returned 
         ThisBranch_inputs = BranchInput(Branch_idx_input_ch=ThisBranch_idx_input_ch, 
                                         name=f'branch_{ThisBranch_key}_input')(inputs)
+        ThisBranch_input_c_size = len(ThisBranch_idx_input_ch) 
         # -- resize
         ThisBranch_resized_input_dim = Branches_resized_input_dim[ThisBranch_key]
+        ThisBranch_input_h_size, ThisBranch_input_w_size = ThisBranch_resized_input_dim, ThisBranch_resized_input_dim
         if ThisBranch_resized_input_dim != input_h_size:
             ThisBranch_inputs = Lambda(lambda x: tf.image.resize(x, [ThisBranch_resized_input_dim, ThisBranch_resized_input_dim]), name=f'branch_{ThisBranch_key}_resize_input')(ThisBranch_inputs)
         # -- color space conversion
@@ -82,11 +84,13 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                                                                 size_splits=ThisBranch_intra_size_splits,
                                                                 name=f'branch_{ThisBranch_key}_alpha_intra_attention_weights_SplitSoftmax')(alphas_intra_attn[ThisBranch_key-1]) # indices of 1st dimension (its size = num_branch) of alphas_intra_attn start from 0 to num_branch-1, so NthBranch_key need to be subtracted with 1
         
+        ThisBranch_input_shape_of_NN = Branches_NN_configs[ThisBranch_key]['input_shape'] # dictionary returned
+        assert (ThisBranch_input_h_size == ThisBranch_input_shape_of_NN['H']) and (ThisBranch_input_w_size == ThisBranch_input_shape_of_NN['W']) and (ThisBranch_input_c_size == ThisBranch_input_shape_of_NN['C'])
         ThisBranch_model = genModelBranch(branch_id=ThisBranch_key, 
                                           branch_NN_configs=Branches_NN_configs[ThisBranch_key],
-                                          input_h_size=input_h_size,
-                                          input_w_size=input_w_size,
-                                          input_num_channel=len(ThisBranch_idx_input_ch), 
+                                          input_h_size=ThisBranch_input_h_size,
+                                          input_w_size=ThisBranch_input_w_size,
+                                          input_num_channel=ThisBranch_input_c_size, 
                                           attn_search=attn_search,
                                           attn_static_infos=ThisBranch_attn_static_infos,
                                           attn_inter_search_infos=ThisBranch_inter_attn_search_infos,
