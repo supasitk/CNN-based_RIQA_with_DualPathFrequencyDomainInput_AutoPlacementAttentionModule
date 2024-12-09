@@ -189,6 +189,10 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Split the selected training set as validation data: {}'.format(cfg['val_from_train']))
         logging.info('Shuffle the selected training set before splitting to create the validation set: {}'.format(cfg['val_from_train_shuffle']))
         logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
+        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
+        logging.info('Rescale input value: {}'.format(cfg['rescale_input_value']))
+        if cfg['rescale_input_value']:
+          logging.info('Rescale input value - Range: {}'.format(cfg['rescale_input_value_range']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
         if cfg['train_augment']:
           logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
@@ -196,7 +200,6 @@ def write_dataset_config_summary(ds_name, cfg):
           logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
           if cfg['train_augment_rotation']:
               logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
-        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
         logging.info('Random oversampling for training data: {}'.format(cfg['train_random_oversampling']))
         if cfg['train_random_oversampling']:
           logging.info('Train random oversampling - Type: {}'.format(cfg['train_random_oversampling_type']))

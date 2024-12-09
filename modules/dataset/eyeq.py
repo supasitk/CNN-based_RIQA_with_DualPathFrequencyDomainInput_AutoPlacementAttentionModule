@@ -104,7 +104,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, seed=None):
+def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
@@ -113,7 +113,20 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
         if augment_infos['vflip']:
             data_augmentation.add(RandomFlip('vertical', seed=seed))
         if augment_infos['rotation']:
-            data_augmentation.add(RandomRotation(augment_infos['rotation_factor'], seed=seed))    
+            data_augmentation.add(RandomRotation(augment_infos['rotation_factor'], seed=seed))
+
+    # function of rescaling
+    if rescale:
+        rescale_range = rescale_infos['range']
+        if rescale_range == 'ZerotoOne':
+            scale_value = 1./255
+            offset_value = 0
+        elif rescale_range == 'minusOnetoOne':
+            scale_value = 1./127.5
+            offset_value = -1
+        else:
+            raise ValueError('Rescale input value range \'{}\' is unknown'.format(rescale_range))
+        rescaling_fn = Rescaling(scale=scale_value, offset=offset_value)
 
     def transform_data(img_path, img_label):
         list_input_types = list()
@@ -133,14 +146,15 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
         if augment:
             inputs = data_augmentation(inputs)
         # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
-        inputs = Rescaling(scale=1./127.5, offset=-1)(inputs)
+        if rescale:
+            inputs = rescaling_fn(inputs)
         
         return inputs, img_path, img_label
     return transform_data
 
 
 def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, 
-                    resized_img_dim, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
+                    resized_img_dim, rescale, rescale_infos, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -186,7 +200,7 @@ def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label
         dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, seed=seed),
+                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

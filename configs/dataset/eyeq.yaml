@@ -35,14 +35,18 @@ train_shuffle: True           # whether the training data shuffled before splitt
 val_from_train: True          # whether the validation data splitted from the selected training set
 val_from_train_shuffle: True  # whether the selected training set shuffled before splitting to create the validation set
 val_portion: 0.25             # split (val_portion * 100)% of the selected training set ([train_portion * 100]% of training data)
+#-- Resize --#
+resized_image_dim: 224        # Dimension of resized image for input to model
+#-- Rescale --#
+rescale_input_value: True     # whether rescaling input values to a new range, if True, details of rescale need to be specified 
+rescale_input_value_range: 'minusOnetoOne'  # supported range(s) are 'ZerotoOne', 'minusOnetoOne'
 #-- Augmentation --#
 train_augment: True                     # whether the data augmentation for training data, if True, details of augment need to be specified
 train_augment_hflip: True               # Random horizontal flipping
 train_augment_vflip: True               # Random vertical flipping
 train_augment_rotation: True            # Random rotation
 train_augment_rotation_factor: 0.2      # Fraction of 2 Pi of rotation results in an output rotating by a random amount in the range [-20% * 2pi, 20% * 2pi]
-resized_image_dim: 224       # Dimension of resized image for input to model
 #-- Random Oversampling --#
-train_random_oversampling: True         # whether oversample the minority classes for training data, if True, details of random sampling need to be specified
-train_random_oversampling_type: 'WeightedProbabilityEveryClassOnEachBatch' # ['WeightedProbabilityEveryClassOnEachBatch' -> Each batch has number of input for each class as weighted probability defined]
-train_random_oversampling_weight: null  # for 'WeightedProbabilityEveryClassOnEachBatch', 'null' means uniform distribution across classes; otherwise 'list of probability for each class (in order)' is specified (sum need to be 1.0), e.g., [0.5, 0.3, 0.2] for 3 classes (weight[i] represents probability to sample from class[i])
+train_random_oversampling: False         # whether oversample the minority classes for training data, if True, details of random sampling need to be specified
+#train_random_oversampling_type: 'WeightedProbabilityEveryClassOnEachBatch' # ['WeightedProbabilityEveryClassOnEachBatch' -> Each batch has number of input for each class as weighted probability defined]
+#train_random_oversampling_weight: null  # for 'WeightedProbabilityEveryClassOnEachBatch', 'null' means uniform distribution across classes; otherwise 'list of probability for each class (in order)' is specified (sum need to be 1.0), e.g., [0.5, 0.3, 0.2] for 3 classes (weight[i] represents probability to sample from class[i])

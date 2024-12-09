@@ -142,6 +142,12 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                 oversampling = False
                 oversampling_infos = None
 
+            rescale = dataset_cfg['rescale_input_value']
+            rescale_infos = None
+            if rescale:
+                rescale_infos = dict()
+                rescale_infos.update([('range', dataset_cfg['rescale_input_value_range'])])
+
             ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
                                                            ds_input_types=model_cfg['input_types_for_model'],
                                                            train_val_test=v_ds_part, 
@@ -152,6 +158,8 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                                                            augment=augment,
                                                            augment_infos=augment_infos,
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
+                                                           rescale=rescale,
+                                                           rescale_infos=rescale_infos,
                                                            batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder,
                                                            oversampling=oversampling, 
