@@ -268,6 +268,7 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('*** Detail of model ***')
     logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
     logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
+    logging.info('Dimension of resized input for each branch(es): {}'.format(cfg['resized_dim_of_input_for_branches']))
     logging.info('Color space conversion of input for each bracnch(es): {}'.format(cfg['color_space_conversion_for_branches']))
     logging.info('Neural network configurations of branch(es): {}'.format(cfg['NN_config_of_branch']))
     logging.info('-' * 100)

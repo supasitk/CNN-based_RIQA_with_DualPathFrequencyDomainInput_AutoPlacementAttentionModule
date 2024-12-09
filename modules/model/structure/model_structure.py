@@ -13,7 +13,7 @@ from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax)
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -23,6 +23,7 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
         Branches_static_attn_config = None
 
     # ------------------ Input Layer for Data ------------------ #
+    assert input_h_size == input_w_size
     inputs = Input([input_h_size, input_w_size, input_num_channel], name='input_image')
     
     # ------ Input Layer for Attention Searching Parameter ----- #
@@ -43,6 +44,10 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
         ThisBranch_idx_input_ch = Branches_idx_input_ch[ThisBranch_key] # list returned 
         ThisBranch_inputs = BranchInput(Branch_idx_input_ch=ThisBranch_idx_input_ch, 
                                         name=f'branch_{ThisBranch_key}_input')(inputs)
+        # -- resize
+        ThisBranch_resized_input_dim = Branches_resized_input_dim[ThisBranch_key]
+        if ThisBranch_resized_input_dim != input_h_size:
+            ThisBranch_inputs = Lambda(lambda x: tf.image.resize(x, [ThisBranch_resized_input_dim, ThisBranch_resized_input_dim]), name=f'branch_{ThisBranch_key}_resize_input')(ThisBranch_inputs)
         # -- color space conversion
         ThisBranch_input_color_space_conversion = Branches_input_color_space_conversion[ThisBranch_key]
         if ThisBranch_input_color_space_conversion is None:

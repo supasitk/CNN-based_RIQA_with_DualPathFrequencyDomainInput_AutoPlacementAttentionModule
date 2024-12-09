@@ -9,6 +9,9 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     Branches_idx_input_ch = model_cfg['indices_of_input_channel_for_branches'] # dictionary returned
     if len(Branches_idx_input_ch) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of index set \'{}\' of input channel for branches'.format(num_branch, len(Branches_idx_input_ch)))
+    Branches_resized_input_dim = model_cfg['resized_dim_of_input_for_branches'] # dictionary returned
+    if len(Branches_resized_input_dim) != num_branch:
+        raise ValueError('Number of branch \'{}\' not equal to number of resized input dimension list \'{}\' for branches'.format(num_branch, len(Branches_resized_input_dim)))
     Branches_input_color_space_conversion = model_cfg['color_space_conversion_for_branches'] # dictionary returned
     if len(Branches_input_color_space_conversion) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of input color space conversion list \'{}\' for branches'.format(num_branch, len(Branches_input_color_space_conversion)))
@@ -18,7 +21,7 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     dropout_rate = cfg['dropout_rate']
     num_class = ds_cfg['class_num']
 
-    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class
+    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class
 
 
 def check_and_get_model_static_attention_configuration(num_branch, model_attn_cfg):
