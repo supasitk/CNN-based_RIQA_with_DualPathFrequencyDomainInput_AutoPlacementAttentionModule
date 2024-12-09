@@ -15,13 +15,16 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     Branches_input_color_space_conversion = model_cfg['color_space_conversion_for_branches'] # dictionary returned
     if len(Branches_input_color_space_conversion) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of input color space conversion list \'{}\' for branches'.format(num_branch, len(Branches_input_color_space_conversion)))
+    Branches_input_dct_transform = model_cfg['dct_transformation_for_branches'] # dictionary returned
+    if len(Branches_input_dct_transform) != num_branch:
+        raise ValueError('Number of branch \'{}\' not equal to number of input DCT transformation list \'{}\' for branches'.format(num_branch, len(Branches_input_dct_transform)))
     Branches_NN_configs = model_cfg['NN_config_of_branch'] # dictionary returned
     if len(Branches_NN_configs) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of neural network configurations list \'{}\' for branches'.format(num_branch, len(Branches_NN_configs)))
     dropout_rate = cfg['dropout_rate']
     num_class = ds_cfg['class_num']
 
-    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class
+    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, dropout_rate, num_class
 
 
 def check_and_get_model_static_attention_configuration(num_branch, model_attn_cfg):

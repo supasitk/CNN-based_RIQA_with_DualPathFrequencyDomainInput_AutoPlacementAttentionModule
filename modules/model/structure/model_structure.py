@@ -8,12 +8,12 @@ from modules.labels import *
 from modules.initializers import *
 from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_static_attention_configuration)
 from modules.model.baseline.baseline_main import (genModelBranch)
-from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax)
+from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax, Depthwise_DCT2d)
 
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -58,6 +58,30 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
             ThisBranch_inputs = Lambda(lambda x: tf.image.rgb_to_yuv(x), name=f'branch_{ThisBranch_key}_input_color_space_conversion_RGBtoYUV')(ThisBranch_inputs)
         else:
             raise ValueError('Unknown \'{}\' color space conversion of input for branch of model'.format(ThisBranch_input_color_space_conversion))
+        # -- DCT transformation
+        ThisBranch_input_dct_transform = Branches_input_dct_transform[ThisBranch_key] # dict returned
+        if ThisBranch_input_dct_transform['transform']:
+            ThisBranch_input_dct_transform_infos = ThisBranch_input_dct_transform['transform_infos'] # dict returned
+            ThisBranch_input_dct_transform_type = ThisBranch_input_dct_transform_infos['type']
+            if ThisBranch_input_dct_transform_type == 'Depthwise_DCT2d':
+                num_freq = ThisBranch_input_dct_transform_infos['num_freq']
+                freq_selection = ThisBranch_input_dct_transform_infos['freq_selection']
+                num_selected_freq = ThisBranch_input_dct_transform_infos['num_selected_freq']
+                tile_size_x = ThisBranch_input_dct_transform_infos['tile_size_x']
+                tile_size_y = ThisBranch_input_dct_transform_infos['tile_size_y']
+
+                ThisBranch_inputs = Depthwise_DCT2d(num_freq=num_freq, 
+                                                    freq_selection=freq_selection, 
+                                                    num_selected_freq=num_selected_freq, 
+                                                    tile_size_x=tile_size_x, 
+                                                    tile_size_y=tile_size_y, 
+                                                    name=f'branch_{ThisBranch_key}_Depthwise_DCT2d')(ThisBranch_inputs)
+
+                ThisBranch_input_h_size = ThisBranch_input_h_size // tile_size_x
+                ThisBranch_input_w_size = ThisBranch_input_w_size // tile_size_y
+                ThisBranch_input_c_size = ThisBranch_input_c_size * num_selected_freq
+            else:
+                raise ValueError('Unknown \'{}\' DCT transform type of input for branch of model'.format(ThisBranch_input_dct_transform_type))
         # -- attention
         if attn_search == False:
             ThisBranch_attn_static_infos = {label_of_attn_existence: Branches_static_attn_existence[ThisBranch_key],
