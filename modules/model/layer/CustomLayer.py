@@ -42,10 +42,16 @@ class Skip(tf.keras.layers.Layer):
         return x
     
 
-class DCT2d(tf.keras.layers.Layer):
-    """Generate layer of 2D-DCT filters and transforming input into 2D-DCT coefficients"""
-    def __init__(self, num_freq=64, freq_selection=None, tile_size_x=8, tile_size_y=8, name='DCT2d', **kwargs):
-        super(DCT2d, self).__init__(name=name, **kwargs)
+class Depthwise_DCT2d(tf.keras.layers.Layer):
+    """ Generate layer of 2D-DCT filters, 
+            - Selecting frequency compenents (using each one for each filter) with 'freq_selection' method from all 'num_freq' frequency components  
+            - Each filter's size is 'tile_size_x' * 'tile_size_y' 
+        and Transforming input (size of [B, H, W, C]) into 2D-DCT coefficients by convolving seperately these 2D-DCT filters for each input channel with strides ([B, H, W, C]) [1, 'tile_size_x', 'tile_size_y', 1], 
+        then concatenates the results together,
+        the Output layer's size is [B , H / tile_size_x, W / tile_size_y, C * num_selected_freq]
+    """
+    def __init__(self, num_freq=64, freq_selection=None, tile_size_x=8, tile_size_y=8, name='Depthwise_DCT2d', **kwargs):
+        super(Depthwise_DCT2d, self).__init__(name=name, **kwargs)
         self.num_freq = num_freq
         self.freq_selection = freq_selection 
         self.tile_size_x = tile_size_x 
