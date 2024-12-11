@@ -20,7 +20,7 @@ resized_dim_of_input_for_branches:        # Dimension of resized input for each 
 
 #-- Color space conversion of branch(es)
 color_space_conversion_for_branches:      # color space conversion of input for each branch(es) [#elements must be equal to 'number_of_branch'] 
-  1: Null                                 # supported conversion are [Null, 'YUV']                      
+  1: null                                 # supported conversion are [null, 'YUV']                      
 
 #-- DCT transformation of branch(es)      
 dct_transformation_for_branches:         # DCT transformation of input for each branch(es) [#elements must be equal to 'number_of_branch'], if 'transform' == True, details of DCT transformation need to be specified 
@@ -34,10 +34,11 @@ NN_config_of_branch:                # Neural network configurations for branch(e
                                     #   'name' -> name of model's branch
                                     #   'model' -> Neural network for branch (Supported neural network(s) are ['ResNet'])
                                     #   'model_infos' -> informations of neural network for branch (see below for more details)
+                                    #   'input_shape' -> shape [height, width, channel] of input tensor for branch
   1: {
       'name': 'ResNet50_RGB',
       'model': 'ResNet',
-      'model_infos': {'numLayer': 50, 'pretrainedWeight': null},
+      'model_infos': {'numLayer': 50, 'pretrainedWeight': null, 'excluded_parts': null},
       'input_shape': {'H': 224, 'W': 224, 'C': 3}
      }
 
@@ -46,4 +47,5 @@ NN_config_of_branch:                # Neural network configurations for branch(e
 #    1. 'ResNet':
 #         'numLayer' -> [18, 34, 50, 101, 152],
 #         'pretrainedWeight' -> [null, 'imagenet' (only 50, 101, 152)] 
+#         'excluded_parts' -> null or list of excluded part(s) of used model (['conv1', 'pool1'])
 ##############################################################################################################################################

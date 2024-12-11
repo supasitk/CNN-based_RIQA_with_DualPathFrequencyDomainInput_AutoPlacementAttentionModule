@@ -96,6 +96,7 @@ def ResNet(
     classes=1000,
     branch_model_name="resnet",
     classifier_activation="softmax",
+    excluded_parts=None,
     attn_search=False,
     seed=None,
     **kwargs,
@@ -198,19 +199,21 @@ def ResNet(
 
     bn_axis = 3 if backend.image_data_format() == "channels_last" else 1
 
-    x = ZeroPadding2D(padding=((3, 3), (3, 3)), name="conv1_pad")(
-        img_input
-    )
-    x = Conv2D(64, 7, strides=2, use_bias=use_bias, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name="conv1_conv")(x)
+    x = img_input
 
-    if not preact:
-        x = BatchNormalization(
-            axis=bn_axis, epsilon=1.001e-5, name="conv1_bn"
-        )(x)
-        x = Activation("relu", name="conv1_relu")(x)
+    if (excluded_parts is None) or ('conv1' not in excluded_parts): 
+        x = ZeroPadding2D(padding=((3, 3), (3, 3)), name="conv1_pad")(x)
+        x = Conv2D(64, 7, strides=2, use_bias=use_bias, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name="conv1_conv")(x)
 
-    x = ZeroPadding2D(padding=((1, 1), (1, 1)), name="pool1_pad")(x)
-    x = MaxPooling2D(3, strides=2, name="pool1_pool")(x)
+        if not preact:
+            x = BatchNormalization(
+                axis=bn_axis, epsilon=1.001e-5, name="conv1_bn"
+            )(x)
+            x = Activation("relu", name="conv1_relu")(x)
+
+    if (excluded_parts is None) or ('pool1' not in excluded_parts): 
+        x = ZeroPadding2D(padding=((1, 1), (1, 1)), name="pool1_pad")(x)
+        x = MaxPooling2D(3, strides=2, name="pool1_pool")(x)
 
     if attn_search == False:
         x = stack_fn(x)
@@ -651,6 +654,7 @@ def ResNet18(
     pooling=None,
     classes=1000,
     branch_model_name="resnet18",
+    excluded_parts=None,
     attention=None,
     seed=None,
     **kwargs,
@@ -683,6 +687,7 @@ def ResNet18(
         pooling,
         classes,
         branch_model_name,
+        excluded_parts=excluded_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -697,6 +702,7 @@ def ResNet34(
     pooling=None,
     classes=1000,
     branch_model_name="resnet34",
+    excluded_parts=None,
     attention=None,
     seed=None,
     **kwargs,
@@ -729,6 +735,7 @@ def ResNet34(
         pooling,
         classes,
         branch_model_name,
+        excluded_parts=excluded_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -748,6 +755,7 @@ def ResNet50(
     pooling=None,
     classes=1000,
     branch_model_name="resnet50",
+    excluded_parts=None,
     attention=None,
     seed=None,
     **kwargs,
@@ -780,6 +788,7 @@ def ResNet50(
         pooling,
         classes,
         branch_model_name,
+        excluded_parts=excluded_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -797,6 +806,7 @@ def ResNet101(
     pooling=None,
     classes=1000,
     branch_model_name="resnet101",
+    excluded_parts=None,
     attention=None,
     seed=None,
     **kwargs,
@@ -829,6 +839,7 @@ def ResNet101(
         pooling,
         classes,
         branch_model_name,
+        excluded_parts=excluded_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -846,6 +857,7 @@ def ResNet152(
     pooling=None,
     classes=1000,
     branch_model_name="resnet152",
+    excluded_parts=None,
     attention=None,
     seed=None,
     **kwargs,
@@ -878,6 +890,7 @@ def ResNet152(
         pooling,
         classes,
         branch_model_name,
+        excluded_parts=excluded_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
