@@ -46,6 +46,31 @@ NN_config_of_branch:                # Neural network configurations for branch(e
 # Supported model informations of neural network for branch are
 #    1. 'ResNet':
 #         'numLayer' -> [18, 34, 50, 101, 152],
-#         'pretrainedWeight' -> [null, 'imagenet' (only 50, 101, 152)] 
+#         'pretrainedWeight' -> [null, 'imagenet' (only 50, 101, 152)], 
 #         'excluded_parts' -> null or list of excluded part(s) of used model (['conv1', 'pool1'])
+##############################################################################################################################################
+
+# -- Feature aggregration from branch(es) of model
+feature_aggregration_from_branches:  # Feature aggregration configurations from branch(es) of model
+                                     #  'method' -> how to aggregrate features from branch(es) ['concatenate']
+                                     #  'dropout_rate' -> dropout rate to use after aggregration 
+  { 
+    'method': 'concatenate', 
+    'dropout_rate': 0.0
+  }
+
+# -- optional dense layer(s) before classification (final) dense layer of model
+optional_dense_layers_of_model:      # Optional dense layer(s) configurations for model
+                                    #   'num_dense' -> number of dense layer(s) added before final dense layer
+                                    #   'dense_infos' -> informations of optional dense(s) of model (see below for more details)
+  {
+    'num_dense': 0,
+    'dense_infos': {'units': [], 'activation': [], 'dropout_rate': []} 
+  }
+
+##############################################################################################################################################
+# Supported informations of optional dense layer are
+#     'units' -> list of dimensionality of the output space for each optional dense (#elements must be equal to 'num_dense'),
+#     'activation' -> list of activation function to use for each optional dense (#elements must be equal to 'num_dense'), 
+#     'dropout_rate' -> list of dropout rate to use for each optional dense (#elements must be equal to 'num_dense')
 ##############################################################################################################################################

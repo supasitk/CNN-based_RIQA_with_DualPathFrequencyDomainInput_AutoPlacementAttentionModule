@@ -13,7 +13,7 @@ from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax, Depthwis
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, dropout_rate, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, feature_aggregration, optional_dense_layers, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -127,11 +127,28 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
 
         list_feature_extraction_for_branches.append(ThisBranch_features)
 
-    # ------------------ Feature Aggregration ------------------#
+    # ------------------ Prediction ------------------- #
+    #-- feature aggregration
     all_features = Concatenate(axis=-1)(list_feature_extraction_for_branches)
     all_features = GlobalAveragePooling2D()(all_features)
     all_features = Flatten()(all_features)
-    all_features = Dropout(dropout_rate, seed=seed)(all_features)
+    if feature_aggregration['dropout_rate'] != 0.0:
+        all_features = Dropout(feature_aggregration['dropout_rate'], seed=seed, name=f'feature_aggregration_dropout')(all_features)
+    #-- optional dense (w/wo drouput) layer(s)
+    num_optional_denses = optional_dense_layers['num_dense']
+    optional_denses_infos = optional_dense_layers['dense_infos'] # dict returned
+    optional_denses_units = optional_denses_infos['units'] # list returned
+    optional_denses_activation = optional_denses_infos['activation'] # list returned
+    optional_denses_dropout_rate = optional_denses_infos['dropout_rate'] # list returned
+    assert (len(optional_denses_units) == num_optional_denses) and (len(optional_denses_activation) == num_optional_denses) and (len(optional_denses_dropout_rate) == num_optional_denses)
+    for optional_dense_i in range(num_optional_denses):
+        all_features = Dense(units=optional_denses_units[optional_dense_i],
+                             activation=optional_denses_activation[optional_dense_i],
+                             kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
+                             name=f'optional_dense_{optional_dense_i}')(all_features)
+        if optional_denses_dropout_rate[optional_dense_i] != 0.0:
+            all_features = Dropout(optional_denses_dropout_rate[optional_dense_i], seed=seed, name=f'optional_dense_{optional_dense_i}_dropout')(all_features) 
+    #-- final (classification) dense layer
     logits = Dense(num_class, kernel_initializer=DENSE_KERNEL_INIT(seed=seed), name='logits')(all_features)
 
     if attn_search == False:

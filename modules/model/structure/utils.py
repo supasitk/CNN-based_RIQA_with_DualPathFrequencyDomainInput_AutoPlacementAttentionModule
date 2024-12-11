@@ -21,10 +21,11 @@ def check_and_get_model_configuration(cfg, ds_cfg, model_cfg):
     Branches_NN_configs = model_cfg['NN_config_of_branch'] # dictionary returned
     if len(Branches_NN_configs) != num_branch:
         raise ValueError('Number of branch \'{}\' not equal to number of neural network configurations list \'{}\' for branches'.format(num_branch, len(Branches_NN_configs)))
-    dropout_rate = cfg['dropout_rate']
+    feature_aggregration = model_cfg['feature_aggregration_from_branches'] # dictionary returned
+    optional_dense_layers = model_cfg['optional_dense_layers_of_model'] # dictionary returned
     num_class = ds_cfg['class_num']
 
-    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, dropout_rate, num_class
+    return input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, feature_aggregration, optional_dense_layers, num_class
 
 
 def check_and_get_model_static_attention_configuration(num_branch, model_attn_cfg):

@@ -241,7 +241,6 @@ def write_exec_config_summary(cfg):
     logging.info('-' * 100)
     logging.info('*** Training Setting ***')
     logging.info('Batch size: {}'.format(cfg['batch_size']))
-    logging.info('Dropout rate: {}'.format(cfg['dropout_rate']))
     logging.info('Weight decay: {}'.format(cfg['weights_decay']))
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
@@ -272,6 +271,8 @@ def write_model_config_summary(model_structure, cfg):
     logging.info('Color space conversion of input for each branch(es): {}'.format(cfg['color_space_conversion_for_branches']))
     logging.info('DCT transformation of input for each branch(es): {}'.format(cfg['dct_transformation_for_branches']))
     logging.info('Neural network configurations of branch(es): {}'.format(cfg['NN_config_of_branch']))
+    logging.info('Feature aggregration from branch(es) of model: {}'.format(cfg['feature_aggregration_from_branches']))
+    logging.info('Optional dense layer(s) before classification dense layer of model: {}'.format(cfg['optional_dense_layers_of_model']))
     logging.info('-' * 100)
     
 

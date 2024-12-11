@@ -71,7 +71,6 @@ loss_fn_config:
 
 # training setting
 batch_size: 32
-dropout_rate: 0.0
 weights_decay: null   # [null or float]
 arch_weights_decay: !!float 1e-3   # [null or float]
 arch_grad_clip_norm: 5.0  # [null or float]
