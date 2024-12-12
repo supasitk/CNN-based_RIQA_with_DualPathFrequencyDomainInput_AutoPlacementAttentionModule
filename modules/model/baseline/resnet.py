@@ -660,17 +660,20 @@ def ResNet18(
     **kwargs,
 ):
     """Instantiates the ResNet18 architecture."""
+    conv_shortcut1 = False
+    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))):
+        conv_shortcut1 = True
 
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=conv_shortcut1, name="conv2", start_block_id=0, attention=attention, seed=seed)
             x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention, seed=seed)
             x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention, seed=seed)
             return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 64, 2, stride1=1, conv_shortcut1=conv_shortcut1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             x = stack0(x, 128, 2, name="conv3", start_block_id=2, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             x = stack0(x, 256, 2, name="conv4", start_block_id=4, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             return stack0(x, 512, 2, name="conv5", start_block_id=6, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
@@ -708,17 +711,20 @@ def ResNet34(
     **kwargs,
 ):
     """Instantiates the ResNet34 architecture."""
+    conv_shortcut1 = False
+    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))):
+        conv_shortcut1 = True
 
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
         def stack_fn(x):
-            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, seed=seed)
+            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=conv_shortcut1, name="conv2", start_block_id=0, attention=attention, seed=seed)
             x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention, seed=seed)
             x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention, seed=seed)
             return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention, seed=seed)
     else:
         def stack_fn(x, alphas_inter_attn_weights, alphas_intra_attn_weights):
-            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=False, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
+            x = stack0(x, 64, 3, stride1=1, conv_shortcut1=conv_shortcut1, name="conv2", start_block_id=0, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             x = stack0(x, 128, 4, name="conv3", start_block_id=3, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             x = stack0(x, 256, 6, name="conv4", start_block_id=7, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
             return stack0(x, 512, 3, name="conv5", start_block_id=13, attention=attention, alphas_inter_attn_weights=alphas_inter_attn_weights, alphas_intra_attn_weights=alphas_intra_attn_weights, seed=seed)
