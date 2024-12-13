@@ -40,7 +40,27 @@ class Skip(tf.keras.layers.Layer):
     
     def call(self, x, alphas_intra_attn_weights, training=False):
         return x
+
+
+class ImageResize(tf.keras.layers.Layer):
+    """Image resize Layer"""
+    def __init__(self, new_height, new_width, name='ImageResize', **kwargs):
+        super(ImageResize, self).__init__(name=name, **kwargs)
+        self.new_h = new_height
+        self.new_w = new_width
     
+    def call(self, x, training=False):
+        return tf.image.resize(x, [self.new_h, self.new_w])
+    
+
+class ImageRGBtoYUV(tf.keras.layers.Layer):
+    """Image RGBtoYUV Layer"""
+    def __init__(self, name='ImageRGBtoYUV', **kwargs):
+        super(ImageRGBtoYUV, self).__init__(name=name, **kwargs)
+    
+    def call(self, x, training=False):
+        return tf.image.rgb_to_yuv(x)
+
 
 class Depthwise_DCT2d(tf.keras.layers.Layer):
     """ Generate layer of 2D-DCT filters, 

@@ -8,7 +8,7 @@ from modules.labels import *
 from modules.initializers import *
 from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_static_attention_configuration)
 from modules.model.baseline.baseline_main import (genModelBranch)
-from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax, Depthwise_DCT2d)
+from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax, ImageResize, ImageRGBtoYUV, Depthwise_DCT2d)
 
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
@@ -49,13 +49,15 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
         ThisBranch_resized_input_dim = Branches_resized_input_dim[ThisBranch_key]
         ThisBranch_input_h_size, ThisBranch_input_w_size = ThisBranch_resized_input_dim, ThisBranch_resized_input_dim
         if ThisBranch_resized_input_dim != input_h_size:
-            ThisBranch_inputs = Lambda(lambda x: tf.image.resize(x, [ThisBranch_resized_input_dim, ThisBranch_resized_input_dim]), name=f'branch_{ThisBranch_key}_resize_input')(ThisBranch_inputs)
+            ThisBranch_inputs = ImageResize(new_height=ThisBranch_resized_input_dim, 
+                                            new_width=ThisBranch_resized_input_dim, 
+                                            name=f'branch_{ThisBranch_key}_resize_input')(ThisBranch_inputs)
         # -- color space conversion
         ThisBranch_input_color_space_conversion = Branches_input_color_space_conversion[ThisBranch_key]
         if ThisBranch_input_color_space_conversion is None:
             pass
         elif ThisBranch_input_color_space_conversion == 'YUV':
-            ThisBranch_inputs = Lambda(lambda x: tf.image.rgb_to_yuv(x), name=f'branch_{ThisBranch_key}_input_color_space_conversion_RGBtoYUV')(ThisBranch_inputs)
+            ThisBranch_inputs = ImageRGBtoYUV(name=f'branch_{ThisBranch_key}_input_color_space_conversion_RGBtoYUV')(ThisBranch_inputs)
         else:
             raise ValueError('Unknown \'{}\' color space conversion of input for branch of model'.format(ThisBranch_input_color_space_conversion))
         # -- DCT transformation
