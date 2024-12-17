@@ -1,0 +1,20 @@
+# Configuration of computing mean and standard deviation of dataset
+
+# Configuration summary
+config_summary: 'EyeQpreprocessedTrain_img224RGBrescaleMinusOneToOne'
+
+# Dataset information
+dataset_infos:
+  'name': 'EyeQ_preprocessed'
+  'part': 'train'
+  'directory': '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/train'
+
+# Statistic information
+stat_infos:
+  'num_channel': 3      # [3: RGB, 192: 8x8-DCT2d]
+
+# Dataset transformation
+dataset_transforms:     # ['RGB', 'depthwise_DCT2d']
+# ------- RGB ------- #
+  'type': 'RGB'
+  'configs': {'resized_img_dim': 224, 'rescale_value_range': 'minusOneToOne'}
