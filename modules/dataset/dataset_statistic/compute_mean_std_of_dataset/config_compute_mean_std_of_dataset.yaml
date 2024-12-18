@@ -1,20 +1,41 @@
 # Configuration of computing mean and standard deviation of dataset
 
 # Configuration summary
-config_summary: 'EyeQpreprocessedTrain_img224RGBrescaleMinusOneToOne'
+# ------- EyeQ (RGB) ------- #
+#config_summary: 'EyeQpreprocessedTrain_img224RGBrescaleMinusOneToOne'
+# ------- EyeQ (Depthwise_DCT2d) ------- #
+config_summary: 'EyeQpreprocessedTrain_img448RGBrescaleMinusOneToOne_transformYUVtoDepthwiseDCT2d8x8Freq64outChannel192'
 
 # Dataset information
 dataset_infos:
+# ------- EyeQ ------- #
   'name': 'EyeQ_preprocessed'
   'part': 'train'
   'directory': '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/train'
 
 # Statistic information
-stat_infos:
-  'num_channel': 3      # [3: RGB, 192: 8x8-DCT2d]
+stat_infos:                 # num_channel [3: RGB, 192: Depthwise_DCT2d_8x8_64freq)]
+# ------- RGB ------- #
+#  'num_channel': 3      
+# ------- Depthwise_DCT2d_8x8_64freq ------- #
+  'num_channel': 192   
 
 # Dataset transformation
-dataset_transforms:     # ['RGB', 'depthwise_DCT2d']
+dataset_transforms:     # ['RGB', 'Depthwise_DCT2d']
 # ------- RGB ------- #
-  'type': 'RGB'
-  'configs': {'resized_img_dim': 224, 'rescale_value_range': 'minusOneToOne'}
+#  'type': 'RGB'
+#  'configs': {'resized_img_dim': 224, 
+#              'rescale_value_range': 'minusOneToOne'    # ['ZeroToOne', 'minusOneToOne']
+#             }
+# ------- Depthwise_DCT2d ------- #
+  'type': 'Depthwise_DCT2d'
+  'configs': {'resized_img_dim': 448, 
+              'rescale_value_range': 'minusOneToOne',   # ['ZeroToOne', 'minusOneToOne']
+              'color_space_conversion': 'YUV',          # [null, 'YUV']
+              'dct_infos': {'num_freq': 64, 
+                            'freq_selection': Null, 
+                            'num_selected_freq': 64, 
+                            'tile_size_x': 8, 
+                            'tile_size_y': 8
+                           }
+             }

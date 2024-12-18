@@ -38,6 +38,19 @@ def main(_):
                             cv_transform.Resize(resized_img_dim),
                             cv_transform.RescaleValue(rescale_value_range)
                         ])
+    elif ds_transform_type == 'Depthwise_DCT2d':
+        resized_img_dim = ds_transform_configs['resized_img_dim']
+        rescale_value_range = ds_transform_configs['rescale_value_range']
+        color_space_conversion = ds_transform_configs['color_space_conversion']
+        dct_infos = ds_transform_configs['dct_infos']
+        img_transform = cv_transform.Compose([
+                            cv_transform.Resize(resized_img_dim),
+                            cv_transform.RescaleValue(rescale_value_range),
+                            cv_transform.ColorSpaceConversion(color_space_conversion),
+                            cv_transform.ExpandDims(axis=0),            # add batch=1 (axis=0) dimension to tensor (input: [H, W, C] -> output: [B, H, W, C])
+                            cv_transform.DepthwiseDCT2d(dct_infos),     # receive 4D-tensor for input
+                            cv_transform.SqueezeDims(axis=0)            # remove batch=1 (axis=0) dimension from tensor (input: [B, H, W, C] -> output: [H, W, C])
+                        ])
     else:
        raise ValueError
 

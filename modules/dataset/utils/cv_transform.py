@@ -1,9 +1,10 @@
-from tensorflow.keras.layers import (Rescaling)
+import tensorflow as tf
+from tensorflow.keras.layers import (Rescaling, Lambda)
 
 import modules.dataset.utils.cv_functional as cv_functional
+from modules.model.layer.CustomLayer import (ImageRGBtoYUV, Depthwise_DCT2d)
 
-
-__all__ = ["Compose", "Resize", "RescaleValue"]
+__all__ = ["Compose", "Resize", "RescaleValue", "ColorSpaceConversion", "DepthwiseDCT2d", "ExpandDims", "SqueezeDims"]
 
 class Compose(object):
     """Composes several transforms together.
@@ -68,3 +69,52 @@ class RescaleValue(object):
     
     def __call__(self, img):
         return self.rescale_value(img)
+    
+
+class ColorSpaceConversion(object):
+    """Color space conversion"""
+
+    def __init__(self, color_space_conversion):
+        if color_space_conversion == None:
+            self.color_space_conversion_fn = Lambda(lambda x: x)
+        elif color_space_conversion == 'YUV':
+            self.color_space_conversion_fn = ImageRGBtoYUV()
+        else:
+            raise ValueError
+        
+    def __call__(self, img):
+        return self.color_space_conversion_fn(img)
+    
+
+class DepthwiseDCT2d(object):
+    """Depthwise DCT2d"""
+
+    def __init__(self, dct_infos):
+        self.dct = Depthwise_DCT2d(num_freq=dct_infos['num_freq'], 
+                                   freq_selection=dct_infos['freq_selection'], 
+                                   num_selected_freq=dct_infos['num_selected_freq'], 
+                                   tile_size_x=dct_infos['tile_size_x'], 
+                                   tile_size_y=dct_infos['tile_size_y'])
+        
+    def __call__(self, img):
+        return self.dct(img)
+    
+
+class ExpandDims(object):
+    """Returns a tensor with a length 1 axis inserted at index axis"""
+
+    def __init__(self, axis):
+        self.axis = axis
+
+    def __call__(self, img):
+        return tf.expand_dims(img, axis=self.axis)
+
+
+class SqueezeDims(object):
+    """Removes dimensions of size 1 from the shape of a tensor, you can remove specific size 1 dimensions by specifying axis"""
+
+    def __init__(self, axis):
+        self.axis = axis
+
+    def __call__(self, img):
+        return tf.squeeze(img, axis=self.axis)
