@@ -6,6 +6,9 @@
 # ------- EyeQ (Depthwise_DCT2d) ------- #
 config_summary: 'EyeQpreprocessedTrain_img448RGBrescaleMinusOneToOne_transformYUVtoDepthwiseDCT2d8x8Freq64outChannel192'
 
+# Log directory
+log_dir: '.'
+
 # Dataset information
 dataset_infos:
 # ------- EyeQ ------- #
@@ -33,7 +36,7 @@ dataset_transforms:     # ['RGB', 'Depthwise_DCT2d']
               'rescale_value_range': 'minusOneToOne',   # ['ZeroToOne', 'minusOneToOne']
               'color_space_conversion': 'YUV',          # [null, 'YUV']
               'dct_infos': {'num_freq': 64, 
-                            'freq_selection': Null, 
+                            'freq_selection': null, 
                             'num_selected_freq': 64, 
                             'tile_size_x': 8, 
                             'tile_size_y': 8

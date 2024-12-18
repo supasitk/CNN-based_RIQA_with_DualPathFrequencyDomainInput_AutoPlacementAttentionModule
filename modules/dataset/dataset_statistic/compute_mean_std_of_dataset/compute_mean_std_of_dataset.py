@@ -80,9 +80,23 @@ def main(_):
     std = tf.math.sqrt(var)
 
     # show and write mean/var/std to file
+    # -- show
     print('mean = {}'.format(np.array2string(mean.numpy(), separator=', ')))
     print('var = {}'.format(np.array2string(var.numpy(), separator=', ')))
     print('std = {}'.format(np.array2string(std.numpy(), separator=', ')))
+    # -- write to file
+    log_file = os.path.join(cfg['log_dir'], cfg['config_summary']) + '.log'
+    f = open(log_file, 'w')
+    f.write(f"-----------------------------------------------------\n")
+    f.write(f"Configuration summary: {cfg['config_summary']}\n")
+    f.write(f"Dataset information: {cfg['dataset_infos']}\n")
+    f.write(f"Statistic information: {cfg['stat_infos']}\n")
+    f.write(f"Dataset transformation: {cfg['dataset_transforms']}\n")
+    f.write(f"-----------------------------------------------------\n")
+    f.write(f"\nmean = {np.array2string(mean.numpy(), separator=', ')}\n")
+    f.write(f"\nvar = {np.array2string(var.numpy(), separator=', ')}\n")
+    f.write(f"\nstd = {np.array2string(std.numpy(), separator=', ')}\n")
+    f.close()
 
 
 if __name__ == '__main__':
