@@ -4,7 +4,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_io as tfio
 
-from tensorflow.keras.layers import (RandomFlip, RandomRotation, Rescaling)
+from tensorflow.keras.layers import (RandomFlip, RandomRotation, Rescaling, Normalization)
+from modules.dataset.dataset_statistic.compute_mean_std_of_dataset.eyeq import *
 
 
 def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key):
@@ -104,7 +105,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, seed=None):
+def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
@@ -128,6 +129,19 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
             raise ValueError('Rescale input value range \'{}\' is unknown'.format(rescale_range))
         rescaling_fn = Rescaling(scale=scale_value, offset=offset_value)
 
+    # function of normalization
+    if normalize:
+        norm_stats = normalize_infos['stat']
+        if norm_stats == 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne':
+            norm_stats_mean = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['mean']
+            norm_stats_var = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['var']
+        elif norm_stats == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne':
+            norm_stats_mean = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['mean']
+            norm_stats_var = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['var']
+        else:
+            raise ValueError
+        norm_fn = Normalization(mean=norm_stats_mean, variance=norm_stats_var)
+
     def transform_data(img_path, img_label):
         list_input_types = list()
         for input_type in ds_input_types:
@@ -142,19 +156,23 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
         inputs = tf.concat(list_input_types, axis=-1)
         # resize
         inputs = tf.image.resize(inputs, [resized_img_dim, resized_img_dim])
-        # augmentation
-        if augment:
-            inputs = data_augmentation(inputs)
         # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
         if rescale:
             inputs = rescaling_fn(inputs)
-        
+        # normalization
+        if normalize:
+            inputs = norm_fn(inputs)
+        # augmentation
+        if augment:
+            inputs = data_augmentation(inputs)
+                
         return inputs, img_path, img_label
     return transform_data
 
 
 def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, 
-                    resized_img_dim, rescale, rescale_infos, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, train_search=False, seed=None):
+                    resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, 
+                    train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
@@ -200,7 +218,7 @@ def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label
         dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, seed=seed),
+                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

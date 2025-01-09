@@ -40,6 +40,9 @@ resized_image_dim: 224        # Dimension of resized image for input to model
 #-- Rescale --#
 rescale_input_value: True     # whether rescaling input values to a new range, if True, details of rescale need to be specified 
 rescale_input_value_range: 'minusOnetoOne'  # supported range(s) are 'ZerotoOne', 'minusOnetoOne'
+#-- Normalization --#
+normalization: False          # whether normalizing input values, if True, details of normalization need to be specified
+normalization_stat: null      # supported 'normalization_stat' are [null, 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne', 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne']
 #-- Augmentation --#
 train_augment: True                     # whether the data augmentation for training data, if True, details of augment need to be specified
 train_augment_hflip: True               # Random horizontal flipping

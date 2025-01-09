@@ -148,6 +148,12 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                 rescale_infos = dict()
                 rescale_infos.update([('range', dataset_cfg['rescale_input_value_range'])])
 
+            normalize = dataset_cfg['normalization']
+            normalize_infos = None
+            if normalize:
+                normalize_infos = dict()
+                normalize_infos.update([('stat', dataset_cfg['normalization_stat'])])
+
             ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
                                                            ds_input_types=model_cfg['input_types_for_model'],
                                                            train_val_test=v_ds_part, 
@@ -160,6 +166,8 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
                                                            rescale=rescale,
                                                            rescale_infos=rescale_infos,
+                                                           normalize=normalize,
+                                                           normalize_infos=normalize_infos,
                                                            batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder,
                                                            oversampling=oversampling, 

@@ -193,6 +193,9 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Rescale input value: {}'.format(cfg['rescale_input_value']))
         if cfg['rescale_input_value']:
           logging.info('Rescale input value - Range: {}'.format(cfg['rescale_input_value_range']))
+        logging.info('Normalize input value: {}'.format(cfg['normalization']))
+        if cfg['normalization']:
+          logging.info('Normalize input value - Statistics: {}'.format(cfg['normalization_stat']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
         if cfg['train_augment']:
           logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
