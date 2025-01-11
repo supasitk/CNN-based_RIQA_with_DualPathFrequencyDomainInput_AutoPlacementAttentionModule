@@ -61,162 +61,7 @@ class ImageRGBtoYUV(tf.keras.layers.Layer):
     def call(self, x, training=False):
         return tf.image.rgb_to_yuv(x)
 
-
-# class Depthwise_DCT2d(tf.keras.layers.Layer):
-#     """ Generate layer of 2D-DCT filters, 
-#             - Selecting frequency compenents (using each one for each filter) with 'freq_selection' method from all 'num_freq' frequency components  
-#             - Each filter's size is 'tile_size_x' * 'tile_size_y' 
-#         and Transforming input (size of [B, H, W, C]) into 2D-DCT coefficients by convolving seperately these 2D-DCT filters for each input channel with strides ([B, H, W, C]) [1, 'tile_size_x', 'tile_size_y', 1], 
-#         then concatenates the results together,
-#         the Output layer's size is [B , H / tile_size_x, W / tile_size_y, C * num_selected_freq]
-#     """
-#     def __init__(self, num_freq=64, freq_selection=None, num_selected_freq=64, tile_size_x=8, tile_size_y=8, name='Depthwise_DCT2d', **kwargs):
-#         super(Depthwise_DCT2d, self).__init__(name=name, **kwargs)
-#         self.num_freq = num_freq
-#         self.freq_selection = freq_selection
-#         self.num_selected_freq = num_selected_freq 
-#         self.tile_size_x = tile_size_x 
-#         self.tile_size_y = tile_size_y
-#         self.name = name
-    
-
-#     def build(self, input_shape):
-#         self.in_channel = input_shape[-1]
-        
-#         freq_idxs_u, freq_idxs_v = self._get_freq_indices(self.num_freq, self.freq_selection)
-#         assert (self.num_selected_freq == len(freq_idxs_u)) and (self.num_selected_freq == len(freq_idxs_v))
-#         # fixed DCT filters init
-#         self.weight = tf.Variable(initial_value=self._get_dct_filter(self.tile_size_x, self.tile_size_y, freq_idxs_u, freq_idxs_v, self.in_channel),
-#                                   trainable=False)
-        
-    
-#     def call(self, x):
-#         out = tf.nn.depthwise_conv2d(x, self.weight, strides=[1, self.tile_size_x, self.tile_size_y, 1], padding='VALID')
-
-#         return out
-
-
-#     def _get_freq_indices(self, num_freq, freq_selection):
-#         component_number = 'component_number'
-#         freq_u_idx = 'freq_u_idx'
-#         freq_v_idx = 'freq_v_idx'
-#         # all 64 frequency components
-#         freq_64_components = [
-#             {component_number: 0, freq_u_idx: 0, freq_v_idx: 0},
-#             {component_number: 1, freq_u_idx: 1, freq_v_idx: 0},
-#             {component_number: 2, freq_u_idx: 0, freq_v_idx: 1},
-#             {component_number: 3, freq_u_idx: 0, freq_v_idx: 2},
-#             {component_number: 4, freq_u_idx: 1, freq_v_idx: 1},
-#             {component_number: 5, freq_u_idx: 2, freq_v_idx: 0},
-#             {component_number: 6, freq_u_idx: 3, freq_v_idx: 0},
-#             {component_number: 7, freq_u_idx: 2, freq_v_idx: 1},
-#             {component_number: 8, freq_u_idx: 1, freq_v_idx: 2},
-#             {component_number: 9, freq_u_idx: 0, freq_v_idx: 3},
-#             {component_number: 10, freq_u_idx: 0, freq_v_idx: 4},
-#             {component_number: 11, freq_u_idx: 1, freq_v_idx: 3},
-#             {component_number: 12, freq_u_idx: 2, freq_v_idx: 2},
-#             {component_number: 13, freq_u_idx: 3, freq_v_idx: 1},
-#             {component_number: 14, freq_u_idx: 4, freq_v_idx: 0},
-#             {component_number: 15, freq_u_idx: 5, freq_v_idx: 0},
-#             {component_number: 16, freq_u_idx: 4, freq_v_idx: 1},
-#             {component_number: 17, freq_u_idx: 3, freq_v_idx: 2},
-#             {component_number: 18, freq_u_idx: 2, freq_v_idx: 3},
-#             {component_number: 19, freq_u_idx: 1, freq_v_idx: 4},
-#             {component_number: 20, freq_u_idx: 0, freq_v_idx: 5},
-#             {component_number: 21, freq_u_idx: 0, freq_v_idx: 6},
-#             {component_number: 22, freq_u_idx: 1, freq_v_idx: 5},
-#             {component_number: 23, freq_u_idx: 2, freq_v_idx: 4},
-#             {component_number: 24, freq_u_idx: 3, freq_v_idx: 3},
-#             {component_number: 25, freq_u_idx: 4, freq_v_idx: 2},
-#             {component_number: 26, freq_u_idx: 5, freq_v_idx: 1},
-#             {component_number: 27, freq_u_idx: 6, freq_v_idx: 0},
-#             {component_number: 28, freq_u_idx: 7, freq_v_idx: 0},
-#             {component_number: 29, freq_u_idx: 6, freq_v_idx: 1},
-#             {component_number: 30, freq_u_idx: 5, freq_v_idx: 2},
-#             {component_number: 31, freq_u_idx: 4, freq_v_idx: 3},
-#             {component_number: 32, freq_u_idx: 3, freq_v_idx: 4},
-#             {component_number: 33, freq_u_idx: 2, freq_v_idx: 5},
-#             {component_number: 34, freq_u_idx: 1, freq_v_idx: 6},
-#             {component_number: 35, freq_u_idx: 0, freq_v_idx: 7},
-#             {component_number: 36, freq_u_idx: 1, freq_v_idx: 7},
-#             {component_number: 37, freq_u_idx: 2, freq_v_idx: 6},
-#             {component_number: 38, freq_u_idx: 3, freq_v_idx: 5},
-#             {component_number: 39, freq_u_idx: 4, freq_v_idx: 4},
-#             {component_number: 40, freq_u_idx: 5, freq_v_idx: 3},
-#             {component_number: 41, freq_u_idx: 6, freq_v_idx: 2},
-#             {component_number: 42, freq_u_idx: 7, freq_v_idx: 1},
-#             {component_number: 43, freq_u_idx: 7, freq_v_idx: 2},
-#             {component_number: 44, freq_u_idx: 6, freq_v_idx: 3},
-#             {component_number: 45, freq_u_idx: 5, freq_v_idx: 4},
-#             {component_number: 46, freq_u_idx: 4, freq_v_idx: 5},
-#             {component_number: 47, freq_u_idx: 3, freq_v_idx: 6},
-#             {component_number: 48, freq_u_idx: 2, freq_v_idx: 7},
-#             {component_number: 49, freq_u_idx: 3, freq_v_idx: 7},
-#             {component_number: 50, freq_u_idx: 4, freq_v_idx: 6},
-#             {component_number: 51, freq_u_idx: 5, freq_v_idx: 5},
-#             {component_number: 52, freq_u_idx: 6, freq_v_idx: 4},
-#             {component_number: 53, freq_u_idx: 7, freq_v_idx: 3},
-#             {component_number: 54, freq_u_idx: 7, freq_v_idx: 4},
-#             {component_number: 55, freq_u_idx: 6, freq_v_idx: 5},
-#             {component_number: 56, freq_u_idx: 5, freq_v_idx: 6},
-#             {component_number: 57, freq_u_idx: 4, freq_v_idx: 7},
-#             {component_number: 58, freq_u_idx: 5, freq_v_idx: 7},
-#             {component_number: 59, freq_u_idx: 6, freq_v_idx: 6},
-#             {component_number: 60, freq_u_idx: 7, freq_v_idx: 5},
-#             {component_number: 61, freq_u_idx: 7, freq_v_idx: 6},
-#             {component_number: 62, freq_u_idx: 6, freq_v_idx: 7},
-#             {component_number: 63, freq_u_idx: 7, freq_v_idx: 7}
-#         ]
-
-#         assert num_freq in [64]
-#         assert freq_selection in [None]
-
-#         if num_freq == 64:
-#             all_freq_component_num = freq_64_components
-#         else:
-#             raise NotImplementedError
-
-#         if freq_selection is None: # No frequency selection -> all frequency used
-#             selected_freq_component_num = [*range(num_freq)]
-#             freq_idxs_u = [f[freq_u_idx] for f in all_freq_component_num if f[component_number] in selected_freq_component_num]
-#             freq_idxs_v = [f[freq_v_idx] for f in all_freq_component_num if f[component_number] in selected_freq_component_num]
-#         else:
-#             raise NotImplementedError
-
-#         return freq_idxs_u, freq_idxs_v
-    
-
-#     def _get_dct_filter(self, tile_size_x, tile_size_y, freq_idxs_u, freq_idxs_v, in_channel):
-#         assert tile_size_x == tile_size_y
-#         assert len(freq_idxs_u) == len(freq_idxs_v)
-        
-#         num_selected_freq = len(freq_idxs_u)
-
-#         dct_filter = np.zeros(shape=[tile_size_x, tile_size_y, num_selected_freq], dtype=np.float32)
-
-#         for f_i, (f_u, f_v) in enumerate(zip(freq_idxs_u, freq_idxs_v)):
-#             for t_x in range(tile_size_x):
-#                 for t_y in range(tile_size_y):
-#                     dct_filter[t_x, t_y, f_i] = self._build_dct_filter(t_x, f_u, tile_size_x) * self._build_dct_filter(t_y, f_v, tile_size_y)
-        
-#         # duplicate dct filter for each input channel to seperately transform each input channel into its 2D-DCT coefficients
-#         list_freq_idx = list()
-#         for f_i in range(num_selected_freq):
-#             list_freq_idx.extend([f_i]*in_channel)
-#         dct_filters = tf.gather(dct_filter, list_freq_idx, axis=-1)
-#         dct_filters = tf.reshape(dct_filters, [tile_size_x, tile_size_y, num_selected_freq, in_channel])
-#         dct_filters = tf.transpose(dct_filters, perm=[0, 1, 3, 2])
-
-#         return dct_filters        
-
-
-#     def _build_dct_filter(self, pos, freq, size):
-#         result = math.cos(math.pi * freq * (pos + 0.5) / size) / math.sqrt(size)
-#         if freq == 0:
-#             return result
-#         else:
-#             return result * math.sqrt(2)
-        
+      
 class Depthwise_DCT2d(tf.keras.layers.Layer):
     """ Generate layer of 2D-DCT filters for each input channel, 
             - For each input channel, selecting frequency compenents (using each one for each filter) according to 'freq_component_selection_of_each_channel' argument from given 'freq_component_set' 
@@ -238,18 +83,30 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.in_channel = input_shape[-1]
         
-        freq_idxs_u, freq_idxs_v = self._get_freq_indices(self.freq_component_set, self.freq_component_selection_of_each_channel, self.num_selected_freq_component_of_each_channel)
-        
+        # get freq_idxs_u and freq_idxs_v of selected frequency components for each channel (dict with key(ch_num)-value(list of freq_idxs_u/v) returned)
+        freq_idxs_u_for_channels, freq_idxs_v_for_channels = self._get_freq_indices(self.freq_component_set, self.freq_component_selection_of_each_channel, self.num_selected_freq_component_of_each_channel)
+        assert (len(freq_idxs_u_for_channels) == self.in_channel) and (len(freq_idxs_v_for_channels) == self.in_channel)
+
         # fixed DCT filters init
-        self.weight = tf.Variable(initial_value=self._get_dct_filter(self.tile_size_x, self.tile_size_y, freq_idxs_u, freq_idxs_v, self.in_channel),
-                                  trainable=False)
+        self.weight = list() # list of 2D-DCT filters set for each corresponding input channel (index of list correspond to index of input channel)
+        for ch_num in range(self.in_channel):
+            self.weight.append(tf.Variable(initial_value=self._get_dct_filter(self.tile_size_x, self.tile_size_y, freq_idxs_u_for_channels[ch_num], freq_idxs_v_for_channels[ch_num]),
+                                           trainable=False))
         
     
     def call(self, x):
-        out = tf.nn.depthwise_conv2d(x, self.weight, strides=[1, self.tile_size_x, self.tile_size_y, 1], padding='VALID')
-
-        return out
-
+        out = list()
+        for ch_num in range(self.in_channel):
+            this_ch_x = tf.gather(x, [ch_num], axis=-1)
+            out_this_ch_x = tf.nn.conv2d(input=this_ch_x,
+                                         filters=self.weight[ch_num],
+                                         strides=[1, self.tile_size_x, self.tile_size_y, 1],
+                                         padding='VALID',
+                                         data_format='NHWC')
+            out.append(out_this_ch_x)
+        
+        return tf.concat(out, axis=-1)
+ 
 
     def _get_freq_indices(self, freq_component_set, freq_component_selection_of_each_channel, num_selected_freq_component_of_each_channel):
         component_number = 'component_number'
@@ -351,14 +208,25 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
             freq_idxs_u[ch_num] = [f[freq_u_idx] for f in all_freq_component if f[component_number] in list_selected_freq_of_ch]
             freq_idxs_v[ch_num] = [f[freq_v_idx] for f in all_freq_component if f[component_number] in list_selected_freq_of_ch]
 
+        # verify whether number of selected frequency for each channel between 'freq_idxs_u/v' and 'num_selected_freq_component_of_each_channel' is equal
         for ch_num, num_selected_freq_of_ch in enumerate(num_selected_freq_component_of_each_channel):
             assert len(freq_idxs_u[ch_num]) == num_selected_freq_of_ch
             assert len(freq_idxs_v[ch_num]) == num_selected_freq_of_ch
 
+        ###### TEST ######
+        print('#'*100)
+        print('[selected_freq_for_channels]: {}'.format(selected_freq_for_channels))
+        print('-'*100)
+        print('[freq_idxs_u]: {}'.format(freq_idxs_u))
+        print('-'*100)
+        print('[freq_idxs_v]: {}'.format(freq_idxs_v))
+        print('#'*100)
+        ###### TEST ######
+
         return freq_idxs_u, freq_idxs_v
     
 
-    def _get_dct_filter(self, tile_size_x, tile_size_y, freq_idxs_u, freq_idxs_v, in_channel):
+    def _get_dct_filter(self, tile_size_x, tile_size_y, freq_idxs_u, freq_idxs_v):
         assert tile_size_x == tile_size_y
         assert len(freq_idxs_u) == len(freq_idxs_v)
         
@@ -370,16 +238,14 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
             for t_x in range(tile_size_x):
                 for t_y in range(tile_size_y):
                     dct_filter[t_x, t_y, f_i] = self._build_dct_filter(t_x, f_u, tile_size_x) * self._build_dct_filter(t_y, f_v, tile_size_y)
-        
-        # duplicate dct filter for each input channel to seperately transform each input channel into its 2D-DCT coefficients
-        list_freq_idx = list()
-        for f_i in range(num_selected_freq):
-            list_freq_idx.extend([f_i]*in_channel)
-        dct_filters = tf.gather(dct_filter, list_freq_idx, axis=-1)
-        dct_filters = tf.reshape(dct_filters, [tile_size_x, tile_size_y, num_selected_freq, in_channel])
-        dct_filters = tf.transpose(dct_filters, perm=[0, 1, 3, 2])
 
-        return dct_filters        
+        # prepares 'dct_filter' for 'tf.nn.conv2d' operation in each corresponding input channel. 
+        # as 'tf.nn.conv2d' need 4-D filters tensor of shape [filter_height, filter_width, in_channels, out_channels], 
+        # we need to expand_dims at axis 2 (with length = 1 -> one in_channel) for 'dct_filter' 
+        # to change shape from [tile_size_x, tile_size_y, num_selected_freq] to [tile_size_x, tile_size_y, 1, num_selected_freq]
+        dct_filter = tf.expand_dims(dct_filter, axis=2)
+
+        return dct_filter
 
 
     def _build_dct_filter(self, pos, freq, size):

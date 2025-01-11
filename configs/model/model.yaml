@@ -22,13 +22,6 @@ resized_dim_of_input_for_branches:        # Dimension of resized input for each 
 color_space_conversion_for_branches:      # color space conversion of input for each branch(es) [#elements must be equal to 'number_of_branch'] 
   1: null                                 # supported conversion are [null, 'YUV']                      
 
-# #-- DCT transformation of branch(es)      
-# dct_transformation_for_branches:         # DCT transformation of input for each branch(es) [#elements must be equal to 'number_of_branch'], if 'transform' == True, details of DCT transformation need to be specified 
-#   1: {                                   # supported DCT transformations (with arguments and their default value) are ['Depthwise_DCT2d' (num_freq[64], freq_selection[Null], num_selected_freq[64], tile_size_x[8], tile_size_y[8])]
-#       'transform': False,
-#       #'transform_infos': {'type': 'Depthwise_DCT2d', 'num_freq': 64, 'freq_selection': Null, 'num_selected_freq': 64, 'tile_size_x': 8, 'tile_size_y': 8}
-#      }
-
 #-- DCT transformation of branch(es)      
 dct_transformation_for_branches:  # DCT transformation of input for each branch(es) [#elements must be equal to 'number_of_branch'], if 'transform' == True, details of DCT transformation need to be specified 
                                   # supported DCT transformations (with arguments and their default value) are 
