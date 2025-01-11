@@ -31,7 +31,7 @@ dct_transformation_for_branches:  # DCT transformation of input for each branch(
                                   #                           2. 'channel' key is dict (for defining freq components selected for each channel) with key-value pair for each channel:
                                   #                              2.1 (key) channel_number (integer)
                                   #                              2.2 (value) if 'freq_number' used, "list of integer (freq component)" must be given
-                                  #                                          if 'freq_code' used, "string of code" ['all'] must be given  
+                                  #                                          if 'freq_code' used, "string of code"  must be given ['all', 'lowN', 'highN', 'stepS'] (N: number of freq [lowN: freq 0 - (N-1); highN: freq (last-N+1) to last], S: step size [stepS: freq 0,S,2S,3S,4S,5S,...])  
                                   #                        'num_selected_freq_component_of_each_channel' [list of number of selected freq component of each channel, e.g., [64, 64, 64] for 3 channels])]
   1: {
       'transform': False,

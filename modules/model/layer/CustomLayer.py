@@ -194,6 +194,15 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
             for ch_num, freq_code_of_ch in freq_component_selection_of_each_channel['channel'].items():
                 if freq_code_of_ch == 'all':
                     selected_freq_for_channels[ch_num] = all_freq_component_num
+                elif 'low' in freq_code_of_ch:
+                    num_freq = int(freq_code_of_ch[3:])
+                    selected_freq_for_channels[ch_num] = all_freq_component_num[:num_freq]
+                elif 'high' in freq_code_of_ch:
+                    num_freq = int(freq_code_of_ch[4:])
+                    selected_freq_for_channels[ch_num] = all_freq_component_num[-num_freq:]
+                elif 'step' in freq_code_of_ch:
+                    step_size = int(freq_code_of_ch[4:])
+                    selected_freq_for_channels[ch_num] = all_freq_component_num[::step_size]
                 else:
                     raise NotImplementedError
         elif freq_component_selection_of_each_channel['format'] == 'freq_number':
@@ -212,16 +221,6 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         for ch_num, num_selected_freq_of_ch in enumerate(num_selected_freq_component_of_each_channel):
             assert len(freq_idxs_u[ch_num]) == num_selected_freq_of_ch
             assert len(freq_idxs_v[ch_num]) == num_selected_freq_of_ch
-
-        ###### TEST ######
-        print('#'*100)
-        print('[selected_freq_for_channels]: {}'.format(selected_freq_for_channels))
-        print('-'*100)
-        print('[freq_idxs_u]: {}'.format(freq_idxs_u))
-        print('-'*100)
-        print('[freq_idxs_v]: {}'.format(freq_idxs_v))
-        print('#'*100)
-        ###### TEST ######
 
         return freq_idxs_u, freq_idxs_v
     
