@@ -191,18 +191,31 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         selected_freq_for_channels = dict()
         if freq_component_selection_of_each_channel['format'] == 'freq_code': # need to convert 'freq_code' to list of 'freq_number'
             all_freq_component_num = [*range(freq_component_set)]
-            for ch_num, freq_code_of_ch in freq_component_selection_of_each_channel['channel'].items():
+            for ch_num, freq_code_and_config_of_ch in freq_component_selection_of_each_channel['channel'].items():
+                freq_code_of_ch = freq_code_and_config_of_ch['code']
+                freq_config_of_ch = freq_code_and_config_of_ch['config'] 
                 if freq_code_of_ch == 'all':
                     selected_freq_for_channels[ch_num] = all_freq_component_num
-                elif 'low' in freq_code_of_ch:
-                    num_freq = int(freq_code_of_ch[3:])
+                elif freq_code_of_ch == 'low':
+                    num_freq = int(freq_config_of_ch)
+                    assert num_freq <= freq_component_set
                     selected_freq_for_channels[ch_num] = all_freq_component_num[:num_freq]
-                elif 'high' in freq_code_of_ch:
-                    num_freq = int(freq_code_of_ch[4:])
+                elif freq_code_of_ch == 'high':
+                    num_freq = int(freq_config_of_ch)
+                    assert num_freq <= freq_component_set
                     selected_freq_for_channels[ch_num] = all_freq_component_num[-num_freq:]
-                elif 'step' in freq_code_of_ch:
-                    step_size = int(freq_code_of_ch[4:])
+                elif freq_code_of_ch == 'step':
+                    step_size = int(freq_config_of_ch)
                     selected_freq_for_channels[ch_num] = all_freq_component_num[::step_size]
+                elif freq_code_of_ch == 'band':
+                    num_band = int(freq_config_of_ch[0])
+                    num_freq_of_each_band = int(freq_config_of_ch[1])
+                    assert num_freq_of_each_band <= (freq_component_set // num_band)
+                    selected_freq_for_channels[ch_num] = list()
+                    for band_num in range(num_band):
+                        start_freq_of_this_band = band_num * (freq_component_set // num_band)
+                        selected_freq_of_this_band = [*range(start_freq_of_this_band, start_freq_of_this_band + num_freq_of_each_band)]
+                        selected_freq_for_channels[ch_num].extend(selected_freq_of_this_band)
                 else:
                     raise NotImplementedError
         elif freq_component_selection_of_each_channel['format'] == 'freq_number':
