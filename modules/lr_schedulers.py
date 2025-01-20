@@ -1,7 +1,7 @@
 from absl import logging
 
 import tensorflow as tf
-from tensorflow.keras.optimizers.schedules import (ExponentialDecay, CosineDecay)
+from tensorflow.keras.optimizers.schedules import (ExponentialDecay, CosineDecay, PiecewiseConstantDecay)
 
 
 def getLRscheduler(lr_schedule, lr_config, total_steps, steps_per_epoch, name='LRscheduler'):
@@ -33,6 +33,15 @@ def getLRscheduler(lr_schedule, lr_config, total_steps, steps_per_epoch, name='L
         lr_scheduler = CosineDecay(initial_learning_rate=lr_init,
                                    decay_steps=decay_steps,
                                    alpha=lr_alpha)
+    elif lr_schedule == 'PiecewiseConstantDecay':
+        lr_values = lr_config['lr_values']
+        lr_boundaries = lr_config['lr_boundaries']
+        lr_boundaries_unit = lr_config['lr_boundaries_unit']
+        if lr_boundaries_unit == 'epoch':
+            lr_boundaries = [b * steps_per_epoch for b in lr_boundaries]
+        
+        lr_scheduler = PiecewiseConstantDecay(boundaries=lr_boundaries,
+                                              values=lr_values)
     else:
         raise ValueError('Unknown \'{}\' for being learning rate scheduler'.format(lr_schedule))
     
