@@ -90,11 +90,11 @@ class DepthwiseDCT2d(object):
     """Depthwise DCT2d"""
 
     def __init__(self, dct_infos):
-        self.dct = Depthwise_DCT2d(num_freq=dct_infos['num_freq'], 
-                                   freq_selection=dct_infos['freq_selection'], 
-                                   num_selected_freq=dct_infos['num_selected_freq'], 
-                                   tile_size_x=dct_infos['tile_size_x'], 
-                                   tile_size_y=dct_infos['tile_size_y'])
+        self.dct = Depthwise_DCT2d(tile_size_x=dct_infos['tile_size_x'], 
+                                   tile_size_y=dct_infos['tile_size_y'],
+                                   freq_component_set=dct_infos['freq_component_set'],
+                                   freq_component_selection_of_each_channel=dct_infos['freq_component_selection_of_each_channel'],
+                                   num_selected_freq_component_of_each_channel=dct_infos['num_selected_freq_component_of_each_channel'])
         
     def __call__(self, img):
         return self.dct(img)

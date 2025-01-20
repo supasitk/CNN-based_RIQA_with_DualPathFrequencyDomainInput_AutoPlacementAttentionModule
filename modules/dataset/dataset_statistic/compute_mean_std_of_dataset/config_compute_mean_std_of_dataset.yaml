@@ -3,6 +3,10 @@
 # Configuration summary
 # ------- EyeQ (RGB) ------- #
 config_summary: 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne'
+# ------- EyeQ (RGB_2resize) ------- #
+#config_summary: 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneResize224'
+# ------- EyeQ (RGBtoYUVto8x8DCT192freq) ------- #
+#config_summary: 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneTransformToYUVto8x8DCT192freq'
 
 # Log directory
 log_dir: '.'
@@ -15,14 +19,43 @@ dataset_infos:
   'directory': '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/train'
 
 # Statistic information
-stat_infos:                 # num_channel [3: RGB]
+stat_infos:                 # num_channel [3: RGB, 3: RGB_2resize, 192: DCT_8x8]
 # ------- RGB ------- #
-  'num_channel': 3      
+  'num_channel': 3   
+# ------- RGB_2resize ------- #
+#  'num_channel': 3
+# ------- DCT_8x8 ------- #
+#  'num_channel': 192        
 
 # Dataset transformation
-dataset_transforms:     # ['RGB']
+dataset_transforms:     # ['RGB', 'RGB_2resize', 'DCT']
 # ------- RGB ------- #
   'type': 'RGB'
   'configs': {'resized_img_dim': 224, 
               'rescale_value_range': 'minusOneToOne'    # ['ZeroToOne', 'minusOneToOne']
              }
+# ------- RGB_2resize ------- #
+#  'type': 'RGB_2resize'
+#  'configs': {'resized_img_dim': [448, 224], 
+#              'rescale_value_range': 'minusOneToOne'    # ['ZeroToOne', 'minusOneToOne']
+#             }
+# ------- DCT ------- #
+#  'type': 'DCT'
+#  'configs': {'resized_img_dim': 448, 
+#              'rescale_value_range': 'minusOneToOne',    # ['ZeroToOne', 'minusOneToOne']
+#              'color_space_conversion': 'YUV',    # [null, 'YUV']
+#              'dct_transformation': {
+#                                     'type': 'Depthwise_DCT2d',
+#                                     'tile_size_x': 8, 
+#                                     'tile_size_y': 8, 
+#                                     'freq_component_set': 64, 
+#                                     'freq_component_selection_of_each_channel': {
+#                                                                                  'format': 'freq_code',
+#                                                                                  'channel': {
+#                                                                                              0: {'code': 'all', 'config': null},
+#                                                                                              1: {'code': 'all', 'config': null}, 
+#                                                                                              2: {'code': 'all', 'config': null}} 
+#                                                                                 },
+#                                     'num_selected_freq_component_of_each_channel': [64, 64, 64]
+#                                    }
+#             }

@@ -38,6 +38,27 @@ def main(_):
                             cv_transform.Resize(resized_img_dim),
                             cv_transform.RescaleValue(rescale_value_range)
                         ])
+    elif ds_transform_type == 'RGB_2resize':
+        resized_img_dim = ds_transform_configs['resized_img_dim']
+        rescale_value_range = ds_transform_configs['rescale_value_range']
+        img_transform = cv_transform.Compose([
+                            cv_transform.Resize(resized_img_dim[0]),
+                            cv_transform.RescaleValue(rescale_value_range),
+                            cv_transform.Resize(resized_img_dim[1])
+                        ])
+    elif ds_transform_type == 'DCT':
+        resized_img_dim = ds_transform_configs['resized_img_dim']
+        rescale_value_range = ds_transform_configs['rescale_value_range']
+        color_space_conversion = ds_transform_configs['color_space_conversion']
+        dct_transformation = ds_transform_configs['dct_transformation']
+        img_transform = cv_transform.Compose([
+                            cv_transform.Resize(resized_img_dim),
+                            cv_transform.RescaleValue(rescale_value_range),
+                            cv_transform.ColorSpaceConversion(color_space_conversion),
+                            cv_transform.ExpandDims(axis=0),    # add batch=1 (axis=0) dimension to tensor (input: [H, W, C] -> output: [B, H, W, C])
+                            cv_transform.DepthwiseDCT2d(dct_transformation),
+                            cv_transform.SqueezeDims(axis=0)    # remove batch=1 (axis=0) dimension from tensor (input: [B, H, W, C] -> output: [H, W, C])
+                        ])
     else:
        raise ValueError
 
