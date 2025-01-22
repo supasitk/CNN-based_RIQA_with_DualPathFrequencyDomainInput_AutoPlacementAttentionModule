@@ -111,18 +111,6 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
             self.norm_mean = norm_stats_mean
             self.norm_var = norm_stats_var
             self.norm_std = tf.math.sqrt(norm_stats_var)
-            
-            # ######### TEST #########
-            # print('#'*50)
-            # print('idxs_of_stats_for_normalize ({}): {}'.format(np.shape(idxs_of_stats_for_normalize), idxs_of_stats_for_normalize))
-            # print('-'*50)
-            # print('norm_mean ({}): {}'.format(np.shape(self.norm_mean), self.norm_mean))
-            # print('-'*50)
-            # print('norm_var ({}): {}'.format(np.shape(self.norm_var), self.norm_var))
-            # print('-'*50)
-            # print('norm_std ({}): {}'.format(np.shape(self.norm_std), self.norm_std))
-            # print('#'*50)
-            # ######### TEST #########
 
 
     def call(self, x):
@@ -245,12 +233,18 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
                     self.selected_freq_for_channels[ch_num] = all_freq_component_num[::step_size]
                 elif freq_code_of_ch == 'band':
                     num_band = int(freq_config_of_ch[0])
-                    num_freq_of_each_band = int(freq_config_of_ch[1])
-                    assert num_freq_of_each_band <= (freq_component_set // num_band)
+                    num_freq_of_each_band = freq_config_of_ch[1]
+                    max_num_freq_of_each_band = freq_component_set // num_band
+                    if isinstance(num_freq_of_each_band, list): # each band might use diffent number of frequency
+                        assert len(num_freq_of_each_band) == num_band 
+                        assert all(num_freq <= max_num_freq_of_each_band for num_freq in num_freq_of_each_band)
+                    else: # each band uses same number of frequency
+                        assert num_freq_of_each_band <= max_num_freq_of_each_band
+                        num_freq_of_each_band = [num_freq_of_each_band for _ in range(num_band)]
                     self.selected_freq_for_channels[ch_num] = list()
                     for band_num in range(num_band):
-                        start_freq_of_this_band = band_num * (freq_component_set // num_band)
-                        selected_freq_of_this_band = [*range(start_freq_of_this_band, start_freq_of_this_band + num_freq_of_each_band)]
+                        start_freq_of_this_band = band_num * max_num_freq_of_each_band
+                        selected_freq_of_this_band = [*range(start_freq_of_this_band, start_freq_of_this_band + num_freq_of_each_band[band_num])]
                         self.selected_freq_for_channels[ch_num].extend(selected_freq_of_this_band)
                 else:
                     raise NotImplementedError
