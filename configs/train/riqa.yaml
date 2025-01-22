@@ -13,12 +13,17 @@ model_config_path: './configs/model/model.yaml'
 model_attention: 'Attn_OneBranch_ThreeInputChannelRGB'    # summary description of model attention
 model_attention_config_path: './configs/model_attention/model_attention.yaml'
 
-# optimizer ['SGD']
+# optimizer ['SGD', 'Adam']
 # --- SGD --- #
 optimizer: 'SGD'
 optimizer_config:
   'momentum': 0.9
   'nesterov': False
+# --- Adam --- #
+#optimizer: 'Adam'
+#optimizer_config:
+#  'beta_1': 0.9
+#  'beta_2': 0.999
 
 # learning rate scheduler ['Fix', 'ExponentialDecay', 'CosineDecay', 'PiecewiseConstantDecay']
 # --- Fix --- #
