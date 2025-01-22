@@ -88,7 +88,8 @@ dct_transformation_for_branches:  # DCT transformation of input for each branch(
   #                                                                     #                  56, 57, 58, 59, 60, 61, 62, 63] 
   #                                                                     #             } 
   #                                                                     }, 
-  #                         'num_selected_freq_component_of_each_channel': [64, 64, 64]
+  #                         'num_selected_freq_component_of_each_channel': [64, 64, 64],
+  #                         'normalize': null   # [null, 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneTransformToYUVto8x8DCT192freq']
   #                        }
   #    }                                 
 

@@ -71,12 +71,14 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                 freq_component_set = ThisBranch_input_dct_transform_infos['freq_component_set']
                 freq_component_selection_of_each_channel = ThisBranch_input_dct_transform_infos['freq_component_selection_of_each_channel']
                 num_selected_freq_component_of_each_channel = ThisBranch_input_dct_transform_infos['num_selected_freq_component_of_each_channel']
+                dct_normalize = ThisBranch_input_dct_transform_infos['normalize']
                 
                 ThisBranch_inputs = Depthwise_DCT2d(tile_size_x=tile_size_x, 
                                                     tile_size_y=tile_size_y,
                                                     freq_component_set=freq_component_set, 
                                                     freq_component_selection_of_each_channel=freq_component_selection_of_each_channel, 
-                                                    num_selected_freq_component_of_each_channel=num_selected_freq_component_of_each_channel, 
+                                                    num_selected_freq_component_of_each_channel=num_selected_freq_component_of_each_channel,
+                                                    normalize=dct_normalize, 
                                                     name=f'branch_{ThisBranch_key}_Depthwise_DCT2d')(ThisBranch_inputs)
 
                 ThisBranch_input_h_size = ThisBranch_input_h_size // tile_size_x

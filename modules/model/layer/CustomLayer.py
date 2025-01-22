@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow.keras.layers import (Softmax)
+from modules.dataset.dataset_statistic.compute_mean_std_of_dataset.eyeq import *
 
 
 class BranchInput(tf.keras.layers.Layer):
@@ -70,13 +71,14 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         then concatenates the results together,
         the Output layer's size is [B , H / tile_size_x, W / tile_size_y, sum of 'num_selected_freq_component_of_each_channel' argument]
     """
-    def __init__(self, tile_size_x=8, tile_size_y=8, freq_component_set=64, freq_component_selection_of_each_channel=None, num_selected_freq_component_of_each_channel=None, name='Depthwise_DCT2d', **kwargs):
+    def __init__(self, tile_size_x=8, tile_size_y=8, freq_component_set=64, freq_component_selection_of_each_channel=None, num_selected_freq_component_of_each_channel=None, normalize=None, name='Depthwise_DCT2d', **kwargs):
         super(Depthwise_DCT2d, self).__init__(name=name, **kwargs)
         self.tile_size_x = tile_size_x 
         self.tile_size_y = tile_size_y
         self.freq_component_set = freq_component_set
         self.freq_component_selection_of_each_channel = freq_component_selection_of_each_channel
-        self.num_selected_freq_component_of_each_channel = num_selected_freq_component_of_each_channel 
+        self.num_selected_freq_component_of_each_channel = num_selected_freq_component_of_each_channel
+        self.normalize = normalize 
         self.name = name
     
 
@@ -92,8 +94,37 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
         for ch_num in range(self.in_channel):
             self.weight.append(tf.Variable(initial_value=self._get_dct_filter(self.tile_size_x, self.tile_size_y, freq_idxs_u_for_channels[ch_num], freq_idxs_v_for_channels[ch_num]),
                                            trainable=False))
-        
-    
+
+        # DCT normalization
+        if self.normalize is not None:
+            idxs_of_stats_for_normalize = list()
+            for ch_num in range(self.in_channel):
+                this_ch_idxs_of_stats_for_normalize = [(ch_num * self.freq_component_set) + f for f in self.selected_freq_for_channels[ch_num]]
+                idxs_of_stats_for_normalize.extend(this_ch_idxs_of_stats_for_normalize)
+            
+            if self.normalize == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneTransformToYUVto8x8DCT192freq':
+                norm_stats_mean = [EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneTransformToYUVto8x8DCT192freq['mean'][i] for i in idxs_of_stats_for_normalize]
+                norm_stats_var = [EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneTransformToYUVto8x8DCT192freq['var'][i] for i in idxs_of_stats_for_normalize]
+            else:
+                raise ValueError
+
+            self.norm_mean = norm_stats_mean
+            self.norm_var = norm_stats_var
+            self.norm_std = tf.math.sqrt(norm_stats_var)
+            
+            # ######### TEST #########
+            # print('#'*50)
+            # print('idxs_of_stats_for_normalize ({}): {}'.format(np.shape(idxs_of_stats_for_normalize), idxs_of_stats_for_normalize))
+            # print('-'*50)
+            # print('norm_mean ({}): {}'.format(np.shape(self.norm_mean), self.norm_mean))
+            # print('-'*50)
+            # print('norm_var ({}): {}'.format(np.shape(self.norm_var), self.norm_var))
+            # print('-'*50)
+            # print('norm_std ({}): {}'.format(np.shape(self.norm_std), self.norm_std))
+            # print('#'*50)
+            # ######### TEST #########
+
+
     def call(self, x):
         out = list()
         for ch_num in range(self.in_channel):
@@ -104,8 +135,13 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
                                          padding='VALID',
                                          data_format='NHWC')
             out.append(out_this_ch_x)
-        
-        return tf.concat(out, axis=-1)
+
+        out = tf.concat(out, axis=-1)
+
+        if self.normalize is not None:
+            out = tf.math.divide(tf.math.subtract(out, self.norm_mean), self.norm_std)
+
+        return out
  
 
     def _get_freq_indices(self, freq_component_set, freq_component_selection_of_each_channel, num_selected_freq_component_of_each_channel):
@@ -188,45 +224,45 @@ class Depthwise_DCT2d(tf.keras.layers.Layer):
             raise NotImplementedError
 
         # defines selected frequency components for each channel
-        selected_freq_for_channels = dict()
+        self.selected_freq_for_channels = dict()
         if freq_component_selection_of_each_channel['format'] == 'freq_code': # need to convert 'freq_code' to list of 'freq_number'
             all_freq_component_num = [*range(freq_component_set)]
             for ch_num, freq_code_and_config_of_ch in freq_component_selection_of_each_channel['channel'].items():
                 freq_code_of_ch = freq_code_and_config_of_ch['code']
                 freq_config_of_ch = freq_code_and_config_of_ch['config'] 
                 if freq_code_of_ch == 'all':
-                    selected_freq_for_channels[ch_num] = all_freq_component_num
+                    self.selected_freq_for_channels[ch_num] = all_freq_component_num
                 elif freq_code_of_ch == 'low':
                     num_freq = int(freq_config_of_ch)
                     assert num_freq <= freq_component_set
-                    selected_freq_for_channels[ch_num] = all_freq_component_num[:num_freq]
+                    self.selected_freq_for_channels[ch_num] = all_freq_component_num[:num_freq]
                 elif freq_code_of_ch == 'high':
                     num_freq = int(freq_config_of_ch)
                     assert num_freq <= freq_component_set
-                    selected_freq_for_channels[ch_num] = all_freq_component_num[-num_freq:]
+                    self.selected_freq_for_channels[ch_num] = all_freq_component_num[-num_freq:]
                 elif freq_code_of_ch == 'step':
                     step_size = int(freq_config_of_ch)
-                    selected_freq_for_channels[ch_num] = all_freq_component_num[::step_size]
+                    self.selected_freq_for_channels[ch_num] = all_freq_component_num[::step_size]
                 elif freq_code_of_ch == 'band':
                     num_band = int(freq_config_of_ch[0])
                     num_freq_of_each_band = int(freq_config_of_ch[1])
                     assert num_freq_of_each_band <= (freq_component_set // num_band)
-                    selected_freq_for_channels[ch_num] = list()
+                    self.selected_freq_for_channels[ch_num] = list()
                     for band_num in range(num_band):
                         start_freq_of_this_band = band_num * (freq_component_set // num_band)
                         selected_freq_of_this_band = [*range(start_freq_of_this_band, start_freq_of_this_band + num_freq_of_each_band)]
-                        selected_freq_for_channels[ch_num].extend(selected_freq_of_this_band)
+                        self.selected_freq_for_channels[ch_num].extend(selected_freq_of_this_band)
                 else:
                     raise NotImplementedError
         elif freq_component_selection_of_each_channel['format'] == 'freq_number':
-            selected_freq_for_channels = freq_component_selection_of_each_channel['channel']
+            self.selected_freq_for_channels = freq_component_selection_of_each_channel['channel']
         else:
             raise NotImplementedError
         
         # find freq_idxs_u and freq_idxs_v of selected frequency components for each channel
         freq_idxs_u = dict()
         freq_idxs_v = dict()
-        for ch_num, list_selected_freq_of_ch in selected_freq_for_channels.items():
+        for ch_num, list_selected_freq_of_ch in self.selected_freq_for_channels.items():
             freq_idxs_u[ch_num] = [f[freq_u_idx] for f in all_freq_component if f[component_number] in list_selected_freq_of_ch]
             freq_idxs_v[ch_num] = [f[freq_v_idx] for f in all_freq_component if f[component_number] in list_selected_freq_of_ch]
 
