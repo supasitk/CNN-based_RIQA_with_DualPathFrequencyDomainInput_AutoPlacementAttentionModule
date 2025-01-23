@@ -97,6 +97,7 @@ def ResNet(
     branch_model_name="resnet",
     classifier_activation="softmax",
     excluded_parts=None,
+    included_parts=None,
     attn_search=False,
     seed=None,
     **kwargs,
@@ -215,11 +216,18 @@ def ResNet(
         x = ZeroPadding2D(padding=((1, 1), (1, 1)), name="pool1_pad")(x)
         x = MaxPooling2D(3, strides=2, name="pool1_pool")(x)
 
+    # dct_conv1
+    if any('dct_conv1' in included_part for included_part in included_parts):
+        dct_conv1_kN = next(included_part for included_part in included_parts if 'dct_conv1' in included_part)
+        dct_conv1_kernel_size = int(dct_conv1_kN[11:])
+        x = Conv2D(64, dct_conv1_kernel_size, strides=1, padding='same', use_bias=use_bias, kernel_initializer=CONV2D_KERNEL_INIT(seed=seed), name="dct_conv1_conv")(x)
+        x = BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name="dct_conv1_bn")(x)
+        x = Activation("relu", name="dct_conv1_relu")(x)
+
     if attn_search == False:
         x = stack_fn(x)
     else:
         x = stack_fn(x, alphas_inter_attn, alphas_intra_attn)
-
 
     if preact:
         x = BatchNormalization(
@@ -655,13 +663,16 @@ def ResNet18(
     classes=1000,
     branch_model_name="resnet18",
     excluded_parts=None,
+    included_parts=None,
     attention=None,
     seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet18 architecture."""
     conv_shortcut1 = False
-    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))):
+    if included_parts is None:
+        included_parts = [] # empty list to avoid error 'NoneType' object is not iterable
+    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))) and (not any('dct_conv1' in included_part for included_part in included_parts)):
         conv_shortcut1 = True
 
     attn_search = attention[label_of_attn_search]
@@ -691,6 +702,7 @@ def ResNet18(
         classes,
         branch_model_name,
         excluded_parts=excluded_parts,
+        included_parts=included_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -706,13 +718,16 @@ def ResNet34(
     classes=1000,
     branch_model_name="resnet34",
     excluded_parts=None,
+    included_parts=None,
     attention=None,
     seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet34 architecture."""
     conv_shortcut1 = False
-    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))):
+    if included_parts is None:
+        included_parts = [] # empty list to avoid error 'NoneType' object is not iterable
+    if (excluded_parts is not None) and (set(['conv1', 'pool1']).issubset(set(excluded_parts))) and (not any('dct_conv1' in included_part for included_part in included_parts)):
         conv_shortcut1 = True
 
     attn_search = attention[label_of_attn_search]
@@ -742,6 +757,7 @@ def ResNet34(
         classes,
         branch_model_name,
         excluded_parts=excluded_parts,
+        included_parts=included_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -762,11 +778,14 @@ def ResNet50(
     classes=1000,
     branch_model_name="resnet50",
     excluded_parts=None,
+    included_parts=None,
     attention=None,
     seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet50 architecture."""
+    if included_parts is None:
+        included_parts = [] # empty list to avoid error 'NoneType' object is not iterable
 
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
@@ -795,6 +814,7 @@ def ResNet50(
         classes,
         branch_model_name,
         excluded_parts=excluded_parts,
+        included_parts=included_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -813,11 +833,14 @@ def ResNet101(
     classes=1000,
     branch_model_name="resnet101",
     excluded_parts=None,
+    included_parts=None,
     attention=None,
     seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet101 architecture."""
+    if included_parts is None:
+        included_parts = [] # empty list to avoid error 'NoneType' object is not iterable
 
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
@@ -846,6 +869,7 @@ def ResNet101(
         classes,
         branch_model_name,
         excluded_parts=excluded_parts,
+        included_parts=included_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,
@@ -864,11 +888,14 @@ def ResNet152(
     classes=1000,
     branch_model_name="resnet152",
     excluded_parts=None,
+    included_parts=None,
     attention=None,
     seed=None,
     **kwargs,
 ):
     """Instantiates the ResNet152 architecture."""
+    if included_parts is None:
+        included_parts = [] # empty list to avoid error 'NoneType' object is not iterable
 
     attn_search = attention[label_of_attn_search]
     if attn_search == False:
@@ -897,6 +924,7 @@ def ResNet152(
         classes,
         branch_model_name,
         excluded_parts=excluded_parts,
+        included_parts=included_parts,
         attn_search=attn_search,
         seed=seed,
         **kwargs,

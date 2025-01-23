@@ -110,7 +110,7 @@ NN_config_of_branch:                # Neural network configurations for branch(e
   1: {
       'name': 'ResNet50_RGB',
       'model': 'ResNet',
-      'model_infos': {'numLayer': 50, 'pretrainedWeight': null, 'excluded_parts': null},
+      'model_infos': {'numLayer': 50, 'pretrainedWeight': null, 'excluded_parts': null, 'included_parts': null},
       'input_shape': {'H': 224, 'W': 224, 'C': 3}
      }
 
@@ -120,6 +120,7 @@ NN_config_of_branch:                # Neural network configurations for branch(e
 #         'numLayer' -> [18, 34, 50, 101, 152],
 #         'pretrainedWeight' -> [null, 'imagenet' (only 50, 101, 152)], 
 #         'excluded_parts' -> null or list of excluded part(s) of used model (['conv1', 'pool1'])
+#         'included_parts' -> null or list of included part(s) of used model (['dct_conv1_kN' (N = kernel size)])
 ##############################################################################################################################################
 
 # -- Feature aggregration from branch(es) of model
