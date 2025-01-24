@@ -101,6 +101,10 @@ dct_transformation_for_branches:  # DCT transformation of input for each branch(
   #                        }
   #    }                                 
 
+#-- Input Normalization of branch(es)
+input_normalization_for_branches:   # Normalization of input for each branch(es) [#elements must be equal to 'number_of_branch'] 
+  1: null                           # [null or '<dict_stats_of_normalization>']
+
 # -- Neural network of branch(es)
 NN_config_of_branch:                # Neural network configurations for branch(es) (#elements must be equal to 'number_of_branch')
                                     #   'name' -> name of model's branch

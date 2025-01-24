@@ -2,18 +2,19 @@ from absl import logging
 import tensorflow as tf
 
 from tensorflow.keras import Model
-from tensorflow.keras.layers import (Input, Lambda, Concatenate, GlobalAveragePooling2D, Flatten, Dropout, Dense)
+from tensorflow.keras.layers import (Input, Lambda, Concatenate, GlobalAveragePooling2D, Flatten, Dropout, Dense, Normalization)
 
 from modules.labels import *
 from modules.initializers import *
 from modules.model.structure.utils import (check_and_get_model_configuration, check_and_get_model_static_attention_configuration)
 from modules.model.baseline.baseline_main import (genModelBranch)
 from modules.model.layer.CustomLayer import (BranchInput, SplitSoftmax, ImageResize, ImageRGBtoYUV, Depthwise_DCT2d)
+from modules.dataset.dataset_statistic.compute_mean_std_of_dataset.eyeq import *
 
 
 def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_search_infos=None, seed=None):
     # ------------------ Model Configuration ------------------ #
-    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_NN_configs, feature_aggregration, optional_dense_layers, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
+    input_h_size, input_w_size, input_num_channel, num_branch, Branches_idx_input_ch, Branches_resized_input_dim, Branches_input_color_space_conversion, Branches_input_dct_transform, Branches_input_normalization, Branches_NN_configs, feature_aggregration, optional_dense_layers, num_class = check_and_get_model_configuration(cfg, ds_cfg, model_cfg)
 
     # ------------------ Model Attention Configuration ------------------ #
     if attn_search == False: # no searching configuration of attention module, so getting configuration of attention module defined
@@ -86,6 +87,18 @@ def genModel(cfg, ds_cfg, model_cfg, model_attn_cfg, attn_search=False, attn_sea
                 ThisBranch_input_c_size = sum(num_selected_freq_component_of_each_channel)
             else:
                 raise ValueError('Unknown \'{}\' DCT transform type of input for branch of model'.format(ThisBranch_input_dct_transform_type))    
+        # -- normalization
+        ThisBranch_input_normalization = Branches_input_normalization[ThisBranch_key]
+        if ThisBranch_input_normalization is not None:
+            if ThisBranch_input_normalization == 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne':
+                norm_mean = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['mean']
+                norm_var = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['var']
+            elif ThisBranch_input_normalization == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneResize224':
+                norm_mean = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneResize224['mean']
+                norm_var = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOneResize224['var']
+            else:
+                raise ValueError
+            ThisBranch_inputs = Normalization(mean=norm_mean, variance=norm_var, name=f'branch_{ThisBranch_key}_input_normalization')(ThisBranch_inputs)
         # -- attention
         if attn_search == False:
             ThisBranch_attn_static_infos = {label_of_attn_existence: Branches_static_attn_existence[ThisBranch_key],
