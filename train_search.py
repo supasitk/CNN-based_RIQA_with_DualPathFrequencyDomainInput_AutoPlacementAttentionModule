@@ -82,7 +82,7 @@ def main(_):
 
     # generate train/validation dataloader of the RIQA dataset 
     # (last 2 return items ('test_ds' and 'test_ds_len') ignored because they are not used for train_search)
-    train_ds, train_ds_len, val_ds, val_ds_len, _, _ = gen_dataset(ds_name, ds_cfg, model_cfg, cfg, train_search=True, seed=seed)
+    train_ds, train_ds_len, arch_train_ds, arch_train_ds_len, _, _ = gen_dataset(ds_name, ds_cfg, model_cfg, cfg, train_search=True, seed=seed)
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
@@ -170,17 +170,18 @@ def main(_):
         if cfg['arch_grad_clip_norm'] != None:
             grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
         arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
-        return loss
+        return logits, loss
 
     # training loop
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
     prog_bar = ProgressBar(steps_per_epoch,
                            checkpoint.step.numpy() % steps_per_epoch)
     train_accumulated_results = accumulated_result()
+    arch_train_accumulated_results = accumulated_result()
     class_names = ds_cfg['class_name']
     summary_writer = tf.summary.create_file_writer('./logs/train_search/' + cfg['config_summary'] + f"/seed{seed}/")
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
-    iter_val_ds = iter(val_ds)
+    iter_arch_train_ds = iter(arch_train_ds)
 
     logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))
     logging.info('Total/Remain of training steps: {} ({:.2f} epochs)'.format(remain_steps, remain_steps/steps_per_epoch))
@@ -196,8 +197,10 @@ def main(_):
 
         # check if adjusting weights of model's architecture searching
         if steps > arch_search_start_steps:
-            val_inputs, val_input_paths, val_labels = next(iter_val_ds)
-            arch_loss = arch_train_step(val_inputs, val_labels)
+            arch_train_inputs, arch_train_input_paths, arch_train_labels = next(iter_arch_train_ds)
+            arch_logits, arch_loss = arch_train_step(arch_train_inputs, arch_train_labels)
+
+            arch_train_accumulated_results.update(arch_train_input_paths, arch_train_labels, arch_logits)
 
         logits, loss = train_step(inputs, labels)
         
@@ -217,7 +220,14 @@ def main(_):
             train_accumulated_results.reset()
 
             if steps > arch_search_start_steps:
-                arch_evaluation_result_writer(summary_writer, 'arch_train', arch_loss, steps, lr=arch_optimizer.learning_rate.numpy())
+                arch_loss = criterion.compute_loss(np.array(arch_train_accumulated_results.accum_y_true), np.array(arch_train_accumulated_results.accum_y_logit), training=True)
+                arch_train_eval_result = compute_metric(arch_train_accumulated_results.accum_y_true, 
+                                                        arch_train_accumulated_results.accum_y_prob,
+                                                        arch_train_accumulated_results.accum_y_pred, 
+                                                        class_names)
+                evaluation_result_log('Arch_Train', arch_loss, arch_train_eval_result, (steps/ steps_per_epoch))
+                arch_evaluation_result_writer(summary_writer, 'arch_train', arch_loss, arch_train_eval_result, steps, lr=arch_optimizer.learning_rate.numpy())
+                arch_train_accumulated_results.reset()
                 snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', step=steps, steps_per_epoch=steps_per_epoch)
    
         # check if checkpoint

@@ -147,9 +147,13 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
 
 
-def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, step, lr=None):
+def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
+    tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
+    tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
+    tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
+    tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
     tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
 
 
