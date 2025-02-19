@@ -13,6 +13,12 @@ model_config_path: './configs/model/model.yaml'
 model_attention_search: 'SearchAttn_OneBranch_ThreeInputChannelRGB'    # summary description of model attention search
 model_attention_search_config_path: './configs/model_attention_search/model_attention_search.yaml'
 
+# algorithm of architecture search ['DARTS']
+# --- DARTS --- #
+arch_algorithm: 'DARTS'
+arch_algorithm_config:
+  'unrolled': False   # whether to use one-step unrolled validation loss 
+
 # optimizer ['SGD']
 # --- SGD --- #
 optimizer: 'SGD'
@@ -78,7 +84,6 @@ loss_fn_config:
 #  'reduction': 'sum_over_batch_size'
 #  'train_with_class_weight': False
 #  'label_smoothing': 0.1
-
 
 # training setting
 batch_size: 32

@@ -160,8 +160,10 @@ def main(_):
         return logits, loss
     
     # define training step function for weights of model's architecture searching 
+    # -- DARTS -- #
+    # ---- [NOT using 'unrolled' method (not using one-step unrolled validation loss)]
     @tf.function
-    def arch_train_step(inputs, labels):
+    def darts_arch_train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
             loss = criterion.compute_loss(labels, logits, training=True)
@@ -171,6 +173,30 @@ def main(_):
             grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
         arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
         return logits, loss
+    # ---- [Using 'unrolled' method (using one-step unrolled validation loss)]
+    @tf.function
+    def darts_unrolled_arch_train_step(inputs, labels):
+        with tf.GradientTape() as tape:
+            logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
+            loss = criterion.compute_loss(labels, logits, training=True)
+        attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
+        grads = tape.gradient(loss, attn_search_weights)
+        if cfg['arch_grad_clip_norm'] != None:
+            grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
+        arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
+        return logits, loss
+
+    # algorithm of architecture search
+    arch_algorithm = cfg['arch_algorithm']
+    arch_algorithm_config = cfg['arch_algorithm_config']
+    if arch_algorithm == 'DARTS':
+        unrolled = arch_algorithm_config['unrolled']
+        if unrolled:
+            arch_train_step = darts_unrolled_arch_train_step
+        else:
+            arch_train_step = darts_arch_train_step
+    else:
+        raise ValueError('Unknown \'{}\' algorithm of architecture search'.format(arch_algorithm))
 
     # training loop
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
