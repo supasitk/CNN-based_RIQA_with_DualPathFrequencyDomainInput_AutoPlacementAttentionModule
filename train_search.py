@@ -16,6 +16,7 @@ from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (LossFn)
 from modules.metric import (accumulated_result, compute_metric)
+from modules.utils import (get_variable_infos)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
 flags.DEFINE_integer('seed', 0, 'seed number')
@@ -175,16 +176,36 @@ def main(_):
         return logits, loss
     # ---- [Using 'unrolled' method (using one-step unrolled validation loss)]
     @tf.function
-    def darts_unrolled_arch_train_step(inputs, labels):
-        with tf.GradientTape() as tape:
+    def darts_unrolled_arch_train_step(train_inputs, train_labels, arch_train_inputs, arch_train_labels, train_lr, train_optimizer):
+        def _compute_unrolled_model(inputs, labels, lr, optimizer):
+            # calculate loss
             logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
             loss = criterion.compute_loss(labels, logits, training=True)
-        attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
-        grads = tape.gradient(loss, attn_search_weights)
-        if cfg['arch_grad_clip_norm'] != None:
-            grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
-        arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
-        return logits, loss
+            # get weight of trainable varaibles 
+            weight_vars = get_variable_infos(snn.model.trainable_variables)[1]
+            # get momentum (velocity) of trainable variables (only if using optimizer with momentum, such as SGD with momentum)
+            try:
+                momentum_vars = list()
+                for m_var in optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
+                    momentum_vars.append(tf.math.multiply(m_var.numpy(), optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
+            except:
+                momentum_vars = list()
+                for w_var in weight_vars:
+                    momentum_vars.append(tf.zeros_like(w_var))
+
+            assert len(weight_vars) == len(momentum_vars)
+
+
+        unrolled_model = _compute_unrolled_model(train_inputs, train_labels, train_lr, train_optimizer)
+
+
+
+
+
+
+
+
+
 
     # algorithm of architecture search
     arch_algorithm = cfg['arch_algorithm']
@@ -224,7 +245,12 @@ def main(_):
         # check if adjusting weights of model's architecture searching
         if steps > arch_search_start_steps:
             arch_train_inputs, arch_train_input_paths, arch_train_labels = next(iter_arch_train_ds)
-            arch_logits, arch_loss = arch_train_step(arch_train_inputs, arch_train_labels)
+            if arch_algorithm == 'DARTS':
+                if unrolled:
+                    lr = optimizer.learning_rate.numpy()
+                    arch_logits, arch_loss = arch_train_step(inputs, labels, arch_train_inputs, arch_train_labels, lr, optimizer)
+                else:
+                    arch_logits, arch_loss = arch_train_step(arch_train_inputs, arch_train_labels)
 
             arch_train_accumulated_results.update(arch_train_input_paths, arch_train_labels, arch_logits)
 
