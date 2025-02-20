@@ -16,7 +16,8 @@ from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (LossFn)
 from modules.metric import (accumulated_result, compute_metric)
-from modules.utils import (get_variable_infos)
+from modules.algo_search.algo_search_main import (algoSearch)
+#from modules.utils import (get_variable_infos)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
 flags.DEFINE_integer('seed', 0, 'seed number')
@@ -126,6 +127,11 @@ def main(_):
     # loss function
     criterion = LossFn(cfg, ds_cfg, train_ds_len)
 
+    # algorithm of architecture search
+    arch_algorithm = cfg['arch_algorithm']
+    arch_algorithm_config = cfg['arch_algorithm_config']
+    arch_algo_search = algoSearch(cfg, snn, optimizer, arch_optimizer, criterion)
+
     # load checkpoint
     checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary'] + f"/seed{seed}/"
     if not os.path.exists(checkpoint_dir):
@@ -163,42 +169,40 @@ def main(_):
     # define training step function for weights of model's architecture searching 
     # -- DARTS -- #
     # ---- [NOT using 'unrolled' method (not using one-step unrolled validation loss)]
-    @tf.function
-    def darts_arch_train_step(inputs, labels):
-        with tf.GradientTape() as tape:
-            logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion.compute_loss(labels, logits, training=True)
-        attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
-        grads = tape.gradient(loss, attn_search_weights)
-        if cfg['arch_grad_clip_norm'] != None:
-            grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
-        arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
-        return logits, loss
+    # @tf.function
+    # def darts_arch_train_step(inputs, labels):
+    #     with tf.GradientTape() as tape:
+    #         logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
+    #         loss = criterion.compute_loss(labels, logits, training=True)
+    #     attn_search_weights = snn.inter_attn_search_parameters + snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
+    #     grads = tape.gradient(loss, attn_search_weights)
+    #     if cfg['arch_grad_clip_norm'] != None:
+    #         grads = [(tf.clip_by_norm(grad, cfg['arch_grad_clip_norm'])) for grad in grads]
+    #     arch_optimizer.apply_gradients(zip(grads, attn_search_weights))
+    #     return logits, loss
     # ---- [Using 'unrolled' method (using one-step unrolled validation loss)]
-    @tf.function
-    def darts_unrolled_arch_train_step(train_inputs, train_labels, arch_train_inputs, arch_train_labels, train_lr, train_optimizer):
-        def _compute_unrolled_model(inputs, labels, lr, optimizer):
-            # calculate loss
-            logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion.compute_loss(labels, logits, training=True)
-            # get weight of trainable varaibles 
-            weight_vars = get_variable_infos(snn.model.trainable_variables)[1]
-            # get momentum (velocity) of trainable variables (only if using optimizer with momentum, such as SGD with momentum)
-            try:
-                momentum_vars = list()
-                for m_var in optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
-                    momentum_vars.append(tf.math.multiply(m_var.numpy(), optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
-            except:
-                momentum_vars = list()
-                for w_var in weight_vars:
-                    momentum_vars.append(tf.zeros_like(w_var))
+    # @tf.function
+    # def darts_unrolled_arch_train_step(train_inputs, train_labels, arch_train_inputs, arch_train_labels, train_lr, train_optimizer):
+    #     def _compute_unrolled_model(inputs, labels, lr, optimizer):
+    #         # calculate loss
+    #         logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
+    #         loss = criterion.compute_loss(labels, logits, training=True)
+    #         # get weight of trainable varaibles 
+    #         weight_vars = get_variable_infos(snn.model.trainable_variables)[1]
+    #         # get momentum (velocity) of trainable variables (only if using optimizer with momentum, such as SGD with momentum)
+    #         try:
+    #             momentum_vars = list()
+    #             for m_var in optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
+    #                 momentum_vars.append(tf.math.multiply(m_var.numpy(), optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
+    #         except:
+    #             momentum_vars = list()
+    #             for w_var in weight_vars:
+    #                 momentum_vars.append(tf.zeros_like(w_var))
 
-            assert len(weight_vars) == len(momentum_vars)
-
-
-        unrolled_model = _compute_unrolled_model(train_inputs, train_labels, train_lr, train_optimizer)
+    #         assert len(weight_vars) == len(momentum_vars)
 
 
+    #     unrolled_model = _compute_unrolled_model(train_inputs, train_labels, train_lr, train_optimizer)
 
 
 
@@ -207,17 +211,19 @@ def main(_):
 
 
 
-    # algorithm of architecture search
-    arch_algorithm = cfg['arch_algorithm']
-    arch_algorithm_config = cfg['arch_algorithm_config']
-    if arch_algorithm == 'DARTS':
-        unrolled = arch_algorithm_config['unrolled']
-        if unrolled:
-            arch_train_step = darts_unrolled_arch_train_step
-        else:
-            arch_train_step = darts_arch_train_step
-    else:
-        raise ValueError('Unknown \'{}\' algorithm of architecture search'.format(arch_algorithm))
+
+
+    # # algorithm of architecture search
+    # arch_algorithm = cfg['arch_algorithm']
+    # arch_algorithm_config = cfg['arch_algorithm_config']
+    # if arch_algorithm == 'DARTS':
+    #     unrolled = arch_algorithm_config['unrolled']
+    #     if unrolled:
+    #         arch_train_step = darts_unrolled_arch_train_step
+    #     else:
+    #         arch_train_step = darts_arch_train_step
+    # else:
+    #     raise ValueError('Unknown \'{}\' algorithm of architecture search'.format(arch_algorithm))
 
     # training loop
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
@@ -246,11 +252,12 @@ def main(_):
         if steps > arch_search_start_steps:
             arch_train_inputs, arch_train_input_paths, arch_train_labels = next(iter_arch_train_ds)
             if arch_algorithm == 'DARTS':
-                if unrolled:
-                    lr = optimizer.learning_rate.numpy()
-                    arch_logits, arch_loss = arch_train_step(inputs, labels, arch_train_inputs, arch_train_labels, lr, optimizer)
-                else:
-                    arch_logits, arch_loss = arch_train_step(arch_train_inputs, arch_train_labels)
+                # if unrolled:
+                #     lr = optimizer.learning_rate.numpy()
+                #     arch_logits, arch_loss = arch_train_step(inputs, labels, arch_train_inputs, arch_train_labels, lr, optimizer)
+                # else:
+                #     arch_logits, arch_loss = arch_train_step(arch_train_inputs, arch_train_labels)
+                arch_logits, arch_loss = arch_algo_search.step(arch_train_inputs, arch_train_labels)
 
             arch_train_accumulated_results.update(arch_train_input_paths, arch_train_labels, arch_logits)
 
