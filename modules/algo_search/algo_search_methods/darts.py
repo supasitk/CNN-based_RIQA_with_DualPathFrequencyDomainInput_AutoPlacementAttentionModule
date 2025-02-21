@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from modules.utils import (get_variable_infos)
+
 
 class DARTS(object):
     """Differentiable Architecture Search"""
@@ -11,10 +13,12 @@ class DARTS(object):
         self.criterion = criterion
         self.unrolled = unrolled
 
+        self.train_weight_decay = self.cfg['weights_decay']
 
-    def step(self, arch_train_inputs, arch_train_labels):
+
+    def step(self, train_inputs, train_labels, arch_train_inputs, arch_train_labels):
         if self.unrolled: # Using 'unrolled' method (using one-step unrolled validation loss)
-            self._update_step_unrolled()
+            logits, loss = self._update_step_unrolled(train_inputs, train_labels, arch_train_inputs, arch_train_labels)
         else: # NOT using 'unrolled' method (not using one-step unrolled validation loss)
             logits, loss = self._update_step(arch_train_inputs, arch_train_labels)
         return logits, loss
@@ -32,5 +36,38 @@ class DARTS(object):
         return logits, loss
 
 
-    def _update_step_unrolled(self):
-        pass
+    def _update_step_unrolled(self, train_inputs, train_labels, arch_train_inputs, arch_train_labels):
+        train_w_vars_unrolled_model = self._compute_unrolled_model(train_inputs, train_labels)
+
+
+    # @tf.function
+    def _compute_unrolled_model(self, train_inputs, train_labels):
+        # calculate train_loss
+        with tf.GradientTape() as tape:
+            train_logits = self.snn.model((train_inputs, *self.snn.inter_attn_search_parameters, *self.snn.intra_attn_search_parameters), training=True)
+            train_loss = self.criterion.compute_loss(train_labels, train_logits, training=True)
+        
+        # get weights of model's trainable variables (weights of model's computational operations)
+        train_w_vars = get_variable_infos(self.snn.model.trainable_variables)[1]
+
+        # get momentum (velocity) value of model's trainable variables (only if using optimizer with momentum, such as SGD with momentum)
+        try:
+            train_momentum_vars = list()
+            for m_var in self.optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
+                train_momentum_vars.append(tf.math.multiply(m_var.numpy(), self.optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
+        except:
+            train_momentum_vars = list()
+            for w_var in train_w_vars:
+                train_momentum_vars.append(tf.zeros_like(w_var))
+
+        # get derivatives (gradients) of weights of model's trainable variables (weights of model's computational operations)
+        train_grads = tape.gradient(train_loss, self.snn.model.trainable_variables)
+        # add derivatives (gradients) of weight_regularization_loss to the gradients of train_loss (total_loss = train_loss + weight_regularization_loss)
+        train_grads = tf.math.add(train_grads, tf.math.multiply(train_w_vars, self.train_weight_decay))
+
+        # calculate new weights of model's trainable variables from updating with the gradients, the momentum value, and learning_rate
+        # w = w - lr * (momentum + gradients)
+        train_lr = self.optimizer.learning_rate.numpy()
+        new_train_w_vars = tf.math.subtract(train_w_vars, tf.math.multiply(tf.math.add(train_momentum_vars, train_grads), train_lr))
+
+        return new_train_w_vars
