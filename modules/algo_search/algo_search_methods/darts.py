@@ -1,19 +1,32 @@
 import tensorflow as tf
 
+from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.utils import (get_variable_infos)
+
+
+def _flatten_and_concat(xs):
+    """Flatten multi-dimensional tensor of weights to 1-D tensor of weights and finally concatenate all of these to 1-D tensor"""
+    return tf.concat([tf.reshape(x, shape=[-1]) for x in xs], axis=-1) 
 
 
 class DARTS(object):
     """Differentiable Architecture Search"""
-    def __init__(self, cfg, SearchNNmodel, optimizer, arch_optimizer, criterion, unrolled):
+    def __init__(self, cfg, ds_cfg, model_cfg, model_attn_search_cfg, seed, snn, optimizer, arch_optimizer, criterion, unrolled):
         self.cfg = cfg
-        self.snn = SearchNNmodel
+        self.ds_cfg = ds_cfg
+        self.model_cfg = model_cfg
+        self.model_attn_search_cfg = model_attn_search_cfg
+        self.seed = seed
+        self.snn = snn
         self.optimizer = optimizer
         self.arch_optimizer = arch_optimizer
         self.criterion = criterion
         self.unrolled = unrolled
 
         self.train_weight_decay = self.cfg['weights_decay']
+
+        if self.unrolled:
+            self.unrolled_snn = SearchNNmodel(self.cfg, self.ds_cfg, self.model_cfg, self.model_attn_search_cfg, seed=self.seed, name='Unrolled_SearchNNmodel')
 
 
     def step(self, train_inputs, train_labels, arch_train_inputs, arch_train_labels):
@@ -37,37 +50,85 @@ class DARTS(object):
 
 
     def _update_step_unrolled(self, train_inputs, train_labels, arch_train_inputs, arch_train_labels):
-        train_w_vars_unrolled_model = self._compute_unrolled_model(train_inputs, train_labels)
+        # train_w_vars_unrolled_model = self._compute_unrolled_model(train_inputs, train_labels)
+        
+        ###### TEST #######
+        train_logits, train_loss = self._compute_unrolled_model(train_inputs, train_labels)
+        return train_logits, train_loss
+        ###### TEST #######
 
 
-    # @tf.function
+    @tf.function
     def _compute_unrolled_model(self, train_inputs, train_labels):
-        # calculate train_loss
+        # calculate train_loss via forward
         with tf.GradientTape() as tape:
             train_logits = self.snn.model((train_inputs, *self.snn.inter_attn_search_parameters, *self.snn.intra_attn_search_parameters), training=True)
             train_loss = self.criterion.compute_loss(train_labels, train_logits, training=True)
         
-        # get weights of model's trainable variables (weights of model's computational operations)
-        train_w_vars = get_variable_infos(self.snn.model.trainable_variables)[1]
+        # get current weights of model's trainable variables (weights of model's computational operations)
+        # and flatten multi-dimensional tensor of weights to 1-D tensor of weights and finally concatenate all of these to 1-D tensor
+        train_w_vars = _flatten_and_concat(self.snn.model.trainable_variables)
 
-        # get momentum (velocity) value of model's trainable variables (only if using optimizer with momentum, such as SGD with momentum)
+        # get momentum (velocity) value of model's trainable variables from train_optimizer (only if using optimizer with momentum, such as SGD with momentum)
+        # and flatten multi-dimensional tensor weights' momentum value to 1-D tensor of weights' momentum value and finally concatenate all of these to 1-D tensor
         try:
-            train_momentum_vars = list()
-            for m_var in self.optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
-                train_momentum_vars.append(tf.math.multiply(m_var.numpy(), self.optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
+            # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
+            train_momentum_vars = _flatten_and_concat(self.optimizer.momentums)
+            # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
+            train_momentum_vars = tf.math.multiply(train_momentum_vars, self.optimizer.momentum)
         except:
-            train_momentum_vars = list()
-            for w_var in train_w_vars:
-                train_momentum_vars.append(tf.zeros_like(w_var))
-
+            train_momentum_vars = tf.zeros_like(train_w_vars)
+        
         # get derivatives (gradients) of weights of model's trainable variables (weights of model's computational operations)
-        train_grads = tape.gradient(train_loss, self.snn.model.trainable_variables)
-        # add derivatives (gradients) of weight_regularization_loss to the gradients of train_loss (total_loss = train_loss + weight_regularization_loss)
-        train_grads = tf.math.add(train_grads, tf.math.multiply(train_w_vars, self.train_weight_decay))
+        # and flatten multi-dimensional tensor weights' gradient value to 1-D tensor of weights' gradient value and finally concatenate all of these to 1-D tensor
+        train_w_grads = _flatten_and_concat(tape.gradient(train_loss, self.snn.model.trainable_variables))
+        # add derivatives (gradients) of weight_regularization_loss to the gradients of train_loss (from loss funciton, total_loss = train_loss + weight_regularization_loss)
+        train_w_grads = tf.math.add(train_w_grads, tf.math.multiply(train_w_vars, self.train_weight_decay))
 
-        # calculate new weights of model's trainable variables from updating with the gradients, the momentum value, and learning_rate
+        # calculate new weights of model's trainable variables from updating by the gradients, the momentum value, and learning_rate
         # w = w - lr * (momentum + gradients)
-        train_lr = self.optimizer.learning_rate.numpy()
-        new_train_w_vars = tf.math.subtract(train_w_vars, tf.math.multiply(tf.math.add(train_momentum_vars, train_grads), train_lr))
+        new_train_w_vars = tf.math.subtract(train_w_vars, tf.math.multiply(tf.math.add(train_momentum_vars, train_w_grads), self.optimizer.learning_rate))
 
-        return new_train_w_vars
+        # construct unrolled_model from new_train_w_vars (new_theta)        
+        unrolled_model = self._construct_model_for_theta(new_train_w_vars)
+
+        ###### TEST #######
+        return train_logits, train_loss
+        ###### TEST #######
+
+        
+        # return new_train_w_vars
+
+    
+    def _construct_model_for_theta(self, theta):
+        ###### TEST #######
+        # print('#'*100)
+        # print('[BEFORE UPDATE]: ')
+        # print(self.snn.inter_attn_search_parameters)
+        # print(self.snn.intra_attn_search_parameters)
+        # print('-'*100)
+        # print(self.unrolled_snn.inter_attn_search_parameters)
+        # print(self.unrolled_snn.intra_attn_search_parameters)
+        # print('#'*100)
+        ###### TEST #######
+        
+        # copy weight parameter for INTER-attention_types searching from snn to unrolled_snn
+        for unrolled_snn_inter_attn_search_weights, snn_inter_attn_search_weights in zip(self.unrolled_snn.inter_attn_search_parameters, self.snn.inter_attn_search_parameters):
+            unrolled_snn_inter_attn_search_weights.assign(tf.identity(snn_inter_attn_search_weights))
+            ###### TEST #######
+            # unrolled_snn_inter_attn_search_weights.assign(tf.math.multiply(tf.identity(snn_inter_attn_search_weights), tf.constant(0.1)))
+            ###### TEST #######
+        # copy weight parameter for INTRA-attention_types searching from snn to unrolled_snn
+        for unrolled_snn_intra_attn_search_weights, snn_intra_attn_search_weights in zip(self.unrolled_snn.intra_attn_search_parameters, self.snn.intra_attn_search_parameters):
+            unrolled_snn_intra_attn_search_weights.assign(tf.identity(snn_intra_attn_search_weights))
+            ###### TEST #######
+            # unrolled_snn_intra_attn_search_weights.assign(tf.math.multiply(tf.identity(snn_intra_attn_search_weights), tf.constant(0.1)))
+            ###### TEST #######
+
+        ###### TEST #######
+        # print('#'*100)
+        # print('[AFTER UPDATE]: ')
+        # print(self.unrolled_snn.inter_attn_search_parameters)
+        # print(self.unrolled_snn.intra_attn_search_parameters)
+        # print('#'*100)
+        ###### TEST #######

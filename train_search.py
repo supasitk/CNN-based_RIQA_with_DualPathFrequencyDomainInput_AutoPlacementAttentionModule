@@ -128,7 +128,7 @@ def main(_):
 
     # algorithm of architecture search
     arch_algorithm = cfg['arch_algorithm']
-    arch_algo_search = algoSearch(cfg, snn, optimizer, arch_optimizer, criterion)
+    arch_algo_search = algoSearch(cfg, ds_cfg, model_cfg, model_attn_search_cfg, seed, snn, optimizer, arch_optimizer, criterion)
 
     # load checkpoint
     checkpoint_dir = './checkpoints/train_search/' + cfg['config_summary'] + f"/seed{seed}/"

@@ -135,7 +135,8 @@ def get_variable_infos(list_of_vars):
   
   for var in list_of_vars:
     path_vars.append(var.path)
-    weight_vars.append(var.numpy())
+    #weight_vars.append(var.numpy()) # for eager mode of execution
+    weight_vars.append(var)
   
   return path_vars, weight_vars
 
