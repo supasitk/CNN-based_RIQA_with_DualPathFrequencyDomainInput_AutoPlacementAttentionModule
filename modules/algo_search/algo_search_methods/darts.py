@@ -58,6 +58,7 @@ class DARTS(object):
         with tf.GradientTape(persistent=True) as tape:
             unrolled_logits = self.unrolled_snn.model((arch_train_inputs, *self.unrolled_snn.inter_attn_search_parameters, *self.unrolled_snn.intra_attn_search_parameters), training=True)
             unrolled_loss = self.criterion.compute_loss(arch_train_labels, unrolled_logits, training=True)
+        # gradient(LOSSval(w', alpha), alpha), part of Eq. 7
         # calculate gradients of weights of INTER/INTRA-attention_types searching for unrolled_snn
         unrolled_snn_attn_search_weights = self.unrolled_snn.inter_attn_search_parameters + self.unrolled_snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
         unrolled_snn_arch_train_w_grads = tape.gradient(unrolled_loss, unrolled_snn_attn_search_weights)
@@ -66,6 +67,8 @@ class DARTS(object):
         # calculate gradients of weights of model's computational operations for unrolled_snn
         unrolled_snn_train_w_grads = tape.gradient(unrolled_loss, self.unrolled_snn.model.trainable_variables)
 
+        implicit_grads = self._hessian_vector_product(unrolled_snn_train_w_grads, train_inputs, train_labels)
+
 
         # release tape
         del tape
@@ -73,7 +76,6 @@ class DARTS(object):
         ###### TEST #######
         return unrolled_logits, unrolled_loss
         ###### TEST #######
-
 
 
     @tf.function
@@ -186,3 +188,12 @@ class DARTS(object):
         #     print(var.numpy())
         # print('#'*100)
         ###### TEST #######
+
+
+    @tf.function
+    def _hessian_vector_product(self, vector, input, target, r=1e-2):
+        """slightly touch vector value to estimate the gradient with respect to alpha refer to Eq. 8 for more details."""
+        # flatten and concatenate vector, then calculate its 2-norm
+        norm_of_vector = tf.norm(_flatten_and_concat(vector))
+
+        R = tf.math.divide(r, norm_of_vector)
