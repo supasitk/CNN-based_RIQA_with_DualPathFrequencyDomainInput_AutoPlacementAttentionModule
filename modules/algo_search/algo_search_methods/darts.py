@@ -89,8 +89,8 @@ class DARTS(object):
         # w = w - lr * (momentum + gradients)
         new_train_w_vars = tf.math.subtract(train_w_vars, tf.math.multiply(tf.math.add(train_momentum_vars, train_w_grads), self.optimizer.learning_rate))
 
-        # construct unrolled_model from new_train_w_vars (new_theta)        
-        unrolled_model = self._construct_model_for_theta(new_train_w_vars)
+        # update self.unrolled_snn with new_train_w_vars (new_theta)        
+        self._update_unrolled_model_for_theta(new_train_w_vars)
 
         ###### TEST #######
         return train_logits, train_loss
@@ -100,14 +100,17 @@ class DARTS(object):
         # return new_train_w_vars
 
     
-    def _construct_model_for_theta(self, theta):
+    def _update_unrolled_model_for_theta(self, theta):
         ###### TEST #######
         # print('#'*100)
-        # print('[BEFORE UPDATE]: ')
+        # print('[BEFORE UPDATE ARCH_WEIGHTS]: ')
+        # print('#'*100)
         # print(self.snn.inter_attn_search_parameters)
-        # print(self.snn.intra_attn_search_parameters)
         # print('-'*100)
+        # print(self.snn.intra_attn_search_parameters)
+        # print('*'*100)
         # print(self.unrolled_snn.inter_attn_search_parameters)
+        # print('-'*100)
         # print(self.unrolled_snn.intra_attn_search_parameters)
         # print('#'*100)
         ###### TEST #######
@@ -127,8 +130,47 @@ class DARTS(object):
 
         ###### TEST #######
         # print('#'*100)
-        # print('[AFTER UPDATE]: ')
+        # print('[AFTER UPDATE ARCH_WEIGHTS]: ')
+        # print('#'*100)
         # print(self.unrolled_snn.inter_attn_search_parameters)
+        # print('-'*100)
         # print(self.unrolled_snn.intra_attn_search_parameters)
+        # print('#'*100)
+        ###### TEST #######
+
+        ###### TEST #######
+        # print('#'*100)
+        # print('[BEFORE UPDATE VARS_WEIGHTS]: ')
+        # print('#'*100)
+        # var_list = [var for var in self.unrolled_snn.model.trainable_variables]
+        # print(var_list)
+        # print('*'*100)
+        # print('#'*100)
+        # for var in var_list[-2:]:
+        #     print(var)
+        #     print(var.shape)
+        #     print(tf.math.reduce_prod(var.shape))
+        #     print(var.numpy())
+        # print('#'*100)
+        ###### TEST #######
+
+        # set weight of unrolled_snn' trainable_variables with the theta (new_train_w_vars) argument
+        offset = 0
+        for var in self.unrolled_snn.model.trainable_variables:
+            var_length = tf.math.reduce_prod(var.shape)
+            var.assign(tf.reshape(theta[offset:offset+var_length], shape=var.shape))
+            offset += var_length
+        
+        ###### TEST #######
+        # print('#'*100)
+        # print('[AFTER UPDATE VARS_WEIGHTS]: ')
+        # print('#'*100)
+        # var_list_after = [var for var in self.unrolled_snn.model.trainable_variables]
+        # print('#'*100)
+        # for var in var_list_after[-2:]:
+        #     print(var)
+        #     print(var.shape)
+        #     print(tf.math.reduce_prod(var.shape))
+        #     print(var.numpy())
         # print('#'*100)
         ###### TEST #######
