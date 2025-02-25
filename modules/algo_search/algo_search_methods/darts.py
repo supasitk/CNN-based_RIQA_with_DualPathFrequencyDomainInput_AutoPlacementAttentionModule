@@ -49,13 +49,31 @@ class DARTS(object):
         return logits, loss
 
 
+    @tf.function
     def _update_step_unrolled(self, train_inputs, train_labels, arch_train_inputs, arch_train_labels):
-        # train_w_vars_unrolled_model = self._compute_unrolled_model(train_inputs, train_labels)
+        # update all learnable parameters of self.unrolled_snn (weights of model's computational operations and weights of INTER/INTRA-attention_types searching)
+        self._compute_unrolled_model(train_inputs, train_labels)
         
+        # calculate unrolled_snn_loss via forward
+        with tf.GradientTape(persistent=True) as tape:
+            unrolled_logits = self.unrolled_snn.model((arch_train_inputs, *self.unrolled_snn.inter_attn_search_parameters, *self.unrolled_snn.intra_attn_search_parameters), training=True)
+            unrolled_loss = self.criterion.compute_loss(arch_train_labels, unrolled_logits, training=True)
+        # calculate gradients of weights of INTER/INTRA-attention_types searching for unrolled_snn
+        unrolled_snn_attn_search_weights = self.unrolled_snn.inter_attn_search_parameters + self.unrolled_snn.intra_attn_search_parameters # combination of lists (concatenate the two lists into one list)
+        unrolled_snn_arch_train_w_grads = tape.gradient(unrolled_loss, unrolled_snn_attn_search_weights)
+        if self.cfg['arch_grad_clip_norm'] != None:
+            unrolled_snn_arch_train_w_grads = [(tf.clip_by_norm(grad, self.cfg['arch_grad_clip_norm'])) for grad in unrolled_snn_arch_train_w_grads]
+        # calculate gradients of weights of model's computational operations for unrolled_snn
+        unrolled_snn_train_w_grads = tape.gradient(unrolled_loss, self.unrolled_snn.model.trainable_variables)
+
+
+        # release tape
+        del tape
+
         ###### TEST #######
-        train_logits, train_loss = self._compute_unrolled_model(train_inputs, train_labels)
-        return train_logits, train_loss
+        return unrolled_logits, unrolled_loss
         ###### TEST #######
+
 
 
     @tf.function
@@ -92,14 +110,8 @@ class DARTS(object):
         # update self.unrolled_snn with new_train_w_vars (new_theta)        
         self._update_unrolled_model_for_theta(new_train_w_vars)
 
-        ###### TEST #######
-        return train_logits, train_loss
-        ###### TEST #######
 
-        
-        # return new_train_w_vars
-
-    
+    @tf.function
     def _update_unrolled_model_for_theta(self, theta):
         ###### TEST #######
         # print('#'*100)
