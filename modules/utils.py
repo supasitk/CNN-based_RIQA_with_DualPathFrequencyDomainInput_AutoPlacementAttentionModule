@@ -129,18 +129,6 @@ def last_k_avg_max_min_metric(metric_list, curr_num_val, k):
   return np.mean(metric_list[-k:]), np.amax(metric_list[-k:]), np.amin(metric_list[-k:])
 
 
-def get_variable_infos(list_of_vars):
-  path_vars = list()
-  weight_vars = list()
-  
-  for var in list_of_vars:
-    path_vars.append(var.path)
-    #weight_vars.append(var.numpy()) # for eager mode of execution
-    weight_vars.append(var)
-  
-  return path_vars, weight_vars
-
-
 def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, val_metrics=None, topN_val_on_metrics=None, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
@@ -353,6 +341,7 @@ def write_exec_search_config_summary(cfg):
     logging.info('*** Training Setting ***')
     logging.info('Batch size: {}'.format(cfg['batch_size']))
     logging.info('Weight decay: {}'.format(cfg['weights_decay']))
+    logging.info('Gradient clip by norm: {}'.format(cfg['grad_clip_norm']))
     logging.info('Weight decay of Architecture Search: {}'.format(cfg['arch_weights_decay']))
     logging.info('Gradient clip by norm of Architecture Search: {}'.format(cfg['arch_grad_clip_norm']))
     logging.info('Training unit: {}'.format(cfg['train_unit']))

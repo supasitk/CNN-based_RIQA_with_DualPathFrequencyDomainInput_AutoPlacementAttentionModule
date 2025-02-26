@@ -153,44 +153,7 @@ def main(_):
     cfg_start_arch_search_train_unit = cfg['start_arch_search_train_unit']
     arch_search_start_steps = int(cfg_start_arch_search_train_unit) if cfg['train_unit'] == 'step' else int(cfg_start_arch_search_train_unit * steps_per_epoch)
     logging.info('[*] Searching model after steps: {} ({:.2f} epochs).'.format(arch_search_start_steps, arch_search_start_steps/steps_per_epoch))
-
-    # define training step function for weights of model's computational operations 
-    @tf.function
-    def train_step(inputs, labels):
-        with tf.GradientTape() as tape:
-            logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-            loss = criterion.compute_loss(labels, logits, training=True)
-        grads = tape.gradient(loss, snn.model.trainable_variables)
-        optimizer.apply_gradients(zip(grads, snn.model.trainable_variables))
-        return logits, loss
     
-    # define training step function for weights of model's architecture searching 
-    # -- DARTS -- #
-    # ---- [Using 'unrolled' method (using one-step unrolled validation loss)]
-    # @tf.function
-    # def darts_unrolled_arch_train_step(train_inputs, train_labels, arch_train_inputs, arch_train_labels, train_lr, train_optimizer):
-    #     def _compute_unrolled_model(inputs, labels, lr, optimizer):
-    #         # calculate loss
-    #         logits = snn.model((inputs, *snn.inter_attn_search_parameters, *snn.intra_attn_search_parameters), training=True)
-    #         loss = criterion.compute_loss(labels, logits, training=True)
-    #         # get weight of trainable varaibles 
-    #         weight_vars = get_variable_infos(snn.model.trainable_variables)[1]
-    #         # get momentum (velocity) of trainable variables (only if using optimizer with momentum, such as SGD with momentum)
-    #         try:
-    #             momentum_vars = list()
-    #             for m_var in optimizer.momentums: # for SGD optimizer, it has one variable `momentums` [list] (only set if `momentum` argument is not 0) for keeping momentum (velocity) of each trainable variables
-    #                 momentum_vars.append(tf.math.multiply(m_var.numpy(), optimizer.momentum)) # for SGD optimizer, 'momemtum' attribute is value of momentum hyperparameter
-    #         except:
-    #             momentum_vars = list()
-    #             for w_var in weight_vars:
-    #                 momentum_vars.append(tf.zeros_like(w_var))
-
-    #         assert len(weight_vars) == len(momentum_vars)
-
-
-    #     unrolled_model = _compute_unrolled_model(train_inputs, train_labels, train_lr, train_optimizer)
-
-
     # training loop
     remain_steps = max(total_steps - checkpoint.step.numpy(), 0)
     prog_bar = ProgressBar(steps_per_epoch,
@@ -218,11 +181,11 @@ def main(_):
         if steps > arch_search_start_steps:
             arch_train_inputs, arch_train_input_paths, arch_train_labels = next(iter_arch_train_ds)
             if arch_algorithm == 'DARTS':
-                arch_logits, arch_loss = arch_algo_search.step(inputs, labels, arch_train_inputs, arch_train_labels)
+                arch_logits, arch_loss = arch_algo_search.arch_step(inputs, labels, arch_train_inputs, arch_train_labels)
 
             arch_train_accumulated_results.update(arch_train_input_paths, arch_train_labels, arch_logits)
 
-        logits, loss = train_step(inputs, labels)
+        logits, loss = arch_algo_search.train_step(inputs, labels)
         
         train_accumulated_results.update(input_paths, labels, logits)
         prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}, lr={:.2e}, elapsed_time={} h:m:s'.format(
