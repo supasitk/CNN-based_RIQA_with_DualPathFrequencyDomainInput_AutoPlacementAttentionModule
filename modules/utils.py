@@ -145,9 +145,11 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
           tf.summary.scalar(f"loss/{eval_mode}/top-1_criterion_loss", top1_metric_of_val, step=step)
         elif metric == 'Accuracy':
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
+        elif metric == 'macroF1':
+          tf.summary.scalar(f"macroF1/{eval_mode}/top-1_macroF1", top1_metric_of_val, step=step)
 
 
-def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, lr=None):
+def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, arch_metrics=None, topN_arch_on_metrics=None, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
     tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
@@ -155,6 +157,14 @@ def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_res
     tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
     tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+    for metric in arch_metrics:
+        top1_metric_of_arch = topN_arch_on_metrics[metric].top_N_val_list[0][metric]
+        if metric == 'Loss':
+          tf.summary.scalar(f"loss/{eval_mode}/top-1_criterion_loss", top1_metric_of_arch, step=step)
+        elif metric == 'Accuracy':
+          tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_arch, step=step)
+        elif metric == 'macroF1':
+          tf.summary.scalar(f"macroF1/{eval_mode}/top-1_macroF1", top1_metric_of_arch, step=step)
 
 
 def write_dataset_config_summary(ds_name, cfg):
@@ -347,6 +357,9 @@ def write_exec_search_config_summary(cfg):
     logging.info('Training unit: {}'.format(cfg['train_unit']))
     logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
     logging.info('Starting number of training unit for architecture search: {}'.format(cfg['start_arch_search_train_unit']))
+    logging.info('ArchSearch metrics used for find top-N ArchSearch (each metric considered separately): {}'.format(cfg['arch_metrics_for_find_top_N_arch_search']))
+    logging.info('top-N ArchSearch recorded on each metric: {}'.format(cfg['arch_top_N']))
+    logging.info('ArchSearch last k metrics: {}'.format(cfg['arch_last_k_metrics']))
     logging.info('Save unit: {}'.format(cfg['save_unit']))
     logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
     logging.info('Number of seed used: {}'.format(cfg['seed_num']))

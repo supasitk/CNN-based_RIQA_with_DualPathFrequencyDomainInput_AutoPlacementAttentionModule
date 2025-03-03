@@ -10,12 +10,13 @@ import tensorflow as tf
 from modules.utils import (load_yaml, set_memory_growth, write_exec_search_config_summary,
                            write_dataset_config_summary, write_model_config_summary,
                            write_model_attention_search_config_summary, ProgressBar,
-                           evaluation_result_log, evaluation_result_writer, arch_evaluation_result_writer)
+                           evaluation_result_log, evaluation_result_writer, arch_evaluation_result_writer,
+                           last_k_avg_max_min_metric)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model_search.model_search_main import (SearchNNmodel)
 from modules.optimizers import (getOptimizer)
 from modules.losses import (LossFn)
-from modules.metric import (accumulated_result, compute_metric)
+from modules.metric import (accumulated_result, compute_metric, record_top_N_validation_for_specific_metric)
 from modules.algo_search.algo_search_main import (algoSearch)
 
 flags.DEFINE_string('cfg_path', './configs/train_search/riqa_search.yaml', 'config file path')
@@ -160,6 +161,15 @@ def main(_):
                            checkpoint.step.numpy() % steps_per_epoch)
     train_accumulated_results = accumulated_result()
     arch_train_accumulated_results = accumulated_result()
+    arch_metrics_for_find_top_N_arch_search = cfg['arch_metrics_for_find_top_N_arch_search']
+    arch_top_N = cfg['arch_top_N']
+    top_N_arch_on_metrics = dict()
+    arch_metrics_list = dict()
+    for metric in arch_metrics_for_find_top_N_arch_search:
+        top_N_arch_on_metrics[metric] = record_top_N_validation_for_specific_metric(N=arch_top_N,
+                                                                                    metric=metric)
+        arch_metrics_list[metric] = list()
+    arch_last_k_metrics = int(cfg['arch_last_k_metrics'])
     class_names = ds_cfg['class_name']
     summary_writer = tf.summary.create_file_writer('./logs/train_search/' + cfg['config_summary'] + f"/seed{seed}/")
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
@@ -202,14 +212,49 @@ def main(_):
             evaluation_result_writer(summary_writer, 'train', loss, train_eval_result, steps, lr=optimizer.learning_rate.numpy())
             train_accumulated_results.reset()
 
+            # check if already starting arch_search
             if steps > arch_search_start_steps:
                 arch_loss = criterion.compute_loss(np.array(arch_train_accumulated_results.accum_y_true), np.array(arch_train_accumulated_results.accum_y_logit), training=True)
                 arch_train_eval_result = compute_metric(arch_train_accumulated_results.accum_y_true, 
                                                         arch_train_accumulated_results.accum_y_prob,
                                                         arch_train_accumulated_results.accum_y_pred, 
                                                         class_names)
-                evaluation_result_log('Arch_Train', arch_loss, arch_train_eval_result, (steps/ steps_per_epoch))
-                arch_evaluation_result_writer(summary_writer, 'arch_train', arch_loss, arch_train_eval_result, steps, lr=arch_optimizer.learning_rate.numpy())
+                evaluation_result_log('Arch_Train', arch_loss, arch_train_eval_result, (steps / steps_per_epoch))
+
+                # summarize information of arch_search result
+                current_epoch = steps / steps_per_epoch
+                current_arch_train_loss = arch_loss
+                current_arch_train_acc = np.mean(arch_train_eval_result['Accuracy'])
+                current_arch_train_macroPrecision = np.mean(arch_train_eval_result['Precision'])
+                current_arch_train_macroSensitivity = np.mean(arch_train_eval_result['Sensitivity'])
+                current_arch_train_macroF1 = np.mean(arch_train_eval_result['F1'])
+
+                current_arch_train_info = {'Epoch': current_epoch,
+                                           'Loss': current_arch_train_loss,
+                                           'Accuracy': current_arch_train_acc,
+                                           'macroPrecision': current_arch_train_macroPrecision,
+                                           'macroSensitivity': current_arch_train_macroSensitivity,
+                                           'macroF1': current_arch_train_macroF1
+                                          }
+
+                # check if the current arch_search information is better than the previous top-N arch_search for each metric,
+                # if yes (for each metric), updating new top-N arch_search of the metric.
+                # also, showing average/max/min value for each metric from last K arch_search
+                logging.info('[Arch_Train - epoch {}]: '.format((current_epoch)))
+                for metric in arch_metrics_for_find_top_N_arch_search:
+                    # check if updating new top-N arch_search of this metric
+                    top_N_arch_on_metrics[metric].update_top_N_validation(current_arch_train_info)
+                    logging.info('\tNew top-{} ArchSearch of {} found: {}'.format(arch_top_N, metric, top_N_arch_on_metrics[metric].is_current_val_metric_value_better))
+                    top_N_arch_on_metrics[metric].show_top_N_validation()
+
+                    # showing average/max/min value for each metric from last K arch_search
+                    arch_metrics_list[metric].append(current_arch_train_info[metric])
+                    arch_last_k_avg_metric, arch_last_k_max_metric, arch_last_k_min_metric = last_k_avg_max_min_metric(arch_metrics_list[metric],
+                                                                                                                       int((steps-arch_search_start_steps)/steps_per_epoch),
+                                                                                                                       arch_last_k_metrics)
+                    logging.info('\tLast {:d} avg|max|min ArchSearch {}: {:0.4f}|{:0.4f}|{:0.4f}\n'.format(arch_last_k_metrics, metric, arch_last_k_avg_metric, arch_last_k_max_metric, arch_last_k_min_metric))
+
+                arch_evaluation_result_writer(summary_writer, 'arch_train', arch_loss, arch_train_eval_result, steps, arch_metrics=arch_metrics_for_find_top_N_arch_search, topN_arch_on_metrics=top_N_arch_on_metrics, lr=arch_optimizer.learning_rate.numpy())
                 arch_train_accumulated_results.reset()
                 snn.write_probability_of_attention_search_options(filepath=log_dir + 'prob_attn_search_options.log', step=steps, steps_per_epoch=steps_per_epoch)
    
