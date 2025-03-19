@@ -62,6 +62,23 @@ class ImageRGBtoYUV(tf.keras.layers.Layer):
     def call(self, x, training=False):
         return tf.image.rgb_to_yuv(x)
 
+
+class ChannelPooling(tf.keras.layers.Layer):
+    """Channel pooling layer"""
+    def __init__(self, method, axis, keepdims, name='ChannelPooling', **kwargs):
+        super(ChannelPooling, self).__init__(name=name, **kwargs)
+        if method == 'avg':
+            self.channel_pooling_op = tf.math.reduce_mean
+        elif method == 'max':
+            self.channel_pooling_op = tf.math.reduce_max
+        else:
+            raise ValueError('Unknown method \'{}\' for ChannelPooling layer'.format(method))
+        self.axis = axis
+        self.keepdims = keepdims
+        
+    def call(self, x, training=False):
+        return self.channel_pooling_op(input_tensor=x, axis=self.axis, keepdims=self.keepdims)
+
       
 class Depthwise_DCT2d(tf.keras.layers.Layer):
     """ Generate layer of 2D-DCT filters for each input channel, 

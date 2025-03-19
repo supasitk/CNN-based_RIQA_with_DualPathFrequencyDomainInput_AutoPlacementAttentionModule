@@ -1,6 +1,7 @@
 from modules.labels import *
 from modules.model.attention.channel_attention.se import (ChannelAttention0)
 from modules.model.attention.spatial_attention.spatialAttention0 import (SpatialAttention0)
+from modules.model.attention.spatial_attention.CBAM_SpatialAttention import (SpatialAttention1)
 
 
 def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=None):
@@ -41,6 +42,24 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            activation=activation,
                                            epsilon=epsilon,
                                            seed=seed,
+                                           name=name)
+            
+        elif attn_type == 'SpatialAttention1':
+            # attn_setting of 'SpatialAttention1' -> list [idx 0:channel_pooling_methods, 1:filter, 2:kernel_size, 3:stride, 4:activation, 5:use_bias]
+            channel_pooling_methods = attn_setting[0]
+            num_filter = attn_setting[1]
+            kernel_size = attn_setting[2]
+            stride = attn_setting[3]
+            activation = attn_setting[4]
+            use_bias = attn_setting[5]
+
+            attn_block = SpatialAttention1(channel_pooling_methods=channel_pooling_methods, 
+                                           filters=num_filter, 
+                                           kernel_size=kernel_size, 
+                                           strides=stride, 
+                                           activation=activation, 
+                                           use_bias=use_bias,
+                                           seed=seed, 
                                            name=name)
     
         else:
