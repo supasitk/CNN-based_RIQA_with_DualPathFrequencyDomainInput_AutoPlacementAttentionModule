@@ -146,7 +146,7 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
         elif metric == 'Accuracy':
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
         elif metric == 'macroF1':
-          tf.summary.scalar(f"macroF1/{eval_mode}/top-1_macroF1", top1_metric_of_val, step=step)
+          tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_val, step=step)
 
 
 def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, arch_metrics=None, topN_arch_on_metrics=None, lr=None):
@@ -164,7 +164,7 @@ def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_res
         elif metric == 'Accuracy':
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_arch, step=step)
         elif metric == 'macroF1':
-          tf.summary.scalar(f"macroF1/{eval_mode}/top-1_macroF1", top1_metric_of_arch, step=step)
+          tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_arch, step=step)
 
 
 def write_dataset_config_summary(ds_name, cfg):
