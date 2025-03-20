@@ -45,13 +45,15 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            name=name)
             
         elif attn_type == 'SpatialAttention1':
-            # attn_setting of 'SpatialAttention1' -> list [idx 0:channel_pooling_methods, 1:filter, 2:kernel_size, 3:stride, 4:activation, 5:use_bias]
+            # attn_setting of 'SpatialAttention1' -> list [idx 0:channel_pooling_methods, 1:filter, 2:kernel_size, 3:stride, 4:activation, 5:use_bias, 6:use_bn, 7:use_relu]
             channel_pooling_methods = attn_setting[0]
             num_filter = attn_setting[1]
             kernel_size = attn_setting[2]
             stride = attn_setting[3]
             activation = attn_setting[4]
             use_bias = attn_setting[5]
+            use_bn = attn_setting[6]
+            use_relu = attn_setting[7]
 
             attn_block = SpatialAttention1(channel_pooling_methods=channel_pooling_methods, 
                                            filters=num_filter, 
@@ -59,6 +61,8 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            strides=stride, 
                                            activation=activation, 
                                            use_bias=use_bias,
+                                           use_bn=use_bn,
+                                           use_relu=use_relu,
                                            seed=seed, 
                                            name=name)
     

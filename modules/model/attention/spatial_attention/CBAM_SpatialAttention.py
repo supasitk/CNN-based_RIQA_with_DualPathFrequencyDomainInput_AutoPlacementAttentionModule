@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import (Conv2D)
+from tensorflow.keras.layers import (Conv2D, Activation, BatchNormalization)
 
 from modules.initializers import *
 from modules.model.layer.CustomLayer import (ChannelPooling)
@@ -7,7 +7,7 @@ from modules.model.layer.CustomLayer import (ChannelPooling)
 
 class SpatialAttention1(tf.keras.layers.Layer):
     """(CBAM_SpatialAttention) Spatial Attenton block from paper 'CBAM: Convolutional Block Attention Module [2018]'."""
-    def __init__(self, channel_pooling_methods=['avg', 'max'], filters=1, kernel_size=7, strides=1, activation='sigmoid', use_bias=False, 
+    def __init__(self, channel_pooling_methods=['avg', 'max'], filters=1, kernel_size=7, strides=1, activation='sigmoid', use_bias=False, use_bn=True, use_relu=False, 
                  seed=None, name=None, **kwargs):
         super(SpatialAttention1, self).__init__(name=name, **kwargs)
         
@@ -24,10 +24,17 @@ class SpatialAttention1(tf.keras.layers.Layer):
                            kernel_size=kernel_size,
                            strides=strides,
                            padding="SAME",
-                           activation=activation,
+                           activation=None,
                            kernel_initializer=CONV2D_KERNEL_INIT(seed=seed),
                            use_bias=use_bias,
                            name=f'{name}_conv')
+        
+        self.bn = BatchNormalization(axis=-1, momentum=0.99, epsilon=1e-5, name=f'{name}_bn') if use_bn else None
+
+        self.relu = Activation(activation='relu', name=f'{name}_relu') if use_relu else None
+
+        self.activation = Activation(activation=activation, 
+                                     name=f'{name}_act')
 
     def call(self, inputs, training=False):
         ch_pool_outs = list()
@@ -36,6 +43,14 @@ class SpatialAttention1(tf.keras.layers.Layer):
             ch_pool_outs.append(this_ch_pool_out)
         ch_pool_outs_concat = tf.concat(ch_pool_outs, axis=-1)
 
-        attn = self.conv(ch_pool_outs_concat)
+        spatial_map = self.conv(ch_pool_outs_concat)
+
+        if self.bn is not None:
+            spatial_map = self.bn(spatial_map)
+        
+        if self.relu is not None:
+            spatial_map = self.relu(spatial_map)
+
+        attn = self.activation(spatial_map)
 
         return tf.math.multiply(inputs, attn)
