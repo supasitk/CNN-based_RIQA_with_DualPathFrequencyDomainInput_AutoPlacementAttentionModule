@@ -1,7 +1,9 @@
 from modules.labels import *
 from modules.model.attention.channel_attention.se import (ChannelAttention0)
+from modules.model.attention.channel_attention.CBAM_ChannelAttention import (ChannelAttention1)
 from modules.model.attention.spatial_attention.spatialAttention0 import (SpatialAttention0)
 from modules.model.attention.spatial_attention.CBAM_SpatialAttention import (SpatialAttention1)
+from modules.model.attention.channel_spatial_attention.cbam import (ChannelSpatialAttention0)
 
 
 def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=None):
@@ -23,6 +25,23 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
             
             attn_block = ChannelAttention0(channel_output=numChannel_InputFeature,
                                            reduction_ratio=r_ratio, 
+                                           activation_dense1=act_d1, 
+                                           activation_dense2=act_d2,
+                                           seed=seed,
+                                           name=name)
+
+        elif attn_type == 'ChannelAttention1':
+            # attn_setting of 'ChannelAttention1' -> list [idx 0:spatial_pooling_methods, 1:reduction_ratio, 2:use_bias, 3:activation_dense1, 4:activation_dense2]
+            spatial_pool_methods = attn_setting[0]
+            r_ratio = attn_setting[1]
+            use_bias = attn_setting[2]
+            act_d1 = attn_setting[3]
+            act_d2 = attn_setting[4]
+            
+            attn_block = ChannelAttention1(channel_output=numChannel_InputFeature,
+                                           spatial_pooling_methods=spatial_pool_methods,
+                                           reduction_ratio=r_ratio,
+                                           use_bias=use_bias, 
                                            activation_dense1=act_d1, 
                                            activation_dense2=act_d2,
                                            seed=seed,
@@ -66,6 +85,41 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            seed=seed, 
                                            name=name)
     
+        elif attn_type == 'ChannelSpatialAttention0':
+            # attn_setting of 'ChannelSpatialAttention0' -> list [idx 0:cam_spatial_pooling_methods, 1:cam_reduction_ratio, 2:cam_use_bias, 3:cam_activation_dense1, 4:cam_activation_dense2, 
+            #                                                         5:sam_channel_pooling_methods, 6:sam_filter, 7:sam_kernel_size, 8:sam_stride, 9:sam_activation, 10:sam_use_bias, 11:sam_use_bn, 12:sam_use_relu]
+            cam_spatial_pool_methods = attn_setting[0]
+            cam_r_ratio = attn_setting[1]
+            cam_use_bias = attn_setting[2]
+            cam_act_d1 = attn_setting[3]
+            cam_act_d2 = attn_setting[4]
+
+            sam_channel_pooling_methods = attn_setting[5]
+            sam_num_filter = attn_setting[6]
+            sam_kernel_size = attn_setting[7]
+            sam_stride = attn_setting[8]
+            sam_activation = attn_setting[9]
+            sam_use_bias = attn_setting[10]
+            sam_use_bn = attn_setting[11]
+            sam_use_relu = attn_setting[12]
+
+            attn_block = ChannelSpatialAttention0(cam_channel_output=numChannel_InputFeature, 
+                                                  cam_spatial_pooling_methods=cam_spatial_pool_methods, 
+                                                  cam_reduction_ratio=cam_r_ratio, 
+                                                  cam_use_bias=cam_use_bias, 
+                                                  cam_activation_dense1=cam_act_d1, 
+                                                  cam_activation_dense2=cam_act_d2,
+                                                  sam_channel_pooling_methods=sam_channel_pooling_methods, 
+                                                  sam_filters=sam_num_filter, 
+                                                  sam_kernel_size=sam_kernel_size, 
+                                                  sam_strides=sam_stride, 
+                                                  sam_activation=sam_activation, 
+                                                  sam_use_bias=sam_use_bias, 
+                                                  sam_use_bn=sam_use_bn, 
+                                                  sam_use_relu=sam_use_relu,
+                                                  seed=seed, 
+                                                  name=name)
+
         else:
             raise ValueError('Unknown attention type \'{}\''.format(attn_type))
         

@@ -31,8 +31,13 @@ attention_config_of_branches:       # Attention configuration for branch(es) (#e
 # Supported attention type(s) and configuration(s) are 
 #    1. Squeeze-and-Excitation (SE) Networks [2017] 
 #         'ChannelAttention0' -> [reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
-#    2. Learning for retinal image quality assessment with label regularization [2022]
+#    2. (CBAM_ChannelAttention) CBAM: Convolutional Block Attention Module [2018]
+#         'ChannelAttention1' -> [spatial_pooling_methods (default=['avg', 'max']), reduction_ratio (default=16), use_bias (default=True), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
+#    3. Learning for retinal image quality assessment with label regularization [2022]
 #         'SpatialAttention0' -> [filter (default=1), kernel_size (default=1), stride (default=1), activation (default='softplus'), epsilon (default=0.1)]
-#    3. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
+#    4. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
 #         'SpatialAttention1' -> [channel_pooling_methods (default=['avg', 'max']), filter (default=1), kernel_size (default=7), stride (default=1), activation (default='sigmoid'), use_bias (default=False), use_bn (default=True), use_relu (default=False)]  
+#    5. CBAM: Convolutional Block Attention Module [2018]
+#         'ChannelSpatialAttention0' -> [cam_spatial_pooling_methods (default=['avg', 'max']), cam_reduction_ratio (default=16), cam_use_bias (default=True), cam_activation_dense1 (default='relu'), cam_activation_dense2 (default='sigmoid'), 
+#                                        sam_channel_pooling_methods (default=['avg', 'max']), sam_filter (default=1), sam_kernel_size (default=7), sam_stride (default=1), sam_activation (default='sigmoid'), sam_use_bias (default=False), sam_use_bn (default=True), sam_use_relu (default=False)]
 ##############################################################################################################################################
