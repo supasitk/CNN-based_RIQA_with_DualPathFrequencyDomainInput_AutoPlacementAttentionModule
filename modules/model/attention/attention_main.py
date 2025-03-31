@@ -1,6 +1,7 @@
 from modules.labels import *
 from modules.model.attention.channel_attention.se import (ChannelAttention0)
 from modules.model.attention.channel_attention.CBAM_ChannelAttention import (ChannelAttention1)
+from modules.model.attention.channel_attention.fca import (ChannelAttention2)
 from modules.model.attention.spatial_attention.spatialAttention0 import (SpatialAttention0)
 from modules.model.attention.spatial_attention.CBAM_SpatialAttention import (SpatialAttention1)
 from modules.model.attention.channel_spatial_attention.cbam import (ChannelSpatialAttention0)
@@ -44,6 +45,24 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            use_bias=use_bias, 
                                            activation_dense1=act_d1, 
                                            activation_dense2=act_d2,
+                                           seed=seed,
+                                           name=name)
+        
+        elif attn_type == 'ChannelAttention2':
+            # attn_setting of 'ChannelAttention2' -> list [idx 0:freq_select_method, 1:num_freq, 2:reduction_ratio, 3:activation_dense1, 4:activation_dense2, 5:use_bias]
+            freq_select_method = attn_setting[0]
+            num_freq = attn_setting[1]
+            r_ratio = attn_setting[2]
+            act_d1 = attn_setting[3]
+            act_d2 = attn_setting[4]
+            use_bias = attn_setting[5]
+            
+            attn_block = ChannelAttention2(freq_select_method=freq_select_method,
+                                           num_freq=num_freq,
+                                           reduction_ratio=r_ratio, 
+                                           activation_dense1=act_d1, 
+                                           activation_dense2=act_d2,
+                                           use_bias=use_bias,
                                            seed=seed,
                                            name=name)
     
