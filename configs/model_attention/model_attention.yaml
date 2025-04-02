@@ -35,11 +35,13 @@ attention_config_of_branches:       # Attention configuration for branch(es) (#e
 #         'ChannelAttention1' -> [spatial_pooling_methods (default=['avg', 'max']), reduction_ratio (default=16), use_bias (default=True), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
 #    3. FcaNet: Frequency Channel Attention Networks [2021] 
 #         'ChannelAttention2' -> [freq_select_method ('TriangleLow'), num_freq (1,2,4,8,16,32), reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid'), use_bias (default=True)]
-#    4. Learning for retinal image quality assessment with label regularization [2022]
+#    4. DepthwiseMultiFreqChannelAttention (Depthwise2DdctSpatialPooling: True -> DepthwiseMultiFreqReduction: False -> MLP: Shared) 
+#         'ChannelAttention3_1' -> [dctSpaPool_freq_select_method ('TriangleLow'), dctSpaPool_num_freq (integer), mlp_reduction_ratio (default=16), mlp_use_bias (default=True), mlp_activation_dense1 (default='relu'), mlp_activation_dense2 (default='sigmoid')]
+#    5. Learning for retinal image quality assessment with label regularization [2022]
 #         'SpatialAttention0' -> [filter (default=1), kernel_size (default=1), stride (default=1), activation (default='softplus'), epsilon (default=0.1)]
-#    5. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
+#    6. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
 #         'SpatialAttention1' -> [channel_pooling_methods (default=['avg', 'max']), filter (default=1), kernel_size (default=7), stride (default=1), activation (default='sigmoid'), use_bias (default=False), use_bn (default=True), use_relu (default=False)]  
-#    6. CBAM: Convolutional Block Attention Module [2018]
+#    7. CBAM: Convolutional Block Attention Module [2018]
 #         'ChannelSpatialAttention0' -> [cam_spatial_pooling_methods (default=['avg', 'max']), cam_reduction_ratio (default=16), cam_use_bias (default=True), cam_activation_dense1 (default='relu'), cam_activation_dense2 (default='sigmoid'), 
 #                                        sam_channel_pooling_methods (default=['avg', 'max']), sam_filter (default=1), sam_kernel_size (default=7), sam_stride (default=1), sam_activation (default='sigmoid'), sam_use_bias (default=False), sam_use_bn (default=True), sam_use_relu (default=False)]
 ##############################################################################################################################################
