@@ -68,16 +68,18 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            name=name)
             
         elif attn_type == 'ChannelAttention3_1':
-            # attn_setting of 'ChannelAttention3_1' -> list [idx 0:dctSpaPool_freq_select_method, 1:dctSpaPool_num_freq, 2:mlp_reduction_ratio, 3:mlp_use_bias, 4:mlp_activation_dense1, 5:mlp_activation_dense2]
+            # attn_setting of 'ChannelAttention3_1' -> list [idx 0:dctSpaPool_freq_select_method, 1:dctSpaPool_num_freq, 2:multiFreqReduction_method, 3:mlp_reduction_ratio, 4:mlp_use_bias, 5:mlp_activation_dense1, 6:mlp_activation_dense2]
             dctSpaPool_freq_select_method = attn_setting[0]
             dctSpaPool_num_freq = attn_setting[1]
-            mlp_r_ratio = attn_setting[2]
-            mlp_use_bias = attn_setting[3]
-            mlp_act_d1 = attn_setting[4]
-            mlp_act_d2 = attn_setting[5]
+            multiFreqReduction_method = attn_setting[2]
+            mlp_r_ratio = attn_setting[3]
+            mlp_use_bias = attn_setting[4]
+            mlp_act_d1 = attn_setting[5]
+            mlp_act_d2 = attn_setting[6]
             
             attn_block = ChannelAttention3_1(dctSpaPool_freq_select_method=dctSpaPool_freq_select_method,
                                              dctSpaPool_num_freq=dctSpaPool_num_freq,
+                                             multiFreqReduction_method=multiFreqReduction_method,
                                              mlp_reduction_ratio=mlp_r_ratio,
                                              mlp_use_bias=mlp_use_bias,
                                              mlp_activation_dense1=mlp_act_d1, 

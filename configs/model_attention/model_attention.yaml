@@ -35,8 +35,8 @@ attention_config_of_branches:       # Attention configuration for branch(es) (#e
 #         'ChannelAttention1' -> [spatial_pooling_methods (default=['avg', 'max']), reduction_ratio (default=16), use_bias (default=True), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
 #    3. FcaNet: Frequency Channel Attention Networks [2021] 
 #         'ChannelAttention2' -> [freq_select_method ('TriangleLow'), num_freq (1,2,4,8,16,32), reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid'), use_bias (default=True)]
-#    4. DepthwiseMultiFreqChannelAttention (Depthwise2DdctSpatialPooling: True -> DepthwiseMultiFreqReduction: False -> MLP: Shared) 
-#         'ChannelAttention3_1' -> [dctSpaPool_freq_select_method ('TriangleLow'), dctSpaPool_num_freq (integer), mlp_reduction_ratio (default=16), mlp_use_bias (default=True), mlp_activation_dense1 (default='relu'), mlp_activation_dense2 (default='sigmoid')]
+#    4. DepthwiseMultiFreqChannelAttention (Depthwise2DdctSpatialPooling: True -> DepthwiseMultiFreqReduction: [null, 'reduce_mean'] -> MLP: Shared) 
+#         'ChannelAttention3_1' -> [dctSpaPool_freq_select_method ('TriangleLow'), dctSpaPool_num_freq (integer), multiFreqReduction_method (null [default], 'reduce_mean'), mlp_reduction_ratio (default=16), mlp_use_bias (default=True), mlp_activation_dense1 (default='relu'), mlp_activation_dense2 (default='sigmoid')]
 #    5. Learning for retinal image quality assessment with label regularization [2022]
 #         'SpatialAttention0' -> [filter (default=1), kernel_size (default=1), stride (default=1), activation (default='softplus'), epsilon (default=0.1)]
 #    6. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
