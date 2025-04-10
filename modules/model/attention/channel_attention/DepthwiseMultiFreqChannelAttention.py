@@ -89,22 +89,28 @@ class Depthwise2DdctSpatialPooling(tf.keras.layers.Layer):
         return mapper_x, mapper_y
 
 
-class ChannelAttention3_1(tf.keras.layers.Layer):
+class ChannelAttention3(tf.keras.layers.Layer):
     """
         DepthwiseMultiFreqChannelAttention with
-            Depthwise2DdctSpatialPooling: True ->
-            DepthwiseMultiFreqReduction: [None, 'reduce_mean'] ->
-            MLP: Shared
+            Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow'], num_freq [integer]) ->
+            DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean']) ->
+            MLP: (mlp_arrangement ['share', 'seperate'], mlp_reduction_ratio (integer), mlp_use_bias (True, False), mlp_activation_dense1 (ActivationName), mlp_activation_dense2 (ActivationName))
     """
     def __init__(self, dctSpaPool_freq_select_method, dctSpaPool_num_freq, 
-                 multiFreqReduction_method=None,
-                 mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_activation_dense2='sigmoid', 
+                 multiFreqReduction_num_group_of_freq, multiFreqReduction_num_freq_per_group, multiFreqReduction_method='reduce_mean',
+                 mlp_arrangement='share', mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_activation_dense2='sigmoid', 
                  seed=None, name=None, **kwargs):
-        super(ChannelAttention3_1, self).__init__(name=name, **kwargs)
+        super(ChannelAttention3, self).__init__(name=name, **kwargs)
+        assert dctSpaPool_freq_select_method in ['TriangleLow']
         self.dctSpaPool_freq_select_method = dctSpaPool_freq_select_method
+        assert multiFreqReduction_num_freq_per_group == (dctSpaPool_num_freq // multiFreqReduction_num_group_of_freq)
         self.dctSpaPool_num_freq = dctSpaPool_num_freq
-        assert multiFreqReduction_method in [None, 'reduce_mean']
+        self.multiFreqReduction_num_group_of_freq = multiFreqReduction_num_group_of_freq
+        self.multiFreqReduction_num_freq_per_group = multiFreqReduction_num_freq_per_group
+        assert multiFreqReduction_method in ['reduce_mean']
         self.multiFreqReduction_method = multiFreqReduction_method
+        assert mlp_arrangement in ['share', 'seperate']
+        self.mlp_arrangement = mlp_arrangement
         self.mlp_reduction_ratio = mlp_reduction_ratio
         self.mlp_use_bias = mlp_use_bias
         self.mlp_activation_dense1 = mlp_activation_dense1
@@ -126,7 +132,13 @@ class ChannelAttention3_1(tf.keras.layers.Layer):
                                                                             freq_select_method=self.dctSpaPool_freq_select_method,
                                                                             num_freq=self.dctSpaPool_num_freq)
     
-        # MLP (shared)
+        # DepthwiseMultiFreqReduction
+        if self.multiFreqReduction_method == 'reduce_mean':
+            self.depthwise_multiFreq_reduction_method = tf.math.reduce_mean
+        else:
+            raise NotImplementedError 
+
+        # MLP
         self.mlp = tf.keras.Sequential()
         self.mlp.add(Dense(units=input_c // self.mlp_reduction_ratio,
                            activation=self.mlp_activation_dense1,
@@ -144,19 +156,32 @@ class ChannelAttention3_1(tf.keras.layers.Layer):
 
 
     def call(self, x):
+        # Depthwise2DdctSpatialPooling 
+        #   input shape = [B, H, W, C]
+        #   output is list of F elements (freqs) with tensor shape [B, C] of each one (F is number of frequency used)
         out_depthwise_2dDCT_spatial_pooling_for_all_freq = self.depthwise_2dDCT_spatial_pooling(x)
 
-        reduced_out_depthwise_2dDCT_spatial_pooling_for_all_freq = list()
-        if self.multiFreqReduction_method == None:
-            reduced_out_depthwise_2dDCT_spatial_pooling_for_all_freq = out_depthwise_2dDCT_spatial_pooling_for_all_freq
-        elif self.multiFreqReduction_method == 'reduce_mean':
-            sum_out_depthwise_2dDCT_spatial_pooling_for_all_freq = tf.math.add_n(out_depthwise_2dDCT_spatial_pooling_for_all_freq)
-            mean_out_depthwise_2dDCT_spatial_pooling_for_all_freq = tf.math.divide(sum_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.dctSpaPool_num_freq)  
-            reduced_out_depthwise_2dDCT_spatial_pooling_for_all_freq.append(mean_out_depthwise_2dDCT_spatial_pooling_for_all_freq)
+        # DepthwiseMultiFreqReduction
+        #   input is list of F elements (freqs) with tensor shape [B, C] of each one
+        #   output created via 3 step: 
+        #       1st step (grouping): outcome is list of G inner-lists (groups) that each inner-list (group) has (F / G) elements (num_freq per group) with tensor shape [B, C] of each one (G is number of group of frequency)
+        #       2nd step (stacking): outcome is list of G stacked tensors with shape [(F/G), B, C] of each one
+        #       3rd step (reduction): outcome is list of G reduced tensors with shape [B, C] of each one
+        # -- 1st step
+        assert len(out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.dctSpaPool_num_freq
+        grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = [out_depthwise_2dDCT_spatial_pooling_for_all_freq[start_idx_grp:start_idx_grp+self.multiFreqReduction_num_freq_per_group] for start_idx_grp in range(0, len(out_depthwise_2dDCT_spatial_pooling_for_all_freq), self.multiFreqReduction_num_freq_per_group)]
+        # -- 2nd step
+        assert len(grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
+        stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = [tf.stack(freq_grp, axis=0) for freq_grp in grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq]
+        # -- 3rd step
+        assert len(stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
+        reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = [self.depthwise_multiFreq_reduction_method(freq_grp, axis=0) for freq_grp in stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq]
 
+        # MLP
+        assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
         channel_map_outs = list()
-        for this_reduced_out_depthwise_2dDCT_spatial_pooling in reduced_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
-            channel_map_outs.append(self.mlp(this_reduced_out_depthwise_2dDCT_spatial_pooling))
+        for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
+            channel_map_outs.append(self.mlp(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
         
         channel_map_outs_sum = tf.math.add_n(channel_map_outs)
 
