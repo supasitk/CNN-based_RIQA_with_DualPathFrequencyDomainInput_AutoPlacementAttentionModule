@@ -89,6 +89,30 @@ class Depthwise2DdctSpatialPooling(tf.keras.layers.Layer):
         return mapper_x, mapper_y
 
 
+class MLP(tf.keras.layers.Layer):
+    """Multi-Layer Perceptron"""
+    def __init__(self, input_shape_c, reduction_ratio, use_bias, activation_dense1, seed=None, name=None, **kwargs):
+        super(MLP, self).__init__(name=name, **kwargs)
+
+        self.mlp = tf.keras.Sequential()
+        self.mlp.add(Dense(units=input_shape_c // reduction_ratio,
+                           activation=activation_dense1,
+                           use_bias=use_bias,
+                           kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
+                           name=f'{name}_dense1'))
+        self.mlp.add(Dense(units=input_shape_c,
+                           activation=None,
+                           use_bias=use_bias,
+                           kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
+                           name=f'{name}_dense2'))
+
+
+    def call(self, x):
+        out = self.mlp(x)
+
+        return out
+
+
 class ChannelAttention3(tf.keras.layers.Layer):
     """
         DepthwiseMultiFreqChannelAttention with
@@ -139,18 +163,27 @@ class ChannelAttention3(tf.keras.layers.Layer):
             raise NotImplementedError 
 
         # MLP
-        self.mlp = tf.keras.Sequential()
-        self.mlp.add(Dense(units=input_c // self.mlp_reduction_ratio,
-                           activation=self.mlp_activation_dense1,
-                           use_bias=self.mlp_use_bias,
-                           kernel_initializer=DENSE_KERNEL_INIT(seed=self.seed),
-                           name=f'{self.name}_mlp_dense1'))
-        self.mlp.add(Dense(units=input_c,
-                           activation=None,
-                           use_bias=self.mlp_use_bias,
-                           kernel_initializer=DENSE_KERNEL_INIT(seed=self.seed),
-                           name=f'{self.name}_mlp_dense2'))
+        if self.mlp_arrangement == 'share':
+            self.mlp_shared = MLP(input_shape_c=input_c,
+                                  reduction_ratio=self.mlp_reduction_ratio,
+                                  use_bias=self.mlp_use_bias,
+                                  activation_dense1=self.mlp_activation_dense1,
+                                  seed=self.seed,
+                                  name=f'{self.name}_mlp_shared')
+        elif self.mlp_arrangement == 'seperate':
+            self.num_mlp = self.multiFreqReduction_num_group_of_freq
+            self.mlps = list()
+            for i in range(self.num_mlp):
+                self.mlps.append(MLP(input_shape_c=input_c,
+                                     reduction_ratio=self.mlp_reduction_ratio,
+                                     use_bias=self.mlp_use_bias,
+                                     activation_dense1=self.mlp_activation_dense1,
+                                     seed=self.seed,
+                                     name=f'{self.name}_mlp_separate_{i}'))
+        else:
+            raise NotImplementedError
 
+        # Activation after tf.math.add_n of output(s) from MLP(s)
         self.activation_dense2_of_mlp = Activation(activation=self.mlp_activation_dense2,
                                                    name=f'{self.name}_mlp_act_dense2')
 
@@ -180,11 +213,16 @@ class ChannelAttention3(tf.keras.layers.Layer):
         # MLP
         assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
         channel_map_outs = list()
-        for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
-            channel_map_outs.append(self.mlp(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
-        
-        channel_map_outs_sum = tf.math.add_n(channel_map_outs)
+        if self.mlp_arrangement == 'share':
+            for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
+                channel_map_outs.append(self.mlp_shared(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
+        elif self.mlp_arrangement == 'seperate':
+            assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlps)
+            for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlps):
+                channel_map_outs.append(mlp(input))
 
+        # Activation after tf.math.add_n of output(s) from MLP(s)
+        channel_map_outs_sum = tf.math.add_n(channel_map_outs)
         attn = self.activation_dense2_of_mlp(channel_map_outs_sum)
         attn = tf.reshape(attn, [-1, 1, 1, self.ch_out])
 
