@@ -113,16 +113,34 @@ class MLP(tf.keras.layers.Layer):
         return out
 
 
+class WeightedMLPoutputs(tf.keras.layers.Layer):
+    def __init__(self, num_output, seed=None, name=None, **kwargs):
+        super(WeightedMLPoutputs, self).__init__(name=name, **kwargs)
+
+        self.W = self.add_weight(shape=[num_output],
+                                 initializer=tf.keras.initializers.GlorotUniform(seed=seed), 
+                                 dtype=tf.float32, 
+                                 trainable=True)
+
+
+    def call(self, inputs):
+        out = list()
+        for input, w in zip(inputs, self.W):
+            out.append(tf.math.multiply(input, w))
+        
+        return out
+
+
 class ChannelAttention3(tf.keras.layers.Layer):
     """
         DepthwiseMultiFreqChannelAttention with
             Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow'], num_freq [integer]) ->
             DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean']) ->
-            MLP: (mlp_arrangement ['share', 'seperate'], mlp_reduction_ratio (integer), mlp_use_bias (True, False), mlp_activation_dense1 (ActivationName), mlp_activation_dense2 (ActivationName))
+            MLP: (mlp_arrangement ['share', 'seperate'], mlp_reduction_ratio (integer), mlp_use_bias (Boolean), mlp_activation_dense1 (ActivationName), mlp_weighted_dense2_outputs (Boolean), mlp_activation_dense2 (ActivationName))
     """
     def __init__(self, dctSpaPool_freq_select_method, dctSpaPool_num_freq, 
                  multiFreqReduction_num_group_of_freq, multiFreqReduction_num_freq_per_group, multiFreqReduction_method='reduce_mean',
-                 mlp_arrangement='share', mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_activation_dense2='sigmoid', 
+                 mlp_arrangement='share', mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_weighted_dense2_outputs=False, mlp_activation_dense2='sigmoid', 
                  seed=None, name=None, **kwargs):
         super(ChannelAttention3, self).__init__(name=name, **kwargs)
         assert dctSpaPool_freq_select_method in ['TriangleLow']
@@ -138,6 +156,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         self.mlp_reduction_ratio = mlp_reduction_ratio
         self.mlp_use_bias = mlp_use_bias
         self.mlp_activation_dense1 = mlp_activation_dense1
+        self.mlp_weighted_dense2_outputs = mlp_weighted_dense2_outputs
         self.mlp_activation_dense2 = mlp_activation_dense2
         self.seed = seed
         self.name = name
@@ -182,6 +201,12 @@ class ChannelAttention3(tf.keras.layers.Layer):
                                      name=f'{self.name}_mlp_separate_{i}'))
         else:
             raise NotImplementedError
+        
+        # Weighting output(s) from (dense2 of) MLP(s)
+        if self.mlp_weighted_dense2_outputs:
+            self.weighted_mlp_outputs = WeightedMLPoutputs(num_output=self.multiFreqReduction_num_group_of_freq,
+                                                           seed=self.seed,
+                                                           name=self.name)
 
         # Activation after tf.math.add_n of output(s) from MLP(s)
         self.activation_dense2_of_mlp = Activation(activation=self.mlp_activation_dense2,
@@ -220,6 +245,10 @@ class ChannelAttention3(tf.keras.layers.Layer):
             assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlps)
             for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlps):
                 channel_map_outs.append(mlp(input))
+
+        # Weighting output(s) from (dense2 of) MLP(s)
+        if self.mlp_weighted_dense2_outputs:
+            channel_map_outs = self.weighted_mlp_outputs(channel_map_outs)
 
         # Activation after tf.math.add_n of output(s) from MLP(s)
         channel_map_outs_sum = tf.math.add_n(channel_map_outs)
