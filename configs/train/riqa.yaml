@@ -1,5 +1,5 @@
 # run info
-config_summary: 'Tr_DsEyeQsz224sc-1to1normFtr75tr25te100AugHVflipRot2e-1TrOSf_Md1Bresnet50RGBnoPreW_AttnCA0b0-15_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitTcwF-Bs32-DropRate0-Wd0-EpTr160Val1LAFt5Save1-10s0'
+config_summary: 'Tr_DsEyeQsz224sc-1to1normFtr75tr25te100AugHVflipRot2e-1TrOSf_Md1Bresnet50RGBnoPreW_AttnCA0b0-15_ExeSGDm9e-1nesF-LrFixInit1e-2-LossSCCElogitTcwF-Bs32-DropRate0-Wd0-EpTr160Val1LAFKt5Save1-10s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -73,7 +73,7 @@ train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 160
 val_unit: 'epoch'       # 'epoch' or 'step' of validation
 val_on_every_unit: 1
-val_metrics_for_find_top_N_val: ['Loss', 'Accuracy', 'macroF1'] # metrics ['Loss', 'Accuracy', 'macroF1'] of validation used for find top-N validation (each metric considered separately)
+val_metrics_for_find_top_N_val: ['Loss', 'Accuracy', 'macroF1', 'QWK'] # metrics ['Loss', 'Accuracy', 'macroF1', 'QWK'] of validation used for find top-N validation (each metric considered separately)
 val_top_N: 5            # top-N validation recorded on each metric in 'val_metrics_for_find_top_N_val' 
 val_last_k_metrics: 5
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight

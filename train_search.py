@@ -228,13 +228,15 @@ def main(_):
                 current_arch_train_macroPrecision = np.mean(arch_train_eval_result['Precision'])
                 current_arch_train_macroSensitivity = np.mean(arch_train_eval_result['Sensitivity'])
                 current_arch_train_macroF1 = np.mean(arch_train_eval_result['F1'])
+                current_arch_train_qwk = np.mean(arch_train_eval_result['QWK'])
 
                 current_arch_train_info = {'Epoch': current_epoch,
                                            'Loss': current_arch_train_loss,
                                            'Accuracy': current_arch_train_acc,
                                            'macroPrecision': current_arch_train_macroPrecision,
                                            'macroSensitivity': current_arch_train_macroSensitivity,
-                                           'macroF1': current_arch_train_macroF1
+                                           'macroF1': current_arch_train_macroF1,
+                                           'QWK': current_arch_train_qwk
                                           }
 
                 # check if the current arch_search information is better than the previous top-N arch_search for each metric,

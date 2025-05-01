@@ -36,6 +36,90 @@ class accumulated_result(object):
         self.accum_y_pred.extend(np.reshape(y_pred, [batch_size]))
 
 
+# [Start] code of Quadratic Weighted Kappa (QWK) metric from "https://github.com/benhamner/Metrics/blob/master/Python/ml_metrics/quadratic_weighted_kappa.py"
+def qwk_confusion_matrix(rater_a, rater_b, min_rating=None, max_rating=None):
+    """
+    Returns the confusion matrix between rater's ratings
+    """
+    assert(len(rater_a) == len(rater_b))
+    if min_rating is None:
+        min_rating = min(rater_a + rater_b)
+    if max_rating is None:
+        max_rating = max(rater_a + rater_b)
+    num_ratings = int(max_rating - min_rating + 1)
+    conf_mat = [[0 for i in range(num_ratings)]
+                for j in range(num_ratings)]
+    for a, b in zip(rater_a, rater_b):
+        conf_mat[a - min_rating][b - min_rating] += 1
+    return conf_mat
+
+
+def histogram(ratings, min_rating=None, max_rating=None):
+    """
+    Returns the counts of each type of rating that a rater made
+    """
+    if min_rating is None:
+        min_rating = min(ratings)
+    if max_rating is None:
+        max_rating = max(ratings)
+    num_ratings = int(max_rating - min_rating + 1)
+    hist_ratings = [0 for x in range(num_ratings)]
+    for r in ratings:
+        hist_ratings[r - min_rating] += 1
+    return hist_ratings
+
+
+def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None):
+    """
+    Calculates the quadratic weighted kappa
+    quadratic_weighted_kappa calculates the quadratic weighted kappa
+    value, which is a measure of inter-rater agreement between two raters
+    that provide discrete numeric ratings.  Potential values range from -1
+    (representing complete disagreement) to 1 (representing complete
+    agreement).  A kappa value of 0 is expected if all agreement is due to
+    chance.
+
+    quadratic_weighted_kappa(rater_a, rater_b), where rater_a and rater_b
+    each correspond to a list of integer ratings.  These lists must have the
+    same length.
+
+    The ratings should be integers, and it is assumed that they contain
+    the complete range of possible ratings.
+
+    quadratic_weighted_kappa(X, min_rating, max_rating), where min_rating
+    is the minimum possible rating, and max_rating is the maximum possible
+    rating
+    """
+    rater_a = np.array(rater_a, dtype=int)
+    rater_b = np.array(rater_b, dtype=int)
+    assert(len(rater_a) == len(rater_b))
+    if min_rating is None:
+        min_rating = min(min(rater_a), min(rater_b))
+    if max_rating is None:
+        max_rating = max(max(rater_a), max(rater_b))
+    conf_mat = qwk_confusion_matrix(rater_a, rater_b,
+                                min_rating, max_rating)
+    num_ratings = len(conf_mat)
+    num_scored_items = float(len(rater_a))
+
+    hist_rater_a = histogram(rater_a, min_rating, max_rating)
+    hist_rater_b = histogram(rater_b, min_rating, max_rating)
+
+    numerator = 0.0
+    denominator = 0.0
+
+    for i in range(num_ratings):
+        for j in range(num_ratings):
+            expected_count = (hist_rater_a[i] * hist_rater_b[j]
+                              / num_scored_items)
+            d = pow(i - j, 2.0) / pow(num_ratings - 1, 2.0)
+            numerator += d * conf_mat[i][j] / num_scored_items
+            denominator += d * expected_count / num_scored_items
+
+    return 1.0 - numerator / denominator
+# [End] code of Quadratic Weighted Kappa (QWK) metric from "https://github.com/benhamner/Metrics/blob/master/Python/ml_metrics/quadratic_weighted_kappa.py"
+
+
 def compute_metric(y_true, y_prob, y_pred, class_names):
     """Evaluate meter for classification"""
     n_class = len(class_names)
@@ -67,6 +151,14 @@ def compute_metric(y_true, y_prob, y_pred, class_names):
     mPrecision = sum(tp) / sum(tp + fp)
     mRecall = sum(tp) / sum(tp + fn)
 
+    # Quadratic Weighted Kappa (QWK) score
+    first_class_id = 0
+    last_class_id = n_class - 1
+    QWK_score = quadratic_weighted_kappa(rater_a=y_true,
+                                         rater_b=y_pred,
+                                         min_rating=first_class_id,
+                                         max_rating=last_class_id)
+
     output = {
         'class_name': class_names,
         'F1': F1_metric,
@@ -83,6 +175,8 @@ def compute_metric(y_true, y_prob, y_pred, class_names):
         'micro-Sensitivity': mRecall,
         'micro-Specificity': sum(tn) / sum(fp + tn),
         'micro-F1': 2*mPrecision * mRecall / (mPrecision + mRecall),
+
+        'QWK': QWK_score,
     }
 
     return output
@@ -98,7 +192,8 @@ class record_top_N_validation_for_specific_metric(object):
                     'Accuracy': MIN_FLOAT,
                     'macroPrecision': MIN_FLOAT,
                     'macroSensitivity': MIN_FLOAT,
-                    'macroF1': MIN_FLOAT
+                    'macroF1': MIN_FLOAT,
+                    'QWK': MIN_FLOAT
                    }
 
 
@@ -113,8 +208,8 @@ class record_top_N_validation_for_specific_metric(object):
       self.comparison_op = operator.lt
       self.max_or_min_op = max
       self.sorted_reverse = False
-    elif ((self.metric == 'Accuracy') or (self.metric == 'macroF1')): # if given accuracy/macroF1 is GREATER than MINIMUM (lowest rank) accuracy/macroF1 of top-N validation recored previously,
-                                                                      # then appending this validation information to self.top_N_val_list, sorting it in DESCENDING [largest to smallest] order (greater accuracy is better), and finally getting only Top-N validation recorded to self.top_N_val_list
+    elif ((self.metric == 'Accuracy') or (self.metric == 'macroF1') or (self.metric == 'QWK')): # if given accuracy/macroF1/QWK is GREATER than MINIMUM (lowest rank) accuracy/macroF1/QWK of top-N validation recored previously,
+                                                                                                # then appending this validation information to self.top_N_val_list, sorting it in DESCENDING [largest to smallest] order (greater accuracy/macroF1/QWK is better), and finally getting only Top-N validation recorded to self.top_N_val_list
       self.comparison_op = operator.gt
       self.max_or_min_op = min
       self.sorted_reverse = True 
@@ -147,7 +242,8 @@ class record_top_N_validation_for_specific_metric(object):
                    ', Accuracy: ' + str("{:0.4f}".format(val_info['Accuracy'])) +
                    ', macroPrecision: ' + str("{:0.4f}".format(val_info['macroPrecision'])) +
                    ', macroSensitivity: ' + str("{:0.4f}".format(val_info['macroSensitivity'])) +
-                   ', macroF1: ' + str("{:0.4f}".format(val_info['macroF1'])))
+                   ', macroF1: ' + str("{:0.4f}".format(val_info['macroF1'])) +
+                   ', QWK: ' + str("{:0.4f}".format(val_info['QWK'])))
 
   
   def get_epoch_number_in_top_N_validation(self):
@@ -163,7 +259,8 @@ class record_N_test_for_specific_val_metric(object):
   #                    'Accuracy': None,
   #                    'macroPrecision': None,
   #                    'macroSensitivity': None,
-  #                    'macroF1': None
+  #                    'macroF1': None,
+  #                    'QWK': None
   #                   }
 
 
@@ -181,9 +278,9 @@ class record_N_test_for_specific_val_metric(object):
 
   
   def show_best_worst_test(self):
-    # sorting N test (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
-    # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
-    sorted_N_test_list = sorted(self.N_test_list, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
+    # sorting N test (list of dictionaries) first by 'Accuracy', 'QWK', and then by 'macroF1', 
+    # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1/qwk is better)
+    sorted_N_test_list = sorted(self.N_test_list, key=lambda x: (x['Accuracy'], x['QWK'], x['macroF1']), reverse=True)
     
     self.best_test = sorted_N_test_list[0]
     self.worst_test = sorted_N_test_list[self.N - 1]
@@ -197,4 +294,5 @@ class record_N_test_for_specific_val_metric(object):
                    ', Accuracy: ' + str("{:0.4f}".format(test['Accuracy'])) +
                    ', macroPrecision: ' + str("{:0.4f}".format(test['macroPrecision'])) +
                    ', macroSensitivity: ' + str("{:0.4f}".format(test['macroSensitivity'])) +
-                   ', macroF1: ' + str("{:0.4f}".format(test['macroF1'])))
+                   ', macroF1: ' + str("{:0.4f}".format(test['macroF1'])) + 
+                   ', QWK: ' + str("{:0.4f}".format(test['QWK'])))

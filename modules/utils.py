@@ -114,7 +114,8 @@ def evaluation_result_log(eval_mode, eval_loss, eval_result, epoch_num=None):
                ', Accuracy: ' + str("{:0.4f}".format(np.mean(eval_result['Accuracy']))) +
                ', macroPrecision: ' + str("{:0.4f}".format(np.mean(eval_result['Precision']))) +
                ', macroSensitivity: ' + str("{:0.4f}".format(np.mean(eval_result['Sensitivity']))) +
-               ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
+               ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))) +
+               ', QWK: ' + str("{:0.4f}".format(np.mean(eval_result['QWK']))))
 
 
 def last_k_avg_max_min_metric(metric_list, curr_num_val, k):
@@ -136,6 +137,7 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
     tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
     tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
+    tf.summary.scalar(f"qwk/{eval_mode}/QWK", np.mean(eval_result['QWK']), step=step)
     if eval_mode == 'train':
       tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
     if eval_mode == 'validation':
@@ -147,6 +149,8 @@ def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, 
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
         elif metric == 'macroF1':
           tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_val, step=step)
+        elif metric == 'QWK':
+          tf.summary.scalar(f"qwk/{eval_mode}/top-1_QWK", top1_metric_of_val, step=step)
 
 
 def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, arch_metrics=None, topN_arch_on_metrics=None, lr=None):
@@ -156,6 +160,7 @@ def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_res
     tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
     tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
+    tf.summary.scalar(f"qwk/{eval_mode}/QWK", np.mean(eval_result['QWK']), step=step)
     tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
     for metric in arch_metrics:
         top1_metric_of_arch = topN_arch_on_metrics[metric].top_N_val_list[0][metric]
@@ -165,6 +170,8 @@ def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_res
           tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_arch, step=step)
         elif metric == 'macroF1':
           tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_arch, step=step)
+        elif metric == 'QWK':
+          tf.summary.scalar(f"qwk/{eval_mode}/top-1_QWK", top1_metric_of_arch, step=step)
 
 
 def write_dataset_config_summary(ds_name, cfg):

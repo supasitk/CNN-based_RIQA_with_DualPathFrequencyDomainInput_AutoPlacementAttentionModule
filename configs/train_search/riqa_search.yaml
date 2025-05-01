@@ -1,5 +1,5 @@
 # run info
-config_summary: 'TrS_DartUnrolledF_DsEyeQsz224sc-1to1normFtrP0.5valFtrP0.5AugHVflipRot2e-1TrOSf_Md1Bresnet50RGBnoPreW_AttnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixI1e-2-OpSadam1B5e-1_2B999e-3-LrSfixI6e-4-LossSCCElogitTcwF-Bs32-Dr0-Wd0-Gclip5-WdS1e-3-GclipSn-EpTr90Search9LAFt5Save1-5s0'
+config_summary: 'TrS_DartUnrolledF_DsEyeQsz224sc-1to1normFtrP0.5valFtrP0.5AugHVflipRot2e-1TrOSf_Md1Bresnet50RGBnoPreW_AttnS3typeSkip-SEr8_16_32-Spa0k1_3_ExeOpSGDm9e-1nesF-LrFixI1e-2-OpSadam1B5e-1_2B999e-3-LrSfixI6e-4-LossSCCElogitTcwF-Bs32-Dr0-Wd0-Gclip5-WdS1e-3-GclipSn-EpTr90Search9LAFKt5Save1-5s0'
 
 # dataset
 dataset_name: 'EyeQ'  # ['EyeQ']
@@ -94,7 +94,7 @@ arch_grad_clip_norm: null  # [null or float]
 train_unit: 'epoch'     # 'epoch' or 'step' of training
 max_train_unit: 90
 start_arch_search_train_unit: 9
-arch_metrics_for_find_top_N_arch_search: ['Loss', 'Accuracy', 'macroF1'] # metrics ['Loss', 'Accuracy', 'macroF1'] of arch_search used for find top-N arch_search (each metric considered separately)
+arch_metrics_for_find_top_N_arch_search: ['Loss', 'Accuracy', 'macroF1', 'QWK'] # metrics ['Loss', 'Accuracy', 'macroF1', 'QWK'] of arch_search used for find top-N arch_search (each metric considered separately)
 arch_top_N: 5
 arch_last_k_metrics: 5
 save_unit: 'epoch'       # 'epoch' or 'step' of saving weight

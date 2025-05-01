@@ -233,13 +233,15 @@ def main(_):
             current_val_macroPrecision = np.mean(val_eval_result['Precision'])
             current_val_macroSensitivity = np.mean(val_eval_result['Sensitivity'])
             current_val_macroF1 = np.mean(val_eval_result['F1'])
+            current_val_qwk = np.mean(val_eval_result['QWK'])
 
             current_val_info = {'Epoch': current_epoch,
                                 'Loss': current_val_loss,
                                 'Accuracy': current_val_acc,
                                 'macroPrecision': current_val_macroPrecision,
                                 'macroSensitivity': current_val_macroSensitivity,
-                                'macroF1': current_val_macroF1
+                                'macroF1': current_val_macroF1,
+                                'QWK': current_val_qwk
                                }
 
             # check if the current validation information is better than the previous top-N validation for each metric,
@@ -310,7 +312,8 @@ def main(_):
             val_macroPrecision = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroPrecision']
             val_macroSensitivity = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroSensitivity']
             val_macroF1 = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroF1']
-            logging.info('\tRank#{} with validation infos (epoch: {}, loss: {:0.4f}, accuracy: {:0.4f}, macroPrecision: {:0.4f}, macroSensitivity: {:0.4f}, macroF1: {:0.4f}):'.format(rank+1, val_epoch_num, val_loss, val_acc, val_macroPrecision, val_macroSensitivity, val_macroF1))
+            val_qwk = top_N_validation_on_metrics[metric].top_N_val_list[rank]['QWK']
+            logging.info('\tRank#{} with validation infos (epoch: {}, loss: {:0.4f}, accuracy: {:0.4f}, macroPrecision: {:0.4f}, macroSensitivity: {:0.4f}, macroF1: {:0.4f}, QWK: {:0.4f}):'.format(rank+1, val_epoch_num, val_loss, val_acc, val_macroPrecision, val_macroSensitivity, val_macroF1, val_qwk))
             
             # load weight into model
             weight_filepath = f"{save_weights_dir}/EP{val_epoch_num}{suffix_saving_onlyWeights_filename}"
@@ -333,12 +336,14 @@ def main(_):
             test_macroPrecision = np.mean(test_eval_result['Precision'])
             test_macroSensitivity = np.mean(test_eval_result['Sensitivity'])
             test_macroF1 = np.mean(test_eval_result['F1'])
+            test_qwk = np.mean(test_eval_result['QWK'])
             logging.info(str("\t\t[Test infos]:") + 
                          ' Loss: ' + str("{:0.4f}".format(test_loss)) +
                          ', Accuracy: ' + str("{:0.4f}".format(test_acc)) +
                          ', macroPrecision: ' + str("{:0.4f}".format(test_macroPrecision)) +
                          ', macroSensitivity: ' + str("{:0.4f}".format(test_macroSensitivity)) +
-                         ', macroF1: ' + str("{:0.4f}".format(test_macroF1)))
+                         ', macroF1: ' + str("{:0.4f}".format(test_macroF1)) +
+                         ', QWK: ' + str("{:0.4f}".format(test_qwk)))
             
             # record test infos
             current_test_info = {'Val_Rank': rank+1,
@@ -347,7 +352,8 @@ def main(_):
                                  'Accuracy': test_acc,
                                  'macroPrecision': test_macroPrecision,
                                  'macroSensitivity': test_macroSensitivity,
-                                 'macroF1': test_macroF1
+                                 'macroF1': test_macroF1,
+                                 'QWK': test_qwk
                                 }
             N_test_on_val_metrics[metric].update_N_test(curr_test_info=current_test_info, rank=rank)
     
@@ -371,13 +377,13 @@ def main(_):
 
     # find the best/worst test among every validation metrics
     logging.info('-' * 50)
-    # sorting best test from every validation metrics (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
+    # sorting best test from every validation metrics (list of dictionaries) first by 'Accuracy', 'QWK', and then by 'macroF1', 
     # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
-    sorted_list_best_test_of_val_metrics = sorted(list_best_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=True)
+    sorted_list_best_test_of_val_metrics = sorted(list_best_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['QWK'], x['macroF1']), reverse=True)
     final_best_test = sorted_list_best_test_of_val_metrics[0]
-    # sorting worst test from every validation metrics (list of dictionaries) first by 'Accuracy' and then by 'macroF1', 
+    # sorting worst test from every validation metrics (list of dictionaries) first by 'Accuracy', 'QWK', and then by 'macroF1', 
     # and sorting it in ASCENDING (reverse=False) [smallest to largest] order (less accuracy/macroF1 is worse)
-    sorted_list_worst_test_of_val_metrics = sorted(list_worst_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['macroF1']), reverse=False)
+    sorted_list_worst_test_of_val_metrics = sorted(list_worst_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['QWK'], x['macroF1']), reverse=False)
     final_worst_test = sorted_list_worst_test_of_val_metrics[0]
 
     list_final_test = [('Best', final_best_test), ('Worst', final_worst_test)]
@@ -389,14 +395,16 @@ def main(_):
                      ', Accuracy: ' + str("{:0.4f}".format(final_test['Accuracy'])) +
                      ', macroPrecision: ' + str("{:0.4f}".format(final_test['macroPrecision'])) +
                      ', macroSensitivity: ' + str("{:0.4f}".format(final_test['macroSensitivity'])) +
-                     ', macroF1: ' + str("{:0.4f}".format(final_test['macroF1'])))
+                     ', macroF1: ' + str("{:0.4f}".format(final_test['macroF1'])) +
+                     ', QWK: ' + str("{:0.4f}".format(final_test['QWK'])))
 
     # record best test infos
     best_test_eval_result = {'Loss': final_best_test['Loss'],
                              'Accuracy': final_best_test['Accuracy'],
                              'Precision': final_best_test['macroPrecision'],
                              'Sensitivity': final_best_test['macroSensitivity'],
-                             'F1': final_best_test['macroF1']
+                             'F1': final_best_test['macroF1'],
+                             'QWK': final_best_test['QWK']
                             }
     evaluation_result_writer(summary_writer, 'test', best_test_eval_result['Loss'], best_test_eval_result, steps)
 
