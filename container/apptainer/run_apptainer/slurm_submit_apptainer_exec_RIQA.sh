@@ -6,11 +6,13 @@
 #SBATCH --error=RIQA_%j.err
 #SBATCH --ntasks=1 
 #SBATCH --qos=medium
-#SBACTH --partition=gpuq
+#SBATCH --partition=gpuq
 #SBATCH --time=3-00:00:00
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=32GB
 #SBATCH --gres=gpu:7g.80gb:1
+#SBATCH --nodelist=dgx-03
+#SBATCH --account=g_g6217550024
 
 module load slurm
 
