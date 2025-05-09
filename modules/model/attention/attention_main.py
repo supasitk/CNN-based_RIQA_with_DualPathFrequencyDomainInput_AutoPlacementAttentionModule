@@ -68,22 +68,25 @@ def genAttnModule(block_id, numChannel_InputFeature, attention, name=None, seed=
                                            name=name)
             
         elif attn_type == 'ChannelAttention3':
-            # attn_setting of 'ChannelAttention3' -> list [idx 0:dctSpaPool_freq_select_method, 1:dctSpaPool_num_freq, 
-            #                                                  2:multiFreqReduction_num_group_of_freq, 3:multiFreqReduction_num_freq_per_group, 4:multiFreqReduction_method, 
-            #                                                  5:mlp_arrangement, 6:mlp_reduction_ratio, 7:mlp_use_bias, 8:mlp_activation_dense1, 9:mlp_weighted_dense2_outputs, 10:mlp_activation_dense2]
-            dctSpaPool_freq_select_method = attn_setting[0]
-            dctSpaPool_num_freq = attn_setting[1]
-            multiFreqReduction_num_group_of_freq = attn_setting[2]
-            multiFreqReduction_num_freq_per_group = attn_setting[3]
-            multiFreqReduction_method = attn_setting[4]
-            mlp_arrangement = attn_setting[5]
-            mlp_r_ratio = attn_setting[6]
-            mlp_use_bias = attn_setting[7]
-            mlp_act_d1 = attn_setting[8]
-            mlp_weighted_d2_outputs = attn_setting[9]
-            mlp_act_d2 = attn_setting[10]
+            # attn_setting of 'ChannelAttention3' -> list [idx 0:globalSpaPool_reduction_method,
+            #                                                  1:dctSpaPool_freq_select_method, 2:dctSpaPool_num_freq, 
+            #                                                  3:multiFreqReduction_num_group_of_freq, 4:multiFreqReduction_num_freq_per_group, 5:multiFreqReduction_method, 
+            #                                                  6:mlp_arrangement, 7:mlp_reduction_ratio, 8:mlp_use_bias, 9:mlp_activation_dense1, 10:mlp_weighted_dense2_outputs, 11:mlp_activation_dense2]
+            globalSpaPool_reduction_method = attn_setting[0]
+            dctSpaPool_freq_select_method = attn_setting[1]
+            dctSpaPool_num_freq = attn_setting[2]
+            multiFreqReduction_num_group_of_freq = attn_setting[3]
+            multiFreqReduction_num_freq_per_group = attn_setting[4]
+            multiFreqReduction_method = attn_setting[5]
+            mlp_arrangement = attn_setting[6]
+            mlp_r_ratio = attn_setting[7]
+            mlp_use_bias = attn_setting[8]
+            mlp_act_d1 = attn_setting[9]
+            mlp_weighted_d2_outputs = attn_setting[10]
+            mlp_act_d2 = attn_setting[11]
             
-            attn_block = ChannelAttention3(dctSpaPool_freq_select_method=dctSpaPool_freq_select_method,
+            attn_block = ChannelAttention3(globalSpaPool_reduction_method=globalSpaPool_reduction_method,
+                                           dctSpaPool_freq_select_method=dctSpaPool_freq_select_method,
                                            dctSpaPool_num_freq=dctSpaPool_num_freq,
                                            multiFreqReduction_num_group_of_freq=multiFreqReduction_num_group_of_freq,
                                            multiFreqReduction_num_freq_per_group=multiFreqReduction_num_freq_per_group,
