@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import (Dense, Activation)
+from tensorflow.keras.layers import (Dense, Activation, GlobalAveragePooling2D, GlobalMaxPool2D)
 
 from modules.initializers import *
 
@@ -145,7 +145,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
                  mlp_arrangement='share', mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_weighted_dense2_outputs=False, mlp_activation_dense2='sigmoid', 
                  seed=None, name=None, **kwargs):
         super(ChannelAttention3, self).__init__(name=name, **kwargs)
-        assert globalSpaPool_reduction_method in ['avg', 'max', 'avg_max']
+        assert globalSpaPool_reduction_method in [None, 'avg', 'max', 'avg_max']
         self.globalSpaPool_reduction_method = globalSpaPool_reduction_method
         assert dctSpaPool_freq_select_method in ['TriangleLow']
         self.dctSpaPool_freq_select_method = dctSpaPool_freq_select_method
@@ -172,14 +172,31 @@ class ChannelAttention3(tf.keras.layers.Layer):
         input_c = input_shape[3]
         self.ch_out = input_c
 
-        # Depthwise2DdctSpatialPooling
+        # Depthwise Spatial Pooling includes 
+        #   1. DepthwiseGlobalSpatialPooling [if any] and 
+        #   2. Depthwise2DdctSpatialPooling
+
+        #-- 1. DepthwiseGlobalSpatialPooling [if any]
+        self.depthwise_global_spatial_pooling_ops = list()
+        if self.globalSpaPool_reduction_method is not None:
+            if self.globalSpaPool_reduction_method == 'avg':
+                self.depthwise_global_spatial_pooling_ops.append(GlobalAveragePooling2D())
+            elif self.globalSpaPool_reduction_method == 'max':
+                self.depthwise_global_spatial_pooling_ops.append(GlobalMaxPool2D())
+            elif self.globalSpaPool_reduction_method == 'avg_max':
+                self.depthwise_global_spatial_pooling_ops.append(GlobalAveragePooling2D())
+                self.depthwise_global_spatial_pooling_ops.append(GlobalMaxPool2D())
+            else:
+                raise NotImplementedError
+
+        #-- 2. Depthwise2DdctSpatialPooling
         self.depthwise_2dDCT_spatial_pooling = Depthwise2DdctSpatialPooling(input_h=input_h,
                                                                             input_w=input_w,
                                                                             input_c=input_c,
                                                                             freq_select_method=self.dctSpaPool_freq_select_method,
                                                                             num_freq=self.dctSpaPool_num_freq)
-    
-        # DepthwiseMultiFreqReduction
+   
+        #---- DepthwiseMultiFreqReduction (for 2. Depthwise2DdctSpatialPooling)
         self.depthwise_multiFreq_reduction_methods = list()
         if self.multiFreqReduction_method == 'reduce_mean':
             self.depthwise_multiFreq_reduction_methods.append(tf.math.reduce_mean)
@@ -200,25 +217,51 @@ class ChannelAttention3(tf.keras.layers.Layer):
                                   seed=self.seed,
                                   name=f'{self.name}_mlp_shared')
         elif self.mlp_arrangement == 'seperate':
-            self.num_mlp = self.multiFreqReduction_num_group_of_freq
-            self.mlps = list()
-            for i in range(self.num_mlp):
-                self.mlps.append(MLP(input_shape_c=input_c,
-                                     reduction_ratio=self.mlp_reduction_ratio,
-                                     use_bias=self.mlp_use_bias,
-                                     activation_dense1=self.mlp_activation_dense1,
-                                     seed=self.seed,
-                                     name=f'{self.name}_mlp_separate_{i}'))
+            # for seperated MLP(s), there are 2 set of MLP(s) including 
+            #   1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+            #   2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] (the number of MLP(s) depends on the number of group(s) of frequency(s)) 
+
+            #-- 1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any] 
+            if self.globalSpaPool_reduction_method is not None:
+                self.mlp_seperated_for_depthwiseGlobalSpatialPooling = MLP(input_shape_c=input_c,
+                                                                           reduction_ratio=self.mlp_reduction_ratio,
+                                                                           use_bias=self.mlp_use_bias,
+                                                                           activation_dense1=self.mlp_activation_dense1,
+                                                                           seed=self.seed,
+                                                                           name=f'{self.name}_mlp_seperated_for_depthwiseGlobalSpatialPooling')
+             
+            #-- 2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] 
+            self.num_mlp_for_depthwise2dDCTspatialPooling = self.multiFreqReduction_num_group_of_freq
+            self.mlp_seperated_for_depthwise2dDCTspatialPooling = list()
+            for i in range(self.num_mlp_for_depthwise2dDCTspatialPooling):
+                self.mlp_seperated_for_depthwise2dDCTspatialPooling.append(MLP(input_shape_c=input_c,
+                                                                               reduction_ratio=self.mlp_reduction_ratio,
+                                                                               use_bias=self.mlp_use_bias,
+                                                                               activation_dense1=self.mlp_activation_dense1,
+                                                                               seed=self.seed,
+                                                                               name=f'{self.name}_mlp_separated_for_depthwise2dDCTspatialPooling_{i}'))
         else:
             raise NotImplementedError
         
-        # Weighting output(s) from (dense2 of) MLP(s)
-        self.weighted_mlp_outputs = list()
+        # Weighting output(s) from (dense2 of) MLP(s) includes
+        #   1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+        #   2. weight(s) for output(s) of MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+
         if self.mlp_weighted_dense2_outputs:
+            #-- 1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+            self.weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling = list()
+            if self.globalSpaPool_reduction_method is not None:
+                for _ in range(len(self.depthwise_global_spatial_pooling_ops)):
+                    self.weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling.append(WeightedMLPoutputs(num_output=1,
+                                                                                                          seed=self.seed,
+                                                                                                          name=f'{self.name}_weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling'))
+
+            #-- 2. weight(s) for output(s) of MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]  
+            self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling = list()
             for _ in range(len(self.depthwise_multiFreq_reduction_methods)):
-                self.weighted_mlp_outputs.append(WeightedMLPoutputs(num_output=self.multiFreqReduction_num_group_of_freq,
-                                                                    seed=self.seed,
-                                                                    name=self.name))
+                self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling.append(WeightedMLPoutputs(num_output=self.multiFreqReduction_num_group_of_freq,
+                                                                                                     seed=self.seed,
+                                                                                                     name=f'{self.name}_weighted_mlp_outputs_for_depthwise2dDCTspatialPooling'))
 
         # Activation after tf.math.add_n of output(s) from MLP(s)
         self.activation_dense2_of_mlp = Activation(activation=self.mlp_activation_dense2,
@@ -259,16 +302,16 @@ class ChannelAttention3(tf.keras.layers.Layer):
                 for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
                     channel_map_outs.append(self.mlp_shared(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
             elif self.mlp_arrangement == 'seperate':
-                assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlps)
-                for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlps):
+                assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlp_seperated_for_depthwise2dDCTspatialPooling)
+                for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlp_seperated_for_depthwise2dDCTspatialPooling):
                     channel_map_outs.append(mlp(input))
             all_reduced_channel_map_outs.append(channel_map_outs)
 
         # Weighting output(s) from (dense2 of) MLP(s)
         weighted_all_reduced_channel_map_outs = list()
         if self.mlp_weighted_dense2_outputs:
-            assert len(all_reduced_channel_map_outs) == len(self.weighted_mlp_outputs)
-            for outs, weights in zip(all_reduced_channel_map_outs, self.weighted_mlp_outputs):
+            assert len(all_reduced_channel_map_outs) == len(self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling)
+            for outs, weights in zip(all_reduced_channel_map_outs, self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling):
                 weighted_all_reduced_channel_map_outs.append(weights(outs))
         else:
             weighted_all_reduced_channel_map_outs = all_reduced_channel_map_outs
