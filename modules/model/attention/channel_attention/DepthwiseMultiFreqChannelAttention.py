@@ -175,7 +175,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         # Depthwise Spatial Pooling includes 
         #   1. DepthwiseGlobalSpatialPooling [if any] and 
         #   2. Depthwise2DdctSpatialPooling
-
+        #-------------------------------------------------------------------------
         #-- 1. DepthwiseGlobalSpatialPooling [if any]
         self.depthwise_global_spatial_pooling_ops = list()
         if self.globalSpaPool_reduction_method is not None:
@@ -220,7 +220,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
             # for seperated MLP(s), there are 2 set of MLP(s) including 
             #   1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
             #   2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] (the number of MLP(s) depends on the number of group(s) of frequency(s)) 
-
+            #-------------------------------------------------------------------------
             #-- 1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any] 
             if self.globalSpaPool_reduction_method is not None:
                 self.mlp_seperated_for_depthwiseGlobalSpatialPooling = MLP(input_shape_c=input_c,
@@ -246,7 +246,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         # Weighting output(s) from (dense2 of) MLP(s) includes
         #   1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
         #   2. weight(s) for output(s) of MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
-
+        #-------------------------------------------------------------------------
         if self.mlp_weighted_dense2_outputs:
             #-- 1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
             self.weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling = list()
@@ -269,32 +269,62 @@ class ChannelAttention3(tf.keras.layers.Layer):
 
 
     def call(self, x):
-        # Depthwise2DdctSpatialPooling 
-        #   input shape = [B, H, W, C]
-        #   output is list of F elements (freqs) with tensor shape [B, C] of each one (F is number of frequency used)
+        # Depthwise Spatial Pooling includes 
+        #   1. DepthwiseGlobalSpatialPooling [if any] and 
+        #   2. Depthwise2DdctSpatialPooling
+        #-------------------------------------------------------------------------
+        #-- 1. DepthwiseGlobalSpatialPooling [if any]
+        #--   input shape = [B, H, W, C]
+        #--   if NOT using DepthwiseGlobalSpatialPooling, output is empty list; 
+        #--   else, output is list of Ops elements with tensor shape [B, C] of each one (Ops is number of globalSpaPool_reduction_method)
+        out_depthwise_global_spatial_pooling_ops = list()
+        if self.globalSpaPool_reduction_method is not None:
+            for op in self.depthwise_global_spatial_pooling_ops:
+                out_depthwise_global_spatial_pooling_ops.append(op(x))
+
+        #-- 2. Depthwise2DdctSpatialPooling 
+        #--   input shape = [B, H, W, C]
+        #--   output is list of F elements (freqs) with tensor shape [B, C] of each one (F is number of frequency used)
         out_depthwise_2dDCT_spatial_pooling_for_all_freq = self.depthwise_2dDCT_spatial_pooling(x)
 
-        # DepthwiseMultiFreqReduction
-        #   input is list of F elements (freqs) with tensor shape [B, C] of each one
-        #   output created via 3 step: 
-        #       1st step (grouping): outcome is list of G inner-lists (groups) that each inner-list (group) has (F / G) elements (num_freq per group) with tensor shape [B, C] of each one (G is number of group of frequency)
-        #       2nd step (stacking): outcome is list of G stacked tensors with shape [(F/G), B, C] of each one
-        #       3rd step (reduction): outcome is list of R inner-lists (reduction_methods) with G reduced tensors of each one with shape [B, C] of each one (R is number of reduction methods)
-        # -- 1st step
+        #---- DepthwiseMultiFreqReduction (for 2. Depthwise2DdctSpatialPooling)
+        #----   input is list of F elements (freqs) with tensor shape [B, C] of each one
+        #----   output created via 3 step: 
+        #----       1st step (grouping): outcome is list of G inner-lists (groups) that each inner-list (group) has (F / G) elements (num_freq per group) with tensor shape [B, C] of each one (G is number of group of frequency)
+        #----       2nd step (stacking): outcome is list of G stacked tensors with shape [(F/G), B, C] of each one
+        #----       3rd step (reduction): outcome is list of R inner-lists (reduction_methods) with G reduced tensors of each one with shape [B, C] of each one (R is number of reduction methods)
+        #------ 1st step
         assert len(out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.dctSpaPool_num_freq
         grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = [out_depthwise_2dDCT_spatial_pooling_for_all_freq[start_idx_grp:start_idx_grp+self.multiFreqReduction_num_freq_per_group] for start_idx_grp in range(0, len(out_depthwise_2dDCT_spatial_pooling_for_all_freq), self.multiFreqReduction_num_freq_per_group)]
-        # -- 2nd step
+        #------ 2nd step
         assert len(grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
         stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = [tf.stack(freq_grp, axis=0) for freq_grp in grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq]
-        # -- 3rd step
+        #------ 3rd step
         assert len(stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
         all_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq = list()
         for reduction_method in self.depthwise_multiFreq_reduction_methods:
             all_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq.append([reduction_method(freq_grp, axis=0) for freq_grp in stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq])
         assert len(all_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.depthwise_multiFreq_reduction_methods)
 
-        # MLP
-        all_reduced_channel_map_outs = list()
+
+        # MLP has 2 parts:
+        #   1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any] and
+        #   2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+        #-------------------------------------------------------------------------
+        #-- 1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+        all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling = list()
+        if self.globalSpaPool_reduction_method is not None:
+            assert len(out_depthwise_global_spatial_pooling_ops) == len(self.depthwise_global_spatial_pooling_ops)
+            for out_op in out_depthwise_global_spatial_pooling_ops:
+                ch_map_outs = list()
+                if self.mlp_arrangement == 'share':
+                    ch_map_outs.append(self.mlp_shared(out_op))
+                elif self.mlp_arrangement == 'seperate':
+                    ch_map_outs.append(self.mlp_seperated_for_depthwiseGlobalSpatialPooling(out_op))
+                all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling.append(ch_map_outs)
+
+        #-- 2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+        all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling = list()
         for reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq in all_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
             assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == self.multiFreqReduction_num_group_of_freq
             channel_map_outs = list()
@@ -305,20 +335,41 @@ class ChannelAttention3(tf.keras.layers.Layer):
                 assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlp_seperated_for_depthwise2dDCTspatialPooling)
                 for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlp_seperated_for_depthwise2dDCTspatialPooling):
                     channel_map_outs.append(mlp(input))
-            all_reduced_channel_map_outs.append(channel_map_outs)
+            all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling.append(channel_map_outs)
+
 
         # Weighting output(s) from (dense2 of) MLP(s)
-        weighted_all_reduced_channel_map_outs = list()
-        if self.mlp_weighted_dense2_outputs:
-            assert len(all_reduced_channel_map_outs) == len(self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling)
-            for outs, weights in zip(all_reduced_channel_map_outs, self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling):
-                weighted_all_reduced_channel_map_outs.append(weights(outs))
-        else:
-            weighted_all_reduced_channel_map_outs = all_reduced_channel_map_outs
+        #   1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+        #   2. weight(s) for output(s) of MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+        #-------------------------------------------------------------------------
+        #-- 1. weight(s) for output(s) of only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+        weighted_all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling = list()
+        if self.globalSpaPool_reduction_method is not None:
+            if self.mlp_weighted_dense2_outputs:
+                assert len(all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling) == len(self.weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling)
+                for out, weight in zip(all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling, self.weighted_mlp_outputs_for_depthwiseGlobalSpatialPooling):
+                    weighted_all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling.append(weight(out))
+            else:
+                weighted_all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling = all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling
 
+        #-- 2. weight(s) for output(s) of MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+        weighted_all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling = list()
+        if self.mlp_weighted_dense2_outputs:
+            assert len(all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling) == len(self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling)
+            for outs, weights in zip(all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling, self.weighted_mlp_outputs_for_depthwise2dDCTspatialPooling):
+                weighted_all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling.append(weights(outs))
+        else:
+            weighted_all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling = all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling
+
+
+        # Merging channel map output(s) from executing DepthwiseGlobalSpatialPooling and Depthwise2DdctSpatialPooling
         merged_weighted_all_reduced_channel_map_outs = list()
-        for weighted_reduced_channel_map_outs in weighted_all_reduced_channel_map_outs:
-            merged_weighted_all_reduced_channel_map_outs.extend(weighted_reduced_channel_map_outs)
+        if self.globalSpaPool_reduction_method is not None:
+            for weighted_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling in weighted_all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling:
+                merged_weighted_all_reduced_channel_map_outs.extend(weighted_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling)
+        for weighted_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling in weighted_all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling:
+            merged_weighted_all_reduced_channel_map_outs.extend(weighted_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling)
+
 
         # Activation after tf.math.add_n of output(s) from MLP(s)
         channel_map_outs_sum = tf.math.add_n(merged_weighted_all_reduced_channel_map_outs)
