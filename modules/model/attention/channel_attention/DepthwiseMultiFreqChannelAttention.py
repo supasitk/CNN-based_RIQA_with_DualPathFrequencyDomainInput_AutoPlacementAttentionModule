@@ -78,8 +78,9 @@ class Depthwise2DdctSpatialPooling(tf.keras.layers.Layer):
         assert method in ['TriangleLow']
         
         if method == 'TriangleLow':
-            all_TriangleLow_indices_x = [0,0,1,1,0,2,2,1,2,0,3,4,0,1,3,0,1,2,3,4,5,0,1,2,3,4,5,6,1,2,3,4]
-            all_TriangleLow_indices_y = [0,1,0,1,2,0,1,2,2,3,0,0,4,3,1,5,4,3,2,1,0,6,5,4,3,2,1,0,6,5,4,3]
+                    # Freq component#    0       4       8      12      16      20      24      28      32      36      40      44      48
+            all_TriangleLow_indices_x = [0,0,1,1,0,2,2,1,2,0,3,4,0,1,3,0,1,2,3,4,5,0,1,2,3,4,5,6,1,2,3,4,5,6,6,2,3,5,5,4,4,3,6,5,4,6,5,6,6]
+            all_TriangleLow_indices_y = [0,1,0,1,2,0,1,2,2,3,0,0,4,3,1,5,4,3,2,1,0,6,5,4,3,2,1,0,6,5,4,3,2,1,2,6,5,3,4,5,4,6,3,5,6,4,6,5,6]
             
             mapper_x = all_TriangleLow_indices_x[:num_freq]
             mapper_y = all_TriangleLow_indices_y[:num_freq]
