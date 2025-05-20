@@ -137,7 +137,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         DepthwiseMultiFreqChannelAttention with
             DepthwiseGlobalSpatialPooling: (null [no using DepthwiseGlobalSpatialPooling] or method ['avg', 'max', 'avg_max']) -> 
             Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow'], num_freq [integer]) ->
-            DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean', 'reduce_max', 'reduce_mean_max']) ->
+            DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']) ->
             MLP: (mlp_arrangement ['share', 'seperate'], mlp_reduction_ratio (integer), mlp_use_bias (Boolean), mlp_activation_dense1 (ActivationName), mlp_weighted_dense2_outputs (Boolean), mlp_activation_dense2 (ActivationName))
     """
     def __init__(self, globalSpaPool_reduction_method, 
@@ -154,7 +154,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         self.dctSpaPool_num_freq = dctSpaPool_num_freq
         self.multiFreqReduction_num_group_of_freq = multiFreqReduction_num_group_of_freq
         self.multiFreqReduction_num_freq_per_group = multiFreqReduction_num_freq_per_group
-        assert multiFreqReduction_method in ['reduce_mean', 'reduce_max', 'reduce_mean_max']
+        assert multiFreqReduction_method in ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']
         self.multiFreqReduction_method = multiFreqReduction_method
         assert mlp_arrangement in ['share', 'seperate']
         self.mlp_arrangement = mlp_arrangement
@@ -201,6 +201,8 @@ class ChannelAttention3(tf.keras.layers.Layer):
         self.depthwise_multiFreq_reduction_methods = list()
         if self.multiFreqReduction_method == 'reduce_mean':
             self.depthwise_multiFreq_reduction_methods.append(tf.math.reduce_mean)
+        elif self.multiFreqReduction_method == 'reduce_sum':
+            self.depthwise_multiFreq_reduction_methods.append(tf.math.reduce_sum)
         elif self.multiFreqReduction_method == 'reduce_max':
             self.depthwise_multiFreq_reduction_methods.append(tf.math.reduce_max)
         elif self.multiFreqReduction_method == 'reduce_mean_max':
