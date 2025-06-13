@@ -138,7 +138,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
             DepthwiseGlobalSpatialPooling: (null [no using DepthwiseGlobalSpatialPooling] or method ['avg', 'max', 'avg_max']) -> 
             Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow'], num_freq [integer]) ->
             DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']) ->
-            MLP: (mlp_arrangement ['share', 'seperate'], mlp_reduction_ratio (integer), mlp_use_bias (Boolean), mlp_activation_dense1 (ActivationName), mlp_weighted_dense2_outputs (Boolean), mlp_activation_dense2 (ActivationName))
+            MLP: (mlp_arrangement ['share', 'seperateAll', 'seperateDomain'], mlp_reduction_ratio (integer), mlp_use_bias (Boolean), mlp_activation_dense1 (ActivationName), mlp_weighted_dense2_outputs (Boolean), mlp_activation_dense2 (ActivationName))
     """
     def __init__(self, globalSpaPool_reduction_method, 
                  dctSpaPool_freq_select_method, dctSpaPool_num_freq, 
@@ -156,7 +156,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
         self.multiFreqReduction_num_freq_per_group = multiFreqReduction_num_freq_per_group
         assert multiFreqReduction_method in ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']
         self.multiFreqReduction_method = multiFreqReduction_method
-        assert mlp_arrangement in ['share', 'seperate']
+        assert mlp_arrangement in ['share', 'seperateAll', 'seperateDomain']
         self.mlp_arrangement = mlp_arrangement
         self.mlp_reduction_ratio = mlp_reduction_ratio
         self.mlp_use_bias = mlp_use_bias
@@ -219,10 +219,13 @@ class ChannelAttention3(tf.keras.layers.Layer):
                                   activation_dense1=self.mlp_activation_dense1,
                                   seed=self.seed,
                                   name=f'{self.name}_mlp_shared')
-        elif self.mlp_arrangement == 'seperate':
+        elif self.mlp_arrangement == 'seperateAll' or self.mlp_arrangement == 'seperateDomain':
             # for seperated MLP(s), there are 2 set of MLP(s) including 
-            #   1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
-            #   2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] (the number of MLP(s) depends on the number of group(s) of frequency(s)) 
+            #   1. (Both seperateAll and seperateDomain) only one MLP for output of DepthwiseGlobalSpatialPooling [if any]
+            #   2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] depends on being either seperateAll or seperateDomain:
+            #       (Suppose that G is the number of group(s) of frequency(s))
+            #       2.1 for seperateAll, each of G MLP(s) used for each of G group(s) of frequency(s) [G groups -to- G MLPs, one by one]
+            #       2.2 for seperateDomain, only one MLP used for all group(s) of frequency(s) [G groups -to- One MLP] 
             #-------------------------------------------------------------------------
             #-- 1. only one MLP for output of DepthwiseGlobalSpatialPooling [if any] 
             if self.globalSpaPool_reduction_method is not None:
@@ -233,16 +236,24 @@ class ChannelAttention3(tf.keras.layers.Layer):
                                                                            seed=self.seed,
                                                                            name=f'{self.name}_mlp_seperated_for_depthwiseGlobalSpatialPooling')
              
-            #-- 2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction] 
-            self.num_mlp_for_depthwise2dDCTspatialPooling = self.multiFreqReduction_num_group_of_freq
-            self.mlp_seperated_for_depthwise2dDCTspatialPooling = list()
-            for i in range(self.num_mlp_for_depthwise2dDCTspatialPooling):
-                self.mlp_seperated_for_depthwise2dDCTspatialPooling.append(MLP(input_shape_c=input_c,
-                                                                               reduction_ratio=self.mlp_reduction_ratio,
-                                                                               use_bias=self.mlp_use_bias,
-                                                                               activation_dense1=self.mlp_activation_dense1,
-                                                                               seed=self.seed,
-                                                                               name=f'{self.name}_mlp_separated_for_depthwise2dDCTspatialPooling_{i}'))
+            #-- 2. MLP(s) for output of Depthwise2DdctSpatialPooling [with DepthwiseMultiFreqReduction]
+            if self.mlp_arrangement == 'seperateAll': 
+                self.num_mlp_for_depthwise2dDCTspatialPooling = self.multiFreqReduction_num_group_of_freq
+                self.mlp_seperated_for_depthwise2dDCTspatialPooling = list()
+                for i in range(self.num_mlp_for_depthwise2dDCTspatialPooling):
+                    self.mlp_seperated_for_depthwise2dDCTspatialPooling.append(MLP(input_shape_c=input_c,
+                                                                                   reduction_ratio=self.mlp_reduction_ratio,
+                                                                                   use_bias=self.mlp_use_bias,
+                                                                                   activation_dense1=self.mlp_activation_dense1,
+                                                                                   seed=self.seed,
+                                                                                   name=f'{self.name}_mlp_separated_for_depthwise2dDCTspatialPooling_{i}'))
+            elif self.mlp_arrangement == 'seperateDomain':
+                    self.mlp_seperated_for_depthwise2dDCTspatialPooling = MLP(input_shape_c=input_c,
+                                                                              reduction_ratio=self.mlp_reduction_ratio,
+                                                                              use_bias=self.mlp_use_bias,
+                                                                              activation_dense1=self.mlp_activation_dense1,
+                                                                              seed=self.seed,
+                                                                              name=f'{self.name}_mlp_separated_for_depthwise2dDCTspatialPooling')
         else:
             raise NotImplementedError
         
@@ -322,7 +333,7 @@ class ChannelAttention3(tf.keras.layers.Layer):
                 ch_map_outs = list()
                 if self.mlp_arrangement == 'share':
                     ch_map_outs.append(self.mlp_shared(out_op))
-                elif self.mlp_arrangement == 'seperate':
+                elif self.mlp_arrangement == 'seperateAll' or self.mlp_arrangement == 'seperateDomain':
                     ch_map_outs.append(self.mlp_seperated_for_depthwiseGlobalSpatialPooling(out_op))
                 all_reduced_channel_map_outs_of_depthwiseGlobalSpatialPooling.append(ch_map_outs)
 
@@ -334,10 +345,13 @@ class ChannelAttention3(tf.keras.layers.Layer):
             if self.mlp_arrangement == 'share':
                 for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
                     channel_map_outs.append(self.mlp_shared(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
-            elif self.mlp_arrangement == 'seperate':
+            elif self.mlp_arrangement == 'seperateAll':
                 assert len(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq) == len(self.mlp_seperated_for_depthwise2dDCTspatialPooling)
                 for input, mlp in zip(reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq, self.mlp_seperated_for_depthwise2dDCTspatialPooling):
                     channel_map_outs.append(mlp(input))
+            elif self.mlp_arrangement == 'seperateDomain':
+                for this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling in reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling_for_all_freq:
+                    channel_map_outs.append(self.mlp_seperated_for_depthwise2dDCTspatialPooling(this_reduced_stacked_grouped_out_depthwise_2dDCT_spatial_pooling))
             all_reduced_channel_map_outs_of_depthwise2dDCTspatialPooling.append(channel_map_outs)
 
 
