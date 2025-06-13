@@ -47,10 +47,10 @@ class oneFreq2DdctSpatialPooling(tf.keras.layers.Layer):
 
 class Depthwise2DdctSpatialPooling(tf.keras.layers.Layer):
     """Depthwise2DdctSpatialPooling"""
-    def __init__(self, input_h, input_w, input_c, freq_select_method, num_freq):
+    def __init__(self, input_h, input_w, input_c, freq_select_method, range_freq, step_freq, num_freq):
         super(Depthwise2DdctSpatialPooling, self).__init__()
 
-        mapper_x, mapper_y = self._get_freq_indices(freq_select_method, num_freq)
+        mapper_x, mapper_y = self._get_freq_indices(freq_select_method, range_freq, step_freq, num_freq)
         assert len(mapper_x) == len(mapper_y)
         # make the frequencies in different sizes are identical to a 7x7 frequency space
         # eg, (2,2) in 14x14 is identical to (1,1) in 7x7
@@ -74,19 +74,26 @@ class Depthwise2DdctSpatialPooling(tf.keras.layers.Layer):
         return out_depthwise_2dDCT_spatial_pooling
 
 
-    def _get_freq_indices(self, method, num_freq):
-        assert method in ['TriangleLow']
-        
+    def _get_freq_indices(self, method, range_freq, step_freq, num_freq):
+        assert method in ['TriangleLow', 'TriangleHigh']
+
+        # 7x7 2D-DCT frequency components (lower component is lower frequency)      
+                # Freq component#    0       4       8      12      16      20      24      28      32      36      40      44      48
+        all_TriangleLow_indices_x = [0,0,1,1,0,2,2,1,2,0,3,4,0,1,3,0,1,2,3,4,5,0,1,2,3,4,5,6,1,2,3,4,5,6,6,2,3,5,5,4,4,3,6,5,4,6,5,6,6]
+        all_TriangleLow_indices_y = [0,1,0,1,2,0,1,2,2,3,0,0,4,3,1,5,4,3,2,1,0,6,5,4,3,2,1,0,6,5,4,3,2,1,2,6,5,3,4,5,4,6,3,5,6,4,6,5,6]
+
         if method == 'TriangleLow':
-                    # Freq component#    0       4       8      12      16      20      24      28      32      36      40      44      48
-            all_TriangleLow_indices_x = [0,0,1,1,0,2,2,1,2,0,3,4,0,1,3,0,1,2,3,4,5,0,1,2,3,4,5,6,1,2,3,4,5,6,6,2,3,5,5,4,4,3,6,5,4,6,5,6,6]
-            all_TriangleLow_indices_y = [0,1,0,1,2,0,1,2,2,3,0,0,4,3,1,5,4,3,2,1,0,6,5,4,3,2,1,0,6,5,4,3,2,1,2,6,5,3,4,5,4,6,3,5,6,4,6,5,6]
-            
-            mapper_x = all_TriangleLow_indices_x[:num_freq]
-            mapper_y = all_TriangleLow_indices_y[:num_freq]
+            mapper_x = all_TriangleLow_indices_x[:range_freq:step_freq]
+            mapper_y = all_TriangleLow_indices_y[:range_freq:step_freq]
+        elif method == 'TriangleHigh':
+            all_TriangleHigh_indices_x = list(reversed(all_TriangleLow_indices_x))
+            all_TriangleHigh_indices_y = list(reversed(all_TriangleLow_indices_y))
+            mapper_x = all_TriangleHigh_indices_x[:range_freq:step_freq]
+            mapper_y = all_TriangleHigh_indices_y[:range_freq:step_freq]
         else:
             raise NotImplementedError
         
+        assert (len(mapper_x) == num_freq) and (len(mapper_y) == num_freq)
         return mapper_x, mapper_y
 
 
@@ -136,22 +143,25 @@ class ChannelAttention3(tf.keras.layers.Layer):
     """
         DepthwiseMultiFreqChannelAttention with
             DepthwiseGlobalSpatialPooling: (null [no using DepthwiseGlobalSpatialPooling] or method ['avg', 'max', 'avg_max']) -> 
-            Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow'], num_freq [integer]) ->
+            Depthwise2DdctSpatialPooling: (freq_select_method ['TriangleLow', 'TriangleHigh'], range_freq [integer], step_freq [integer], num_freq [integer]) ->
             DepthwiseMultiFreqReduction: (num_group_of_freq [integer], num_freq_per_group [integer], method ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']) ->
             MLP: (mlp_arrangement ['share', 'seperateAll', 'seperateDomain'], mlp_reduction_ratio (integer), mlp_use_bias (Boolean), mlp_activation_dense1 (ActivationName), mlp_weighted_dense2_outputs (Boolean), mlp_activation_dense2 (ActivationName))
     """
     def __init__(self, globalSpaPool_reduction_method, 
-                 dctSpaPool_freq_select_method, dctSpaPool_num_freq, 
+                 dctSpaPool_freq_select_method, dctSpaPool_range_freq, dctSpaPool_step_freq, dctSpaPool_num_freq, 
                  multiFreqReduction_num_group_of_freq, multiFreqReduction_num_freq_per_group, multiFreqReduction_method='reduce_mean',
                  mlp_arrangement='share', mlp_reduction_ratio=16, mlp_use_bias=True, mlp_activation_dense1='relu', mlp_weighted_dense2_outputs=False, mlp_activation_dense2='sigmoid', 
                  seed=None, name=None, **kwargs):
         super(ChannelAttention3, self).__init__(name=name, **kwargs)
         assert globalSpaPool_reduction_method in [None, 'avg', 'max', 'avg_max']
         self.globalSpaPool_reduction_method = globalSpaPool_reduction_method
-        assert dctSpaPool_freq_select_method in ['TriangleLow']
+        assert dctSpaPool_freq_select_method in ['TriangleLow', 'TriangleHigh']
         self.dctSpaPool_freq_select_method = dctSpaPool_freq_select_method
-        assert multiFreqReduction_num_freq_per_group == (dctSpaPool_num_freq // multiFreqReduction_num_group_of_freq)
+        assert dctSpaPool_num_freq == (dctSpaPool_range_freq // dctSpaPool_step_freq)
+        self.dctSpaPool_range_freq = dctSpaPool_range_freq
+        self.dctSpaPool_step_freq = dctSpaPool_step_freq
         self.dctSpaPool_num_freq = dctSpaPool_num_freq
+        assert multiFreqReduction_num_freq_per_group == (dctSpaPool_num_freq // multiFreqReduction_num_group_of_freq)
         self.multiFreqReduction_num_group_of_freq = multiFreqReduction_num_group_of_freq
         self.multiFreqReduction_num_freq_per_group = multiFreqReduction_num_freq_per_group
         assert multiFreqReduction_method in ['reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max']
@@ -195,6 +205,8 @@ class ChannelAttention3(tf.keras.layers.Layer):
                                                                             input_w=input_w,
                                                                             input_c=input_c,
                                                                             freq_select_method=self.dctSpaPool_freq_select_method,
+                                                                            range_freq=self.dctSpaPool_range_freq,
+                                                                            step_freq=self.dctSpaPool_step_freq,
                                                                             num_freq=self.dctSpaPool_num_freq)
    
         #---- DepthwiseMultiFreqReduction (for 2. Depthwise2DdctSpatialPooling)
