@@ -53,3 +53,25 @@ train_augment_rotation_factor: 0.2      # Fraction of 2 Pi of rotation results i
 train_random_oversampling: False         # whether oversample the minority classes for training data, if True, details of random sampling need to be specified
 #train_random_oversampling_type: 'WeightedProbabilityEveryClassOnEachBatch' # ['WeightedProbabilityEveryClassOnEachBatch' -> Each batch has number of input for each class as weighted probability defined]
 #train_random_oversampling_weight: null  # for 'WeightedProbabilityEveryClassOnEachBatch', 'null' means uniform distribution across classes; otherwise 'list of probability for each class (in order)' is specified (sum need to be 1.0), e.g., [0.5, 0.3, 0.2] for 3 classes (weight[i] represents probability to sample from class[i])
+
+################################################################################################################################
+# Additional preprocessing image after doing the preprocessed images for EyeQ from the original images of EyePACS dataset (via module 'dataset/preprocess_dataset/eyeq/{EyeQ_process_main.py,fundus_prep.py}')
+# (supported additional preprocessing(s) are 'RGB_wCLAHE')
+################################################################################################################################
+additional_preprocessing_image: True          # whether the additional preprocessing image, if True, details of preprocessing need to be specified
+#-- Input for additional preprocessing image --#
+addPrepImg_input_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/'   # root path of the input directory (containing 'preprocessed train/test images for EyeQ') for doing additional preprocessing image 
+addPrepImg_input_train_dir_name: 'train'      # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'train' images for EyeQ
+addPrepImg_input_val_dir_name: 'train'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'validation' images for EyeQ
+addPrepImg_input_test_dir_name: 'test'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'test' images for EyeQ
+#-- Output for additional preprocessing image --#
+addPrepImg_output_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/additional_preprocessed_img/'   # root path of the output directory for doing additional preprocessing image 
+#-- Configuration of additional preprocessing image --#
+addPrepImg_methods: ['RGB_wCLAHE']    # list of method(s) for additional preprocessing image (supported methods are ['RGB_wCLAHE'])
+                                      # configuration of each method used need to be specified
+# --- RGB_wCLAHE --- # 
+addPrepImg_RGBwCLAHE_dir_name: 'rgb_wCLAHE/cv2/clipLimit2.0/tileGridSize8x8/'     # name/path of directory (joined with (after) 'addPrepImg_output_root_dir' directory) for keeping additional preprocessing image with CLAHE  
+addPrepImg_RGBwCLAHE_config:
+  'library': 'cv2'
+  'clipLimit': 2.0
+  'tileGridSize': 8

@@ -5,6 +5,7 @@ import tensorflow as tf
 
 from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
+from modules.dataset.additional_preprocess_dataset.eyeq.EyeQ_additional_preprocess_main import (eyeq_additional_preprocess)
 from modules.dataset.eyeq import (gen_EyeQImgPathLabelDict, gen_EyeQdataset)
 
 def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=False, seed=None):
@@ -74,7 +75,52 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
             test_img_num = len(fnmatch.filter(os.listdir(prep_ds_test_subdir), '*.jpeg'))
             logging.info('The preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(train_img_num, val_img_num, test_img_num))
 
-        # At this point, the preprocessed images of the dataset already used, then
+
+
+
+
+
+        # additional preprocessing [if any] for the preprocessed images of the dataset 
+        if dataset_cfg['additional_preprocessing_image']:
+            # root path of the input directory (including name of 'train/val/test' directory under this) containing the preprocessed images of the dataset for doing the additional preprocessing
+            addPrepImg_input_root_dir = dataset_cfg['addPrepImg_input_root_dir']
+            addPrepImg_input_train_dir_name = dataset_cfg['addPrepImg_input_train_dir_name']
+            addPrepImg_input_val_dir_name = dataset_cfg['addPrepImg_input_val_dir_name']
+            addPrepImg_input_test_dir_name = dataset_cfg['addPrepImg_input_test_dir_name']
+            # list of name of the 'train/val/test' directory of the root of input directory 
+            # removing duplicate dir name if same name found, e.g., if name of 'val' dir is same to name of 'train' dir (val_from_train=True),
+            # to avoid repeat of the additional preprocessing on the same directory
+            list_addPrepImg_input_train_val_test_dir_name = list(dict.fromkeys([addPrepImg_input_train_dir_name, addPrepImg_input_val_dir_name, addPrepImg_input_test_dir_name]))
+
+            # root path of the output directory for doing the additional preprocessing
+            addPrepImg_output_root_dir = dataset_cfg['addPrepImg_output_root_dir']
+
+            # list of method(s) for the additional preprocessing
+            addPrepImg_methods = dataset_cfg['addPrepImg_methods']
+            logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset required.'.format(addPrepImg_methods))
+
+            # doing each method(s) of additional preprocessing
+            for additional_prep_method in addPrepImg_methods:
+                if additional_prep_method == 'RGB_wCLAHE':
+                    # root path of output directory ('addPrepImg_output_root_dir' joined with 'addPrepImg_{method}_dir_name' ) for keeping additional preprocessing image of this method
+                    addPrepImg_method_output_root_dir = os.path.join(addPrepImg_output_root_dir, dataset_cfg['addPrepImg_RGBwCLAHE_dir_name'])
+
+                    # configuration of this method for additional preprocessing 
+                    addPrepImg_method_configs = dataset_cfg['addPrepImg_RGBwCLAHE_config']
+                else:
+                    raise ValueError('Unknown \'{}\' additional preprocessing method for the preprocessed images of dataset'.format(additional_prep_method))
+                
+                eyeq_additional_preprocess(input_root_dir=addPrepImg_input_root_dir, 
+                                           list_input_subdir=list_addPrepImg_input_train_val_test_dir_name, 
+                                           output_root_dir=addPrepImg_method_output_root_dir, 
+                                           addPrep_method=additional_prep_method, 
+                                           addPrep_method_configs=addPrepImg_method_configs)
+
+
+
+
+
+        # At this point, the preprocessed (including additional_preprocessed [if any]) images of the dataset already used, then
         # [1st step] create dictionaries of image path and label for train/validation/test of dataset, then
         # [2nd step] generate train/validation/test dataloader of the EyeQ dataset
 
