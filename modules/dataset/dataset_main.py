@@ -75,12 +75,10 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
             test_img_num = len(fnmatch.filter(os.listdir(prep_ds_test_subdir), '*.jpeg'))
             logging.info('The preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(train_img_num, val_img_num, test_img_num))
 
-
-
-
-
-
-        # additional preprocessing [if any] for the preprocessed images of the dataset 
+        # At this point, the preprocessed images of the dataset already used, then
+        # Additional preprocessing [if any] for the preprocessed images of the dataset
+        # check if the additional preprocessing for the preprocessed images of the dataset existed
+        # if not existing, the additional preprocessing for the preprocessed images of the dataset firstly need to be done 
         if dataset_cfg['additional_preprocessing_image']:
             # root path of the input directory (including name of 'train/val/test' directory under this) containing the preprocessed images of the dataset for doing the additional preprocessing
             addPrepImg_input_root_dir = dataset_cfg['addPrepImg_input_root_dir']
@@ -110,15 +108,22 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                 else:
                     raise ValueError('Unknown \'{}\' additional preprocessing method for the preprocessed images of dataset'.format(additional_prep_method))
                 
-                eyeq_additional_preprocess(input_root_dir=addPrepImg_input_root_dir, 
-                                           list_input_subdir=list_addPrepImg_input_train_val_test_dir_name, 
-                                           output_root_dir=addPrepImg_method_output_root_dir, 
-                                           addPrep_method=additional_prep_method, 
-                                           addPrep_method_configs=addPrepImg_method_configs)
-
-
-
-
+                if not os.path.exists(addPrepImg_method_output_root_dir): # case of the additional preprocessing for the preprocessed images of the dataset not existed
+                    logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset cannot be found. Starting to create....'.format(additional_prep_method))
+                    # doing this additional processing specified
+                    eyeq_additional_preprocess(input_root_dir=addPrepImg_input_root_dir, 
+                                               list_input_subdir=list_addPrepImg_input_train_val_test_dir_name, 
+                                               output_root_dir=addPrepImg_method_output_root_dir, 
+                                               addPrep_method=additional_prep_method, 
+                                               addPrep_method_configs=addPrepImg_method_configs)
+                else: # case of the additional preprocessing for the preprocessed images of the dataset existed
+                    # count a number of the train/validation/test images of this additional preprocessing for the preprocessed images of the dataset
+                    addPrepImg_train_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_train_dir_name)), '*.jpeg'))
+                    addPrepImg_val_img_num = 0
+                    if addPrepImg_input_val_dir_name != addPrepImg_input_train_dir_name:
+                        addPrepImg_val_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_val_dir_name)), '*.jpeg'))
+                    addPrepImg_test_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_test_dir_name)), '*.jpeg'))
+                    logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(additional_prep_method, addPrepImg_train_img_num, addPrepImg_val_img_num, addPrepImg_test_img_num))
 
         # At this point, the preprocessed (including additional_preprocessed [if any]) images of the dataset already used, then
         # [1st step] create dictionaries of image path and label for train/validation/test of dataset, then
