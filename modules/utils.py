@@ -228,6 +228,19 @@ def write_dataset_config_summary(ds_name, cfg):
         if cfg['train_random_oversampling']:
           logging.info('Train random oversampling - Type: {}'.format(cfg['train_random_oversampling_type']))
           logging.info('Train random oversampling - Weight: {}'.format(cfg['train_random_oversampling_weight']))
+        logging.info('*** Additional preprocessing the preprocessed images for EyeQ from the original images of EyePACS dataset ***')
+        logging.info('Additional preprocessing the preprocessed images for EyeQ: {}'.format(cfg['additional_preprocessing_image']))
+        if cfg['additional_preprocessing_image']:
+          logging.info('Root path of the input directory, containing \'preprocessed train/val/test images for EyeQ\', for doing additional preprocessing image: {}'.format(cfg['addPrepImg_input_root_dir']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'train\' images: {}'.format(cfg['addPrepImg_input_train_dir_name']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'validation\' images: {}'.format(cfg['addPrepImg_input_val_dir_name']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'test\' images: {}'.format(cfg['addPrepImg_input_test_dir_name']))
+          logging.info('Root path of the output directory for doing additional preprocessing image: {}'.format(cfg['addPrepImg_output_root_dir']))
+          logging.info('List of method(s) for additional preprocessing image: {}'.format(cfg['addPrepImg_methods']))
+          if 'RGB_wCLAHE' in cfg['addPrepImg_methods']:
+            logging.info('#-- RGB_wCLAHE --#')
+            logging.info('Name/Path of directory (joined with the root path of the output directory) for keeping additional preprocessing image with RGB_wCLAHE: {}'.format(cfg['addPrepImg_RGBwCLAHE_dir_name']))
+            logging.info('Configurations for doing additional preprocessing image with RGB_wCLAHE: {}'.format(cfg['addPrepImg_RGBwCLAHE_config']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
     logging.info('-' * 100)
