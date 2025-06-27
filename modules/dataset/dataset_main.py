@@ -203,6 +203,26 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                 normalize_infos = dict()
                 normalize_infos.update([('stat', dataset_cfg['normalization_stat'])])
 
+            addPrepImg = dataset_cfg['additional_preprocessing_image']
+            addPrepImg_infos = None
+            if addPrepImg:
+                addPrepImg_infos = dict()
+                # details of additional preprocessing image after doing the preprocessed images for EyeQ from the original images of EyePACS dataset
+                addPrepImg_output_root_dir = dataset_cfg['addPrepImg_output_root_dir']
+                addPrepImg_methods = dataset_cfg['addPrepImg_methods']
+                addPrepImg_methods_settings = dataset_cfg['addPrepImg_methods_settings']
+                # sub-dict for each info need to be used,
+                # -- sub-dict for keeping root directory of each method for additional preprocessing image
+                addPrepImg_methods_root_dir = dict()
+                
+                for method in addPrepImg_methods:
+                    # get root directory of this method for additional preprocessing image
+                    dir_name_of_this_addPrepImg_method = addPrepImg_methods_settings[method]['dir_name']
+                    root_dir_of_this_addPrepImg_method = os.path.join(addPrepImg_output_root_dir, dir_name_of_this_addPrepImg_method)
+                    addPrepImg_methods_root_dir.update([(method, root_dir_of_this_addPrepImg_method)])
+                
+                addPrepImg_infos.update([('root_dir', addPrepImg_methods_root_dir)])
+
             ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
                                                            ds_input_types=model_cfg['input_types_for_model'],
                                                            train_val_test=v_ds_part, 
@@ -217,6 +237,8 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
                                                            rescale_infos=rescale_infos,
                                                            normalize=normalize,
                                                            normalize_infos=normalize_infos,
+                                                           additional_preprocessing_image=addPrepImg,
+                                                           additional_preprocessing_image_infos=addPrepImg_infos,
                                                            batch_size=train_cfg['batch_size'],
                                                            drop_remainder=drop_remainder,
                                                            oversampling=oversampling, 

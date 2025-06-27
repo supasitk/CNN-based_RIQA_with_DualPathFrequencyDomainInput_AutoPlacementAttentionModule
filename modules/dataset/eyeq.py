@@ -105,7 +105,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, seed=None):
+def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, addPrepImg, addPrepImg_infos, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
@@ -131,47 +131,86 @@ def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment
 
     # function of normalization
     if normalize:
-        norm_stats = normalize_infos['stat']
-        if norm_stats == 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne':
-            norm_stats_mean = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['mean']
-            norm_stats_var = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['var']
-        elif norm_stats == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne':
-            norm_stats_mean = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['mean']
-            norm_stats_var = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['var']
-        else:
-            raise ValueError
-        norm_fn = Normalization(mean=norm_stats_mean, variance=norm_stats_var)
+        norm_fn = dict()
+        for ds_input_type in ds_input_types:
+            norm_stat_name_of_ds_input_type = normalize_infos['stat'][ds_input_type]
+            norm_fn_of_ds_input_type = None
+            if ds_input_type == 'RGB':
+                if norm_stat_name_of_ds_input_type == 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne':
+                    mean = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['mean']
+                    var = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['var']
+                elif norm_stat_name_of_ds_input_type == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne':
+                    mean = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['mean']
+                    var = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['var']
+                elif norm_stat_name_of_ds_input_type == None:
+                    mean = None
+                    var = None
+                else:
+                    raise ValueError
+            elif ds_input_type == 'RGB_wCLAHE':
+                if norm_stat_name_of_ds_input_type == None:
+                    mean = None
+                    var = None
+                else:
+                    raise ValueError
+            else:
+                raise ValueError
+                
+            if (mean != None) and (var != None):
+                norm_fn_of_ds_input_type = Normalization(mean=mean, variance=var)
+        
+            norm_fn.update([(ds_input_type, norm_fn_of_ds_input_type)])
+
+    # details of additional preprocessing image after doing the preprocessed images for EyeQ
+    if addPrepImg:
+        ds_input_types_root_dir = dict()
+        for ds_input_type in ds_input_types:
+            if ds_input_type != 'RGB': # note that 'RGB' is default (not additional preprocessing) input type of dataset
+                ds_input_types_root_dir.update([(ds_input_type, addPrepImg_infos['root_dir'][ds_input_type])])
+
 
     def transform_data(img_path, img_label):
+        list_img_path_of_input_types = list()
         list_input_types = list()
         for input_type in ds_input_types:
             if input_type == 'RGB':
-                this_input_type = tf.io.read_file(img_path)
-                # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
-                this_input_type = tf.io.decode_image(this_input_type, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
+                this_input_type_img_path = img_path
             else:
-                raise ValueError('Input type of data \'{}\' is unknown'.format(input_type))
+                split_img_path = tf.strings.split(img_path, sep=os.sep)
+                img_ds_part = split_img_path[-2] # 'train' or 'val' or 'test' directory
+                img_filename = split_img_path[-1]
+                this_input_type_img_path = tf.strings.join([ds_input_types_root_dir[input_type], os.sep, img_ds_part, os.sep, img_filename])
+            # read input
+            this_input_type = tf.io.read_file(this_input_type_img_path)
+            # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
+            this_input_type = tf.io.decode_image(this_input_type, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
+            # resize
+            this_input_type = tf.image.resize(this_input_type, [resized_img_dim, resized_img_dim])
+            # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
+            if rescale:
+                this_input_type = rescaling_fn(this_input_type)
+            # normalization
+            if normalize:
+                if norm_fn[input_type] != None:
+                    this_input_type = norm_fn[input_type](this_input_type)
             # get and concatenate types of input needed for model 
+            list_img_path_of_input_types.append(this_input_type_img_path)
             list_input_types.append(this_input_type)
+        
+        img_paths = tf.strings.join(list_img_path_of_input_types, separator=', ')    
         inputs = tf.concat(list_input_types, axis=-1)
-        # resize
-        inputs = tf.image.resize(inputs, [resized_img_dim, resized_img_dim])
-        # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
-        if rescale:
-            inputs = rescaling_fn(inputs)
-        # normalization
-        if normalize:
-            inputs = norm_fn(inputs)
+        
         # augmentation
         if augment:
             inputs = data_augmentation(inputs)
                 
-        return inputs, img_path, img_label
+        return inputs, img_paths, img_label
     return transform_data
 
 
 def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, 
-                    resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, 
+                    resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, additional_preprocessing_image, additional_preprocessing_image_infos, 
+                    batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, 
                     train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
@@ -218,7 +257,7 @@ def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label
         dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, seed=seed),
+                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, additional_preprocessing_image, additional_preprocessing_image_infos, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

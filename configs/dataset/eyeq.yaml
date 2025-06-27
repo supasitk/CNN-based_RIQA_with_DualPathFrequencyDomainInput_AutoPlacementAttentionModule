@@ -42,7 +42,9 @@ rescale_input_value: True     # whether rescaling input values to a new range, i
 rescale_input_value_range: 'minusOnetoOne'  # supported range(s) are 'ZerotoOne', 'minusOnetoOne'
 #-- Normalization --#
 normalization: False          # whether normalizing input values, if True, details of normalization need to be specified
-normalization_stat: null      # supported 'normalization_stat' are [null, 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne', 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne']
+normalization_stat:           # statistic of each input type(s) [number and name of elements must be same to 'input_types_for_model' of 'configs/model/model.yaml']
+  'RGB': null                 # supported 'normalization_stat' of 'RGB' input type for model are [null, 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne', 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne']
+#  'RGB_wCLAHE': null          # supported 'normalization_stat' of 'RGB_wCLAHE' input type for model are [null]
 #-- Augmentation --#
 train_augment: True                     # whether the data augmentation for training data, if True, details of augment need to be specified
 train_augment_hflip: True               # Random horizontal flipping
@@ -58,24 +60,24 @@ train_random_oversampling: False         # whether oversample the minority class
 # Additional preprocessing image after doing the preprocessed images for EyeQ from the original images of EyePACS dataset (via module 'dataset/preprocess_dataset/eyeq/{EyeQ_process_main.py,fundus_prep.py}')
 # (supported additional preprocessing(s) are 'RGB_wCLAHE')
 ################################################################################################################################
-additional_preprocessing_image: True          # whether the additional preprocessing image, if True, details of preprocessing need to be specified
-#-- Input for additional preprocessing image --#
-addPrepImg_input_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/'   # root path of the input directory (containing 'preprocessed train/test images for EyeQ') for doing additional preprocessing image 
-addPrepImg_input_train_dir_name: 'train'      # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'train' images for EyeQ
-addPrepImg_input_val_dir_name: 'train'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'validation' images for EyeQ
-addPrepImg_input_test_dir_name: 'test'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'test' images for EyeQ
-#-- Output for additional preprocessing image --#
-addPrepImg_output_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/additional_preprocessed_img/'   # root path of the output directory for doing additional preprocessing image 
-#-- Configuration of additional preprocessing image --#
-addPrepImg_methods: ['RGB_wCLAHE']    # list of method(s) for additional preprocessing image (supported methods are ['RGB_wCLAHE'])
-                                      # configuration of each method used need to be specified
-addPrepImg_methods_settings:
-  # --- RGB_wCLAHE --- #
-  'RGB_wCLAHE': { 
-                 'dir_name': 'rgb_wCLAHE/cv2/clipLimit0.5/tileGridSize8x8/', # name/path of directory (joined with (after) 'addPrepImg_output_root_dir' directory) for keeping additional preprocessing image with CLAHE  
-                 'config': { # configuration of additional preprocessing image with CLAHE 
-                            'library': 'cv2',
-                            'clipLimit': 2.0,
-                            'tileGridSize': 8
-                           }
-                }
+additional_preprocessing_image: False          # whether the additional preprocessing image, if True, details of preprocessing need to be specified
+# #-- Input for additional preprocessing image --#
+# addPrepImg_input_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/preprocessed_img/'   # root path of the input directory (containing 'preprocessed train/test images for EyeQ') for doing additional preprocessing image 
+# addPrepImg_input_train_dir_name: 'train'      # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'train' images for EyeQ
+# addPrepImg_input_val_dir_name: 'train'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'validation' images for EyeQ
+# addPrepImg_input_test_dir_name: 'test'        # name of directory under the 'addPrepImg_input_root_dir' directory containing preprocessed 'test' images for EyeQ
+# #-- Output for additional preprocessing image --#
+# addPrepImg_output_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/additional_preprocessed_img/'   # root path of the output directory for doing additional preprocessing image 
+# #-- Configuration of additional preprocessing image --#
+# addPrepImg_methods: ['RGB_wCLAHE']    # list of method(s) for additional preprocessing image (supported methods are ['RGB_wCLAHE'])
+#                                       # configuration of each method used need to be specified
+# addPrepImg_methods_settings:
+#   # --- RGB_wCLAHE --- #
+#   'RGB_wCLAHE': { 
+#                  'dir_name': 'rgb_wCLAHE/cv2/clipLimit0.5/tileGridSize8x8/', # name/path of directory (joined with (after) 'addPrepImg_output_root_dir' directory) for keeping additional preprocessing image with CLAHE  
+#                  'config': { # configuration of additional preprocessing image with CLAHE 
+#                             'library': 'cv2',
+#                             'clipLimit': 2.0,
+#                             'tileGridSize': 8
+#                            }
+#                 }

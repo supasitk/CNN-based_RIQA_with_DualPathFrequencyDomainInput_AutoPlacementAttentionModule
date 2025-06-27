@@ -1,7 +1,8 @@
 # Model configuration
 
 # Input into model
-input_types_for_model: ['RGB']      # list of input type(s) for model (supported types are ['RGB']),
+input_types_for_model: ['RGB']      # list of input type(s) for model (supported types are ['RGB', 'RGB_wCLAHE']),
+                                    # for EyeQ dataset, unless 'RGB', other input types must found in 'addPrepImg_methods' of configs/dataset/eyeq.yaml
                                     # the input type(s) are concatenated (IN ORDER as the list) to one input tensor for model, 
                                     # so each branch of model will gather subset of channels from the tensor for its execution
 number_of_input_channel: 3          # number of input channel of data (input) tensor for the model (must be equal to 'summation of number of channel for each input type')
