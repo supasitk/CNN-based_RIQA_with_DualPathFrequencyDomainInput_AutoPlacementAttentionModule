@@ -237,10 +237,11 @@ def write_dataset_config_summary(ds_name, cfg):
           logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'test\' images: {}'.format(cfg['addPrepImg_input_test_dir_name']))
           logging.info('Root path of the output directory for doing additional preprocessing image: {}'.format(cfg['addPrepImg_output_root_dir']))
           logging.info('List of method(s) for additional preprocessing image: {}'.format(cfg['addPrepImg_methods']))
-          if 'RGB_wCLAHE' in cfg['addPrepImg_methods']:
-            logging.info('#-- RGB_wCLAHE --#')
-            logging.info('Name/Path of directory (joined with the root path of the output directory) for keeping additional preprocessing image with RGB_wCLAHE: {}'.format(cfg['addPrepImg_RGBwCLAHE_dir_name']))
-            logging.info('Configurations for doing additional preprocessing image with RGB_wCLAHE: {}'.format(cfg['addPrepImg_RGBwCLAHE_config']))
+          for addPrepImg_method in cfg['addPrepImg_methods']:
+            addPrepImg_method_settings = cfg['addPrepImg_methods_settings'][addPrepImg_method]
+            logging.info('#-- {} --#'.format(addPrepImg_method))
+            logging.info('Name/Path of directory (joined with the root path of the output directory) for keeping additional preprocessing image with {}: {}'.format(addPrepImg_method, addPrepImg_method_settings['dir_name']))
+            logging.info('Configurations for doing additional preprocessing image with {}: {}'.format(addPrepImg_method, addPrepImg_method_settings['config']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
     logging.info('-' * 100)

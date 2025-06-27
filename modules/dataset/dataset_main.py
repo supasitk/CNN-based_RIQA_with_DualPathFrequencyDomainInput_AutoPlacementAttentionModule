@@ -99,14 +99,12 @@ def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=Fa
 
             # doing each method(s) of additional preprocessing
             for additional_prep_method in addPrepImg_methods:
-                if additional_prep_method == 'RGB_wCLAHE':
-                    # root path of output directory ('addPrepImg_output_root_dir' joined with 'addPrepImg_{method}_dir_name' ) for keeping additional preprocessing image of this method
-                    addPrepImg_method_output_root_dir = os.path.join(addPrepImg_output_root_dir, dataset_cfg['addPrepImg_RGBwCLAHE_dir_name'])
-
-                    # configuration of this method for additional preprocessing 
-                    addPrepImg_method_configs = dataset_cfg['addPrepImg_RGBwCLAHE_config']
-                else:
-                    raise ValueError('Unknown \'{}\' additional preprocessing method for the preprocessed images of dataset'.format(additional_prep_method))
+                assert additional_prep_method in ['RGB_wCLAHE']
+                addPrepImg_method_settings = dataset_cfg['addPrepImg_methods_settings'][additional_prep_method]
+                # root path of output directory ('addPrepImg_output_root_dir' joined with 'dir_name' of this 'additional_prep_method') for keeping additional preprocessing image of this method
+                addPrepImg_method_output_root_dir = os.path.join(addPrepImg_output_root_dir, addPrepImg_method_settings['dir_name'])
+                # configuration of this method for additional preprocessing
+                addPrepImg_method_configs = addPrepImg_method_settings['config']
                 
                 if not os.path.exists(addPrepImg_method_output_root_dir): # case of the additional preprocessing for the preprocessed images of the dataset not existed
                     logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset cannot be found. Starting to create....'.format(additional_prep_method))

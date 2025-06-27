@@ -69,9 +69,13 @@ addPrepImg_output_root_dir: '/sk/DNN/dataset_for_run/retinal_image/EyeQ/addition
 #-- Configuration of additional preprocessing image --#
 addPrepImg_methods: ['RGB_wCLAHE']    # list of method(s) for additional preprocessing image (supported methods are ['RGB_wCLAHE'])
                                       # configuration of each method used need to be specified
-# --- RGB_wCLAHE --- # 
-addPrepImg_RGBwCLAHE_dir_name: 'rgb_wCLAHE/cv2/clipLimit2.0/tileGridSize8x8/'     # name/path of directory (joined with (after) 'addPrepImg_output_root_dir' directory) for keeping additional preprocessing image with CLAHE  
-addPrepImg_RGBwCLAHE_config:
-  'library': 'cv2'
-  'clipLimit': 2.0
-  'tileGridSize': 8
+addPrepImg_methods_settings:
+  # --- RGB_wCLAHE --- #
+  'RGB_wCLAHE': { 
+                 'dir_name': 'rgb_wCLAHE/cv2/clipLimit0.5/tileGridSize8x8/', # name/path of directory (joined with (after) 'addPrepImg_output_root_dir' directory) for keeping additional preprocessing image with CLAHE  
+                 'config': { # configuration of additional preprocessing image with CLAHE 
+                            'library': 'cv2',
+                            'clipLimit': 2.0,
+                            'tileGridSize': 8
+                           }
+                }
