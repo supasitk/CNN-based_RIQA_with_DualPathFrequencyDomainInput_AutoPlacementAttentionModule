@@ -4,6 +4,7 @@ from modules.labels import *
 from modules.model.layer.CustomLayer import (Skip)
 from modules.model_search.attention_search.channel_attention_search.se_search import (ChannelAttention0_Search)
 from modules.model_search.attention_search.spatial_attention_search.spatialAttention0_search import (SpatialAttention0_Search)
+from modules.model_search.attention_search.channel_attention_search.cbamCA_search import (ChannelAttention1_Search)
 
 
 class AttentionSearchModule(tf.keras.layers.Layer):
@@ -59,7 +60,23 @@ class AttentionSearchModule(tf.keras.layers.Layer):
                                                                        kernel_size_search_infos=k_size_search_infos,
                                                                        seed=seed, 
                                                                        name=self.name)
-            
+
+            elif attn_type == 'ChannelAttention1': # CBAM_ChannelAttention
+                # support search options: 'reduction_ratio' (list of integer)
+                # default static options: spatial_pooling_methods=['avg', 'max'], use_bias=True, activation_dense1='relu', activation_dense2='sigmoid'
+
+                # 'reduction_ratio' search infos
+                r_ratio = 'reduction_ratio'
+                r_ratio_search_infos = self._get_search_option_infos(attn_search_infos=self.attention, 
+                                                                     attn_type=attn_type, 
+                                                                     search_option_name=r_ratio)
+
+                intra_ops_of_this_attn_type = ChannelAttention1_Search(block_id=self.block_id, 
+                                                                       channel_output=self.numChannel_InputFeature, 
+                                                                       reduction_ratio_search_infos=r_ratio_search_infos,
+                                                                       seed=seed,
+                                                                       name=self.name)
+
             else:
                 raise ValueError('Unknown attention type \'{}\' for searching'.format(attn_type))
 
