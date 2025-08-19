@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import (GlobalAveragePooling2D, Dense, Reshape, ZeroPadding1D, ReLU)
+from tensorflow.keras.layers import (GlobalAveragePooling2D, GlobalMaxPool2D, Dense, Reshape, ZeroPadding1D, Activation)
 
 from modules.labels import *
 from modules.initializers import *
@@ -23,36 +23,43 @@ from modules.initializers import *
 #                                    |         and         |                                     #
 #                                    |  (global_MAX_pool)  |                                     #
 #                                    -----------------------                                     #
-#                                               |                                                #
-#                                               | Exciation_1st (Dense_1st) op                   #
-#                                               | with search option as list of 'reduction_ratio'#
-#                                               v                                                #
-#                       -----------------------------------------------                          # 
-#                       |                       |                     |                          #                    
-#                       v                       v                     v                          #
+#                    Squeeze op (MAX_pool) ||   | Squeeze op (AVG_pool)                          #
+#                                          ||   |                                                #
+#                                          ||   |                                                #
+#                                          ||   | Exciation_1st (Dense_1st) op                   #
+#                                          ||   | with search option as list of 'reduction_ratio'#
+#                                          vv   v                                                #
+#                   -----------------------------------------------------                        # 
+#                   ||    |                  ||    |                ||  |                        #                    
+#                   vv    v                  vv    v                vv  v                        #
 #              -------------------    --------------------   ---------------------               #
 #              | Dense_r_ratio#0 |    | Dense_r_ratio#.. |   | Dense_r_ratio#N-1 |               #
 #              -------------------    --------------------   ---------------------               # 
-#                       |                       |                     |                          #
+#                   ||    |                  ||    |                   ||    |                   #
 #           ------------------------    ------------------------   ------------------------      #
 #           |     ZeroPadding as   |    |     ZeroPadding as   |   |     ZeroPadding as   |      #
 #           | MIN(r_ratio_options) |    | MIN(r_ratio_options) |   | MIN(r_ratio_options) |      #
 #           |     output size      |    |     output size      |   |     output size      |      #  
 #           ------------------------    ------------------------   ------------------------      # 
-#                       |                       |                              |                 #
-#     * alpha_r_ratio#0 |    * alpha_r_ratio#.. v          * alpha_r_ratio#N-1 |                 #
-#                       ----------------------> + <-----------------------------                 #
-#                                               |                                                #
-#                                               v                                                #
+#                       ||  |                       ||  |                       ||   |           #
+#     * alpha_r_ratio#0 ||  v    * alpha_r_ratio#.. ||  v   * alpha_r_ratio#N-1 ||   v           #
+#                       ||  ------------------> + <-||--------------------------||----           #
+#                       vv                      |   vv                          vv               # 
+#                       ===============> + <====|=================================               #
+#                                        ||     |                                                #
+#                                        vv     v                                                #
 #                                    -----------------------                                     #
 #                                    | Excitation_1st act  |                                     #
 #                                    |        (ReLU)       |                                     #
 #                                    -----------------------                                     #
-#                                               |                                                #
-#                                               v                                                #
+#                                             ||  |                                              #
+#                                             vv  v                                              #
 #                               ---------------------------------                                #
 #                               | Excitation_2nd (Dense_2nd) op |                                #
 #                               ---------------------------------                                #
+#                                           ||      |                                            #
+#                                           vv      v                                            #
+#                                           --> + <--                                            #
 #                                               |                                                #
 #                                               v                                                #
 #                                    -----------------------                                     #
@@ -81,8 +88,16 @@ class ChannelAttention1_Search(tf.keras.layers.Layer):
         self.block_id = block_id
         self.ch_out = channel_output
 
-        # -------- Squeeze Operation ---------- #
-        self.squeeze = GlobalAveragePooling2D()
+        # -------- Squeeze Operation(s) ---------- #
+        self.squeeze_ops = list()
+        for spatial_pooling_method in spatial_pooling_methods:
+            if spatial_pooling_method == 'avg':
+                spatial_pooling_op = GlobalAveragePooling2D(name=f'{self.name}_spatialpool_avg')
+            elif spatial_pooling_method == 'max':
+                spatial_pooling_op = GlobalMaxPool2D(name=f'{name}_spatialpool_max')
+            else:
+                raise ValueError('Unknown method \'{}\' for SpatialPooling layer'.format(spatial_pooling_method))
+            self.squeeze_ops.append(spatial_pooling_op)
 
         # -------- Exciation_1st (Dense_1st) Opeartions for searching ---------- #
         # get list of operations of Excitation_1st (Dense_1st) as list of reduction_ratio search options specified 
@@ -93,57 +108,37 @@ class ChannelAttention1_Search(tf.keras.layers.Layer):
         min_value_of_r_ratios = min(list_of_r_ratios)
 
         self.dense1_ops_with_r_ratios = list()
-
         for this_r_ratio in list_of_r_ratios:
             dense1_ops_with_this_r_ratio = self._get_dense1_ops(min_r_ratios=min_value_of_r_ratios, 
                                                                 this_r_ratio=this_r_ratio,
+                                                                use_bias=use_bias,
                                                                 seed=self.seed,
                                                                 name=self.name)
-
             self.dense1_ops_with_r_ratios.append(dense1_ops_with_this_r_ratio)
 
         # -------- Exciation_1st Activation ---------- #
-        if activation_dense1 == 'relu':
-            dense1_act_func = ReLU
+        self.dense1_act = Activation(activation=activation_dense1,
+                                     name=name + "_dense1_act")
 
-        self.dense1_act = dense1_act_func(name=name + "_dense1_act")
+        # -------- Exciation_2nd (Dense_2nd) Opeartion ---------- #
+        self.dense2_op = Dense(units=self.ch_out,
+                               activation=None,
+                               use_bias=use_bias,
+                               kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
+                               name=name + "_dense2_op")
 
-        # -------- Exciation_2nd (Dense_2nd) Opeartion and Activation ---------- #
-        self.dense2 = Dense(units=channel_output,
-                            activation=activation_dense2,
-                            kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
-                            name=name + "_dense2_op_act")
-
-
-    def call(self, inputs, alphas_intra_attn_weights, training=False):
-        # -------- Squeeze Operation ---------- #
-        out_squeeze_op = self.squeeze(inputs)
-
-        # -------- Exciation_1st (Dense_1st) Opeartions for searching ---------- #
-        out_dense1_ops_with_r_ratios = list()
-        for dense1_op_id, dense1_op in enumerate(self.dense1_ops_with_r_ratios):
-            out_dense1_op = dense1_op(out_squeeze_op)
-            out_dense1_op = out_dense1_op * alphas_intra_attn_weights[self.block_id, self.start_weight_idx_of_r_ratios + dense1_op_id]
-
-            out_dense1_ops_with_r_ratios.append(out_dense1_op)
-        
-        mix_out_dense1_ops_with_r_ratios = tf.add_n(out_dense1_ops_with_r_ratios)
-
-        # -------- Exciation_1st Activation ---------- #
-        out_dense1_act = self.dense1_act(mix_out_dense1_ops_with_r_ratios)
-
-        # -------- Exciation_2nd (Dense_2nd) Opeartion and Activation ---------- #
-        attn = self.dense2(out_dense1_act)
-        attn = tf.reshape(attn, [-1, 1, 1, self.ch_out])
-        return tf.math.multiply(inputs, attn)
+        # -------- Exciation_2nd Activation ---------- #
+        self.dense2_act = Activation(activation=activation_dense2,
+                                     name=name + "_dense2_act")
 
 
-    def _get_dense1_ops(self, min_r_ratios, this_r_ratio, seed=None, name=None):
+    def _get_dense1_ops(self, min_r_ratios, this_r_ratio, use_bias=True, seed=None, name=None):
         # calculate how many zeros to add at the beginning and end of the padding dimension (axis 1)
         num_left_pad = 0
         num_right_pad = (self.ch_out // min_r_ratios) - (self.ch_out // this_r_ratio)
 
         return Sequential([Dense(units=self.ch_out // this_r_ratio,
+                                 use_bias=use_bias,
                                  kernel_initializer=DENSE_KERNEL_INIT(seed=seed),
                                  name=name + "_dense1_op_r" + str(this_r_ratio)),
                            Reshape([-1, 1]),
@@ -151,3 +146,40 @@ class ChannelAttention1_Search(tf.keras.layers.Layer):
                            Reshape([-1])                        
                           ]
                          )
+
+
+    def call(self, inputs, alphas_intra_attn_weights, training=False):
+        # -------- Squeeze Operation ---------- #
+        out_squeeze_ops = list()
+        for squeeze_op in self.squeeze_ops:
+            out_squeeze_ops.append(squeeze_op(inputs))
+        
+        # -------- Exciation_1st (Dense_1st) Opeartions for searching ---------- #
+        out_dense1_ops_with_r_ratios_for_out_squeeze_ops = list()
+        for dense1_op_id, dense1_op in enumerate(self.dense1_ops_with_r_ratios):
+            out_dense1_op_for_out_squeeze_ops = list()
+            for out_squeeze_op in out_squeeze_ops:
+                out_dense1_op_for_out_squeeze_op = dense1_op(out_squeeze_op)
+                out_dense1_op_for_out_squeeze_op = out_dense1_op_for_out_squeeze_op * alphas_intra_attn_weights[self.block_id, self.start_weight_idx_of_r_ratios + dense1_op_id]
+                out_dense1_op_for_out_squeeze_ops.append(out_dense1_op_for_out_squeeze_op)
+            out_dense1_ops_with_r_ratios_for_out_squeeze_ops.append(out_dense1_op_for_out_squeeze_ops)
+
+        mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_ops = [tf.math.add_n(list(out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op)) for out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op in zip(*out_dense1_ops_with_r_ratios_for_out_squeeze_ops)]
+
+        # -------- Exciation_1st Activation ---------- #
+        out_dense1_acts = list()
+        for mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op in mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_ops:
+            out_dense1_acts.append(self.dense1_act(mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op))
+
+        # -------- Exciation_2nd (Dense_2nd) Opeartion ---------- #
+        out_dense2_ops = list()
+        for out_dense1_act in out_dense1_acts:
+            out_dense2_ops.append(self.dense2_op(out_dense1_act))
+
+        out_dense2_ops_sum = tf.math.add_n(out_dense2_ops)
+
+        # -------- Exciation_2nd Activation ---------- #
+        attn = self.dense2_act(out_dense2_ops_sum)
+        
+        attn = tf.reshape(attn, [-1, 1, 1, self.ch_out])
+        return tf.math.multiply(inputs, attn)
