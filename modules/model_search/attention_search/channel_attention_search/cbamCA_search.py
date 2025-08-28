@@ -150,11 +150,17 @@ class ChannelAttention1_Search(tf.keras.layers.Layer):
 
     def call(self, inputs, alphas_intra_attn_weights, training=False):
         # -------- Squeeze Operation ---------- #
+        # output: list of squeeze operation(s) -> [out_squeeze_op#1, out_squeeze_op#2, ....]
         out_squeeze_ops = list()
         for squeeze_op in self.squeeze_ops:
             out_squeeze_ops.append(squeeze_op(inputs))
         
         # -------- Exciation_1st (Dense_1st) Opeartions for searching ---------- #
+        # output: nested-list of dense1_op_with_r_ratio operation(s) -> [
+        #                                                                [out_dense1_op_with_r#1_for_out_squeeze_op#1, out_dense1_op_with_r#1_for_out_squeeze_op#2, ...], 
+        #                                                                [out_dense1_op_with_r#2_for_out_squeeze_op#1, out_dense1_op_with_r#2_for_out_squeeze_op#2, ...], 
+        #                                                                [...]    
+        #                                                               ]
         out_dense1_ops_with_r_ratios_for_out_squeeze_ops = list()
         for dense1_op_id, dense1_op in enumerate(self.dense1_ops_with_r_ratios):
             out_dense1_op_for_out_squeeze_ops = list()
@@ -164,18 +170,29 @@ class ChannelAttention1_Search(tf.keras.layers.Layer):
                 out_dense1_op_for_out_squeeze_ops.append(out_dense1_op_for_out_squeeze_op)
             out_dense1_ops_with_r_ratios_for_out_squeeze_ops.append(out_dense1_op_for_out_squeeze_ops)
 
+        # mix different output of dense1_op_with_r_ratio operation(s) for each same out_squeeze_op#n by
+        #   nested-list of dense1_op_with_r_ratio operation(s) delisted and then zipping to get 
+        #   tuple of (out_dense1_op_with_r#1_for_out_squeeze_op#1, out_dense1_op_with_r#2_for_out_squeeze_op#1, ...), 
+        #            (out_dense1_op_with_r#1_for_out_squeeze_op#2, out_dense1_op_with_r#2_for_out_squeeze_op#2, ...),
+        #            ...
+        #   each tuple converted to list and add its elements together
+        # output: list of mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_ops -> [mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#1, mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#2, ...]
         mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_ops = [tf.math.add_n(list(out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op)) for out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op in zip(*out_dense1_ops_with_r_ratios_for_out_squeeze_ops)]
 
         # -------- Exciation_1st Activation ---------- #
+        # output: list of dense1_activation operation -> [out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#1, out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#2, ....]
         out_dense1_acts = list()
         for mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op in mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_ops:
             out_dense1_acts.append(self.dense1_act(mix_out_dense1_ops_with_r_ratios_for_each_same_out_squeeze_op))
 
         # -------- Exciation_2nd (Dense_2nd) Opeartion ---------- #
+        # output: list of dense2 operation -> [out_dense2_op_of_out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#1, out_dense2_op_of_out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#2, ....]
         out_dense2_ops = list()
         for out_dense1_act in out_dense1_acts:
             out_dense2_ops.append(self.dense2_op(out_dense1_act))
 
+        # add every out_dense2_op_of_out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#N together
+        # output: sum_of_out_dense2_op_of_out_dense1_act_of_mix_out_dense1_op_with_r_ratio(s)_for_out_squeeze_op#N
         out_dense2_ops_sum = tf.math.add_n(out_dense2_ops)
 
         # -------- Exciation_2nd Activation ---------- #
