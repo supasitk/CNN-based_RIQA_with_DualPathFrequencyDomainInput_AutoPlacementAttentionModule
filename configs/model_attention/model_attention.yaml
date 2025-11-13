@@ -41,10 +41,18 @@ attention_config_of_branches:       # Attention configuration for branch(es) (#e
 #                                           MLP: (arrangement, reduction_ratio, use_bias, activation_dense1, weighted_dense2_outputs, activation_dense2)]
 #         'ChannelAttention3' -> [globalSpaPool_reduction_method (null [no using DepthwiseGlobalSpatialPooling] or method ('avg', 'max', 'avg_max')), 
 #                                 dctSpaPool_freq_select_method ('TriangleLow', 'TriangleHigh'),
-#                                 dctSpaPool_first_freq_component [value of freq_component started from 0] (integer),
-#                                 dctSpaPool_last_freq_component [value of freq_component started from 0] (integer),
-#                                 dctSpaPool_step_freq (integer) [step_freq is the increment between each number (freq), from 'first' to 'last' frequency component, included in the sequence (used/selected freq component(s))],
-#                                 dctSpaPool_num_freq (integer) [num_freq = (last_freq_component - first_freq_component + 1) // step_freq], 
+#                                 dctSpaPool_freq_component_specifying_type ('freq_range', 'freq_list') [specifying type of freq_component used],
+#                                 dctSpaPool_freq_component_specification (list) [specification of the used/selected freq_component(s) depended on 'dctSpaPool_freq_component_specifying_type']: 
+#                                     1. 'freq_range': the list must contain 3 value [
+#                                                                                     dctSpaPool_first_freq_component [value of freq_component started from 0] (integer), 
+#                                                                                     dctSpaPool_last_freq_component [value of freq_component started from 0] (integer), 
+#                                                                                     dctSpaPool_step_freq] (integer) [step_freq is the increment between each number (freq), from 'first' to 'last' frequency component, included in the sequence (used/selected freq component(s))]
+#                                                                                    ]
+#                                     2. 'freq_list': the list contains [
+#                                                                        value of the used/selected freq_component(s), ...
+#                                                                       ], 
+#                                 dctSpaPool_num_freq (integer) [for 'freq_range', num_freq must be (last_freq_component - first_freq_component + 1) // step_freq; 
+#                                                             as for 'freq_list', num_freq must be len(list containing value of the used/selected freq_component(s))], 
 #                                 multiFreqReduction_num_group_of_freq (integer), 
 #                                 multiFreqReduction_num_freq_per_group (integer), 
 #                                 multiFreqReduction_method ('reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max'), 
