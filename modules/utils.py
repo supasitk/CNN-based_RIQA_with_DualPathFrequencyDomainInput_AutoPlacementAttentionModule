@@ -114,93 +114,64 @@ def evaluation_result_log(eval_mode, eval_loss, eval_result, epoch_num=None):
                ', Accuracy: ' + str("{:0.4f}".format(np.mean(eval_result['Accuracy']))) +
                ', macroPrecision: ' + str("{:0.4f}".format(np.mean(eval_result['Precision']))) +
                ', macroSensitivity: ' + str("{:0.4f}".format(np.mean(eval_result['Sensitivity']))) +
-               ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))))
+               ', macroF1: ' + str("{:0.4f}".format(np.mean(eval_result['F1']))) +
+               ', QWK: ' + str("{:0.4f}".format(np.mean(eval_result['QWK']))))
 
 
-def last_k_avg_max_min_accuracy(acc_list, curr_num_val, k):
-  """calculate last k average accuracy"""
+def last_k_avg_max_min_metric(metric_list, curr_num_val, k):
+  """calculate last k average/max/mix metric of validation"""
   if curr_num_val < k:
     k = curr_num_val
   else:
     # in case of restoring from checkpoint 
-    if len(acc_list) < k:
-      k = len(acc_list)
+    if len(metric_list) < k:
+      k = len(metric_list)
 
-  return np.mean(acc_list[-k:]), np.amax(acc_list[-k:]), np.amin(acc_list[-k:])
+  return np.mean(metric_list[-k:]), np.amax(metric_list[-k:]), np.amin(metric_list[-k:])
 
 
-def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, is_best_val_acc=False):
+def evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, val_metrics=None, topN_val_on_metrics=None, lr=None):
   with summary_writer.as_default():
     tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
     tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
     tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
     tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
     tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
-    if eval_mode == 'validation' and is_best_val_acc:
-       tf.summary.scalar(f"accuracy/{eval_mode}/best_accuracy", np.mean(eval_result['Accuracy']), step=step)
+    tf.summary.scalar(f"qwk/{eval_mode}/QWK", np.mean(eval_result['QWK']), step=step)
+    if eval_mode == 'train':
+      tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+    if eval_mode == 'validation':
+      for metric in val_metrics:
+        top1_metric_of_val = topN_val_on_metrics[metric].top_N_val_list[0][metric]
+        if metric == 'Loss':
+          tf.summary.scalar(f"loss/{eval_mode}/top-1_criterion_loss", top1_metric_of_val, step=step)
+        elif metric == 'Accuracy':
+          tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_val, step=step)
+        elif metric == 'macroF1':
+          tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_val, step=step)
+        elif metric == 'QWK':
+          tf.summary.scalar(f"qwk/{eval_mode}/top-1_QWK", top1_metric_of_val, step=step)
 
 
-def write_exec_config_summary(cfg):
-    """summarize important configuration of execution"""
-    logging.info('-' * 100)
-    logging.info('Summary of execution configuration')
-    logging.info('{}'.format(cfg['config_summary']))
-    logging.info('-' * 100)
-    logging.info('*** DATASET ***')
-    logging.info('Dataset: {}'.format(cfg['dataset_name']))
-    logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
-    logging.info('-' * 100)
-    logging.info('*** MODEL ***')
-    logging.info('Model structure: {}'.format(cfg['model_structure']))
-    logging.info('Model config path: {}'.format(cfg['model_config_path']))
-    logging.info('-' * 100)
-    logging.info('*** OPTIMIZER ***')
-    logging.info('Optimizer: {}'.format(cfg['optimizer']))
-    logging.info('Optimizer configuration: {}'.format(cfg['optimizer_config']))
-    logging.info('-' * 100)
-    logging.info('*** LEARNING RATE ***')
-    logging.info('Learning rate (Init): {}'.format(cfg['lr_init']))
-    logging.info('-' * 100)
-    logging.info('*** LOSS FUNCTION ***')
-    logging.info('Loss function: {}'.format(cfg['loss_fn']))
-    logging.info('Loss function configuration: {}'.format(cfg['loss_fn_config']))
-    logging.info('-' * 100)
-    logging.info('*** Training Setting ***')
-    logging.info('Batch size: {}'.format(cfg['batch_size']))
-    logging.info('Dropout rate: {}'.format(cfg['dropout_rate']))
-    logging.info('Weight decay: {}'.format(cfg['weights_decay']))
-    logging.info('Training unit: {}'.format(cfg['train_unit']))
-    logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
-    logging.info('Validation unit: {}'.format(cfg['val_unit']))
-    logging.info('Validation on every unit: {}'.format(cfg['val_on_every_unit']))
-    logging.info('Validation last k accuracy: {}'.format(cfg['val_last_k_accuracy']))
-    logging.info('Save unit: {}'.format(cfg['save_unit']))
-    logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
-    logging.info('Seed: {}'.format(cfg['seed']))
-
-
-def write_model_config_summary(model_structure, cfg):
-    """summarize important configuration of model"""
-    logging.info('-' * 100)
-    logging.info('Summary of model configuration')
-    logging.info('-' * 100)
-    logging.info('Model Structure: {}'.format(model_structure))
-    
-    # details of configuration sepearted for each model
-    if model_structure == 'OneBranch_ThreeInputChannelRGB':
-      logging.info('*** Input Channel ***')
-      logging.info('Number of input channel of dataset: {}'.format(cfg['number_of_input_channel']))
-      logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
-      logging.info('*** Detail of branch ***')
-      logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
-      logging.info('Name of branch(es): {}'.format(cfg['name_of_branches']))
-      logging.info('Neural network for branch(es): {}'.format(cfg['model_of_branches']))
-      logging.info('Number of layer for branch(es): {}'.format(cfg['numLayer_of_branches']))
-      logging.info('Pretrained weight for branch(es): {}'.format(cfg['pretrainedWeight_of_branches']))
-    else:
-      raise ValueError('Unknown \'{}\' model'.format(model_structure))
-    logging.info('-' * 100)
-    
+def arch_evaluation_result_writer(summary_writer, eval_mode, eval_loss, eval_result, step, arch_metrics=None, topN_arch_on_metrics=None, lr=None):
+  with summary_writer.as_default():
+    tf.summary.scalar(f"loss/{eval_mode}/criterion_loss", eval_loss, step=step)
+    tf.summary.scalar(f"accuracy/{eval_mode}/accuracy", np.mean(eval_result['Accuracy']), step=step)
+    tf.summary.scalar(f"precision/{eval_mode}/macroPrecision", np.mean(eval_result['Precision']), step=step)
+    tf.summary.scalar(f"sensitivity/{eval_mode}/macroSensitivity", np.mean(eval_result['Sensitivity']), step=step)
+    tf.summary.scalar(f"f1/{eval_mode}/macroF1", np.mean(eval_result['F1']), step=step)
+    tf.summary.scalar(f"qwk/{eval_mode}/QWK", np.mean(eval_result['QWK']), step=step)
+    tf.summary.scalar(f"learning_rate/{eval_mode}/learning_rate", lr, step=step)
+    for metric in arch_metrics:
+        top1_metric_of_arch = topN_arch_on_metrics[metric].top_N_val_list[0][metric]
+        if metric == 'Loss':
+          tf.summary.scalar(f"loss/{eval_mode}/top-1_criterion_loss", top1_metric_of_arch, step=step)
+        elif metric == 'Accuracy':
+          tf.summary.scalar(f"accuracy/{eval_mode}/top-1_accuracy", top1_metric_of_arch, step=step)
+        elif metric == 'macroF1':
+          tf.summary.scalar(f"f1/{eval_mode}/top-1_macroF1", top1_metric_of_arch, step=step)
+        elif metric == 'QWK':
+          tf.summary.scalar(f"qwk/{eval_mode}/top-1_QWK", top1_metric_of_arch, step=step)
 
 
 def write_dataset_config_summary(ds_name, cfg):
@@ -234,17 +205,206 @@ def write_dataset_config_summary(ds_name, cfg):
         logging.info('Number of classes: {}'.format(cfg['class_num']))
         logging.info('Name of classes: {}'.format(cfg['class_name']))
         logging.info('*** Data preprocessing ***')
-        logging.info('Split training data as validation data: {}'.format(cfg['val_from_train']))
-        logging.info('Shuffle training data before splitting into train and validation data: {}'.format(cfg['val_from_train_shuffle']))
-        logging.info('Validation portion from training set: {}'.format(cfg['val_portion']))
+        logging.info('Portion of training data used for training set: {}'.format(cfg['train_portion']))
+        logging.info('Shuffle training data before splitting to create the selected training set: {}'.format(cfg['train_shuffle']))
+        logging.info('Split the selected training set as validation data: {}'.format(cfg['val_from_train']))
+        logging.info('Shuffle the selected training set before splitting to create the validation set: {}'.format(cfg['val_from_train_shuffle']))
+        logging.info('Validation portion from the selected training set: {}'.format(cfg['val_portion']))
+        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
+        logging.info('Rescale input value: {}'.format(cfg['rescale_input_value']))
+        if cfg['rescale_input_value']:
+          logging.info('Rescale input value - Range: {}'.format(cfg['rescale_input_value_range']))
+        logging.info('Normalize input value: {}'.format(cfg['normalization']))
+        if cfg['normalization']:
+          logging.info('Normalize input value - Statistics: {}'.format(cfg['normalization_stat']))
         logging.info('Data augmentation for training data: {}'.format(cfg['train_augment']))
         if cfg['train_augment']:
-            logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
-            logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
-            logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
-            if cfg['train_augment_rotation']:
-                logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
-        logging.info('Dimension of resized image: {}'.format(cfg['resized_image_dim']))
+          logging.info('Train augmentation - Random horizontal flpping: {}'.format(cfg['train_augment_hflip']))
+          logging.info('Train augmentation - Random vertical flpping: {}'.format(cfg['train_augment_vflip']))
+          logging.info('Train augmentation - Random rotation: {}'.format(cfg['train_augment_rotation']))
+          if cfg['train_augment_rotation']:
+              logging.info('Train augmentation - Random rotation factor: {}'.format(cfg['train_augment_rotation_factor']))
+        logging.info('Random oversampling for training data: {}'.format(cfg['train_random_oversampling']))
+        if cfg['train_random_oversampling']:
+          logging.info('Train random oversampling - Type: {}'.format(cfg['train_random_oversampling_type']))
+          logging.info('Train random oversampling - Weight: {}'.format(cfg['train_random_oversampling_weight']))
+        logging.info('*** Additional preprocessing the preprocessed images for EyeQ from the original images of EyePACS dataset ***')
+        logging.info('Additional preprocessing the preprocessed images for EyeQ: {}'.format(cfg['additional_preprocessing_image']))
+        if cfg['additional_preprocessing_image']:
+          logging.info('Root path of the input directory, containing \'preprocessed train/val/test images for EyeQ\', for doing additional preprocessing image: {}'.format(cfg['addPrepImg_input_root_dir']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'train\' images: {}'.format(cfg['addPrepImg_input_train_dir_name']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'validation\' images: {}'.format(cfg['addPrepImg_input_val_dir_name']))
+          logging.info('Name of sub-directory under the root path of input directory containing preprocessed \'test\' images: {}'.format(cfg['addPrepImg_input_test_dir_name']))
+          logging.info('Root path of the output directory for doing additional preprocessing image: {}'.format(cfg['addPrepImg_output_root_dir']))
+          logging.info('List of method(s) for additional preprocessing image: {}'.format(cfg['addPrepImg_methods']))
+          for addPrepImg_method in cfg['addPrepImg_methods']:
+            addPrepImg_method_settings = cfg['addPrepImg_methods_settings'][addPrepImg_method]
+            logging.info('#-- {} --#'.format(addPrepImg_method))
+            logging.info('Name/Path of directory (joined with the root path of the output directory) for keeping additional preprocessing image with {}: {}'.format(addPrepImg_method, addPrepImg_method_settings['dir_name']))
+            logging.info('Configurations for doing additional preprocessing image with {}: {}'.format(addPrepImg_method, addPrepImg_method_settings['config']))
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(ds_name))
     logging.info('-' * 100)
+
+
+def write_exec_config_summary(cfg):
+    """summarize important configuration of execution"""
+    logging.info('-' * 100)
+    logging.info('Summary of execution configuration')
+    logging.info('{}'.format(cfg['config_summary']))
+    logging.info('-' * 100)
+    logging.info('*** DATASET ***')
+    logging.info('Dataset: {}'.format(cfg['dataset_name']))
+    logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ***')
+    logging.info('Model structure: {}'.format(cfg['model_structure']))
+    logging.info('Model config path: {}'.format(cfg['model_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ATTENTION ***')
+    logging.info('Model attention structure: {}'.format(cfg['model_attention']))
+    logging.info('Model attention config path: {}'.format(cfg['model_attention_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** OPTIMIZER ***')
+    logging.info('Optimizer: {}'.format(cfg['optimizer']))
+    logging.info('Optimizer configuration: {}'.format(cfg['optimizer_config']))
+    logging.info('-' * 100)
+    logging.info('*** LEARNING RATE SCHEDULER ***')
+    logging.info('Learning rate schedule: {}'.format(cfg['lr_schedule']))
+    logging.info('Learning rate configuration: {}'.format(cfg['lr_config']))
+    logging.info('-' * 100)
+    logging.info('*** LOSS FUNCTION ***')
+    logging.info('Loss function: {}'.format(cfg['loss_fn']))
+    logging.info('Loss function configuration: {}'.format(cfg['loss_fn_config']))
+    logging.info('-' * 100)
+    logging.info('*** Training Setting ***')
+    logging.info('Batch size: {}'.format(cfg['batch_size']))
+    logging.info('Weight decay: {}'.format(cfg['weights_decay']))
+    logging.info('Training unit: {}'.format(cfg['train_unit']))
+    logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
+    logging.info('Validation unit: {}'.format(cfg['val_unit']))
+    logging.info('Validation on every unit: {}'.format(cfg['val_on_every_unit']))
+    logging.info('Validation metrics used for find top-N validation (each metric considered separately): {}'.format(cfg['val_metrics_for_find_top_N_val']))
+    logging.info('top-N Validation recorded on each metric: {}'.format(cfg['val_top_N']))
+    logging.info('Validation last k metrics: {}'.format(cfg['val_last_k_metrics']))
+    logging.info('Save unit: {}'.format(cfg['save_unit']))
+    logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
+    logging.info('Number of seed used: {}'.format(cfg['seed_num']))
+    logging.info('Start seed number: {}'.format(cfg['seed_start']))
+
+
+def write_model_config_summary(model_structure, cfg):
+    """summarize important configuration of model"""
+    logging.info('-' * 100)
+    logging.info('Summary of model configuration')
+    logging.info('-' * 100)
+    logging.info('Model Structure: {}'.format(model_structure))
+    logging.info('*** Detail of Input into model ***')
+    logging.info('Input type for model: {}'.format(cfg['input_types_for_model']))
+    logging.info('Number of input channel of input (data) tensor for model: {}'.format(cfg['number_of_input_channel']))
+    logging.info('*** Detail of model ***')
+    logging.info('Number of branch: {}'.format(cfg['number_of_branch']))
+    logging.info('Indices of input channel(s) for each bracnch(es): {}'.format(cfg['indices_of_input_channel_for_branches']))
+    logging.info('Dimension of resized input for each branch(es): {}'.format(cfg['resized_dim_of_input_for_branches']))
+    logging.info('Color space conversion of input for each branch(es): {}'.format(cfg['color_space_conversion_for_branches']))
+    logging.info('DCT transformation of input for each branch(es): {}'.format(cfg['dct_transformation_for_branches']))
+    logging.info('Normalization of input for each branch(es): {}'.format(cfg['input_normalization_for_branches']))
+    logging.info('Neural network configurations of branch(es): {}'.format(cfg['NN_config_of_branch']))
+    logging.info('Feature aggregration from branch(es) of model: {}'.format(cfg['feature_aggregration_from_branches']))
+    logging.info('Optional dense layer(s) before classification dense layer of model: {}'.format(cfg['optional_dense_layers_of_model']))
+    logging.info('-' * 100)
+    
+
+def write_model_attention_config_summary(model_attn, cfg):
+    """summarize important configuration of model attention"""
+    logging.info('-' * 100)
+    logging.info('Summary of model attention configuration')
+    logging.info('-' * 100)
+    logging.info('Model Attention: {}'.format(model_attn))
+    logging.info('Attention existence: {}'.format(cfg['attention_existence']))
+    if cfg['attention_existence']:
+      logging.info('Attention configuration for each bracnch(es): {}'.format(cfg['attention_config_of_branches']))
+    logging.info('-' * 100)
+
+
+def write_exec_search_config_summary(cfg):
+    """summarize important configuration of search execution"""
+    logging.info('-' * 100)
+    logging.info('Summary of search execution configuration')
+    logging.info('{}'.format(cfg['config_summary']))
+    logging.info('-' * 100)
+    logging.info('*** DATASET ***')
+    logging.info('Dataset: {}'.format(cfg['dataset_name']))
+    logging.info('Dataset config path: {}'.format(cfg['dataset_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ***')
+    logging.info('Model structure: {}'.format(cfg['model_structure']))
+    logging.info('Model config path: {}'.format(cfg['model_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** MODEL ATTENTION SEARCH ***')
+    logging.info('Model attention search structure: {}'.format(cfg['model_attention_search']))
+    logging.info('Model attention search config path: {}'.format(cfg['model_attention_search_config_path']))
+    logging.info('-' * 100)
+    logging.info('*** ARCHITECTURE SEARCH ALGORITHM ***')
+    logging.info('Algorithm of architecture search: {}'.format(cfg['arch_algorithm']))
+    logging.info('Algorithm of architecture search\'s configuration: {}'.format(cfg['arch_algorithm_config']))
+    logging.info('-' * 100)
+    logging.info('*** OPTIMIZER ***')
+    logging.info('Optimizer: {}'.format(cfg['optimizer']))
+    logging.info('Optimizer configuration: {}'.format(cfg['optimizer_config']))
+    logging.info('-' * 100)
+    logging.info('*** LEARNING RATE SCHEDULER ***')
+    logging.info('Learning rate schedule: {}'.format(cfg['lr_schedule']))
+    logging.info('Learning rate configuration: {}'.format(cfg['lr_config']))
+    logging.info('-' * 100)
+    logging.info('*** ARCH OPTIMIZER ***')
+    logging.info('Optimizer of Architecture Search: {}'.format(cfg['arch_optimizer']))
+    logging.info('Optimizer configuration of Architecture Search: {}'.format(cfg['arch_optimizer_config']))
+    logging.info('-' * 100)
+    logging.info('*** ARCH LEARNING RATE SCHEDULER ***')
+    logging.info('Learning rate schedule of Architecture Search: {}'.format(cfg['arch_lr_schedule']))
+    logging.info('Learning rate configuration of Architecture Search: {}'.format(cfg['arch_lr_config']))
+    logging.info('-' * 100)
+    logging.info('*** LOSS FUNCTION ***')
+    logging.info('Loss function: {}'.format(cfg['loss_fn']))
+    logging.info('Loss function configuration: {}'.format(cfg['loss_fn_config']))
+    logging.info('-' * 100)
+    logging.info('*** Training Setting ***')
+    logging.info('Batch size: {}'.format(cfg['batch_size']))
+    logging.info('Weight decay: {}'.format(cfg['weights_decay']))
+    logging.info('Gradient clip by norm: {}'.format(cfg['grad_clip_norm']))
+    logging.info('Weight decay of Architecture Search: {}'.format(cfg['arch_weights_decay']))
+    logging.info('Gradient clip by norm of Architecture Search: {}'.format(cfg['arch_grad_clip_norm']))
+    logging.info('Training unit: {}'.format(cfg['train_unit']))
+    logging.info('Maximum number of training unit: {}'.format(cfg['max_train_unit']))
+    logging.info('Starting number of training unit for architecture search: {}'.format(cfg['start_arch_search_train_unit']))
+    logging.info('ArchSearch metrics used for find top-N ArchSearch (each metric considered separately): {}'.format(cfg['arch_metrics_for_find_top_N_arch_search']))
+    logging.info('top-N ArchSearch recorded on each metric: {}'.format(cfg['arch_top_N']))
+    logging.info('ArchSearch last k metrics: {}'.format(cfg['arch_last_k_metrics']))
+    logging.info('Save unit: {}'.format(cfg['save_unit']))
+    logging.info('Save on every unit: {}'.format(cfg['save_on_every_unit']))
+    logging.info('Number of seed used: {}'.format(cfg['seed_num']))
+    logging.info('Start seed number: {}'.format(cfg['seed_start']))
+
+
+def write_model_attention_search_config_summary(model_attn_search, cfg):
+    """summarize important configuration of model attention searching"""
+    logging.info('-' * 100)
+    logging.info('Summary of model attention searching configuration')
+    logging.info('-' * 100)
+    logging.info('Model Attention Search: {}'.format(model_attn_search))
+    logging.info('Number of attention block for each bracnch(es): {}'.format(cfg['number_of_attention_block']))
+    logging.info('Number of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['number_of_attention_type']))
+    logging.info('List of attention type used for searching on any attention block for each bracnch(es): {}'.format(cfg['list_of_attention_type']))
+    logging.info('Search configuration of each attention type for branch(es): {}'.format(cfg['search_config_of_attention_type']))
+    logging.info('-' * 100)
+
+
+def write_info_and_weight_parameter_for_attention_searching(level, info, weight):
+    """summarize information and weight parameter for attention searching"""
+    logging.info('-'*100)
+    logging.info('Summary of information and weight parameter for {}-attention_types searching'.format(level))
+    logging.info('-'*100)
+    logging.info('Information for {}-attention_types searching: {}'.format(level, info))
+    logging.info('Weight parameter for {}-attention_types searching: {}'.format(level, weight))
+    logging.info('-'*100)

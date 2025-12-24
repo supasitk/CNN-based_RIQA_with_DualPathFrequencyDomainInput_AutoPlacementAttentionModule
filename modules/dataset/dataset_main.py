@@ -5,9 +5,10 @@ import tensorflow as tf
 
 from modules.utils import (read_csv_to_list_of_dict)
 from modules.dataset.preprocess_dataset.eyeq.EyeQ_process_main import (eyeq_process)
+from modules.dataset.additional_preprocess_dataset.eyeq.EyeQ_additional_preprocess_main import (eyeq_additional_preprocess)
 from modules.dataset.eyeq import (gen_EyeQImgPathLabelDict, gen_EyeQdataset)
 
-def gen_dataset(dataset_name, dataset_cfg, train_cfg):
+def gen_dataset(dataset_name, dataset_cfg, model_cfg, train_cfg, train_search=False, seed=None):
     """Generate train/validation/test dataloader of the dataset"""
 
     if dataset_name == 'EyeQ': # Eye Quality (EyeQ) dataset
@@ -16,6 +17,8 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
         name_class = dataset_cfg['class_name']
 
         # get details of data preprocessing
+        train_portion = dataset_cfg['train_portion']
+        train_shuffle = dataset_cfg['train_shuffle']
         val_from_train = dataset_cfg['val_from_train']
         val_from_train_shuffle = dataset_cfg['val_from_train_shuffle']
         val_portion = dataset_cfg['val_portion']
@@ -73,6 +76,54 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
             logging.info('The preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(train_img_num, val_img_num, test_img_num))
 
         # At this point, the preprocessed images of the dataset already used, then
+        # Additional preprocessing [if any] for the preprocessed images of the dataset
+        # check if the additional preprocessing for the preprocessed images of the dataset existed
+        # if not existing, the additional preprocessing for the preprocessed images of the dataset firstly need to be done 
+        if dataset_cfg['additional_preprocessing_image']:
+            # root path of the input directory (including name of 'train/val/test' directory under this) containing the preprocessed images of the dataset for doing the additional preprocessing
+            addPrepImg_input_root_dir = dataset_cfg['addPrepImg_input_root_dir']
+            addPrepImg_input_train_dir_name = dataset_cfg['addPrepImg_input_train_dir_name']
+            addPrepImg_input_val_dir_name = dataset_cfg['addPrepImg_input_val_dir_name']
+            addPrepImg_input_test_dir_name = dataset_cfg['addPrepImg_input_test_dir_name']
+            # list of name of the 'train/val/test' directory of the root of input directory 
+            # removing duplicate dir name if same name found, e.g., if name of 'val' dir is same to name of 'train' dir (val_from_train=True),
+            # to avoid repeat of the additional preprocessing on the same directory
+            list_addPrepImg_input_train_val_test_dir_name = list(dict.fromkeys([addPrepImg_input_train_dir_name, addPrepImg_input_val_dir_name, addPrepImg_input_test_dir_name]))
+
+            # root path of the output directory for doing the additional preprocessing
+            addPrepImg_output_root_dir = dataset_cfg['addPrepImg_output_root_dir']
+
+            # list of method(s) for the additional preprocessing
+            addPrepImg_methods = dataset_cfg['addPrepImg_methods']
+            logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset required.'.format(addPrepImg_methods))
+
+            # doing each method(s) of additional preprocessing
+            for additional_prep_method in addPrepImg_methods:
+                assert additional_prep_method in ['RGB_wCLAHE']
+                addPrepImg_method_settings = dataset_cfg['addPrepImg_methods_settings'][additional_prep_method]
+                # root path of output directory ('addPrepImg_output_root_dir' joined with 'dir_name' of this 'additional_prep_method') for keeping additional preprocessing image of this method
+                addPrepImg_method_output_root_dir = os.path.join(addPrepImg_output_root_dir, addPrepImg_method_settings['dir_name'])
+                # configuration of this method for additional preprocessing
+                addPrepImg_method_configs = addPrepImg_method_settings['config']
+                
+                if not os.path.exists(addPrepImg_method_output_root_dir): # case of the additional preprocessing for the preprocessed images of the dataset not existed
+                    logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset cannot be found. Starting to create....'.format(additional_prep_method))
+                    # doing this additional processing specified
+                    eyeq_additional_preprocess(input_root_dir=addPrepImg_input_root_dir, 
+                                               list_input_subdir=list_addPrepImg_input_train_val_test_dir_name, 
+                                               output_root_dir=addPrepImg_method_output_root_dir, 
+                                               addPrep_method=additional_prep_method, 
+                                               addPrep_method_configs=addPrepImg_method_configs)
+                else: # case of the additional preprocessing for the preprocessed images of the dataset existed
+                    # count a number of the train/validation/test images of this additional preprocessing for the preprocessed images of the dataset
+                    addPrepImg_train_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_train_dir_name)), '*.jpeg'))
+                    addPrepImg_val_img_num = 0
+                    if addPrepImg_input_val_dir_name != addPrepImg_input_train_dir_name:
+                        addPrepImg_val_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_val_dir_name)), '*.jpeg'))
+                    addPrepImg_test_img_num = len(fnmatch.filter(os.listdir(os.path.join(addPrepImg_method_output_root_dir, addPrepImg_input_test_dir_name)), '*.jpeg'))
+                    logging.info('Additional preprocessing \'{}\' for the preprocessed images of dataset already existed. Found {}, {}, {} images for train, validation, and test'.format(additional_prep_method, addPrepImg_train_img_num, addPrepImg_val_img_num, addPrepImg_test_img_num))
+
+        # At this point, the preprocessed (including additional_preprocessed [if any]) images of the dataset already used, then
         # [1st step] create dictionaries of image path and label for train/validation/test of dataset, then
         # [2nd step] generate train/validation/test dataloader of the EyeQ dataset
 
@@ -95,7 +146,7 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
         img_path_dict_key = 'img_path'
         img_label_dict_key = 'img_label'
         
-        # dictionraies of image path and label for train/validation/test of dataset
+        # dictionaries of image path and label for train/validation/test of dataset
         img_path_label_dicts = gen_EyeQImgPathLabelDict(ds_num_class=num_class,
                                                         ds_parts=ds_parts, 
                                                         ds_part_dirs=prep_ds_dirs,
@@ -104,15 +155,18 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
                                                         img_label_col_name=img_label_col_name,
                                                         img_path_dict_key=img_path_dict_key,
                                                         img_label_dict_key=img_label_dict_key,
+                                                        train_portion=train_portion, 
+                                                        train_shuffle=train_shuffle,
                                                         val_from_train=val_from_train,
                                                         val_from_train_shuffle=val_from_train_shuffle,
-                                                        val_portion=val_portion)
+                                                        val_portion=val_portion,
+                                                        seed=seed)
 
         # !------ [2nd step] ------!
         ds_dataloaders = list()
         ds_num_imgs = list()
         for (k_ds_part, v_ds_part), (k_img_path_label_dict, v_img_path_label_dict) in zip(ds_parts.items(), img_path_label_dicts.items()):
-            if v_ds_part == 'train':
+            if ((v_ds_part == 'train') or ((v_ds_part == 'validation') and (train_search == True))):
                 shuffle = True
                 augment = dataset_cfg['train_augment']
                 augment_infos = None
@@ -123,13 +177,55 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
                     augment_infos.update([('rotation', dataset_cfg['train_augment_rotation'])])
                     augment_infos.update([('rotation_factor', dataset_cfg['train_augment_rotation_factor'])])
                 drop_remainder = True
+                oversampling = dataset_cfg['train_random_oversampling']
+                oversampling_infos = None
+                if oversampling:
+                    oversampling_infos = dict()
+                    oversampling_infos.update([('type', dataset_cfg['train_random_oversampling_type'])])
+                    oversampling_infos.update([('weight', dataset_cfg['train_random_oversampling_weight'])])
             else:
                 shuffle = False
                 augment = False
                 augment_infos = None
                 drop_remainder = False
+                oversampling = False
+                oversampling_infos = None
 
-            ds_dataloader, total_num_img = gen_EyeQdataset(train_val_test=v_ds_part, 
+            rescale = dataset_cfg['rescale_input_value']
+            rescale_infos = None
+            if rescale:
+                rescale_infos = dict()
+                rescale_infos.update([('range', dataset_cfg['rescale_input_value_range'])])
+
+            normalize = dataset_cfg['normalization']
+            normalize_infos = None
+            if normalize:
+                normalize_infos = dict()
+                normalize_infos.update([('stat', dataset_cfg['normalization_stat'])])
+
+            addPrepImg = dataset_cfg['additional_preprocessing_image']
+            addPrepImg_infos = None
+            if addPrepImg:
+                addPrepImg_infos = dict()
+                # details of additional preprocessing image after doing the preprocessed images for EyeQ from the original images of EyePACS dataset
+                addPrepImg_output_root_dir = dataset_cfg['addPrepImg_output_root_dir']
+                addPrepImg_methods = dataset_cfg['addPrepImg_methods']
+                addPrepImg_methods_settings = dataset_cfg['addPrepImg_methods_settings']
+                # sub-dict for each info need to be used,
+                # -- sub-dict for keeping root directory of each method for additional preprocessing image
+                addPrepImg_methods_root_dir = dict()
+                
+                for method in addPrepImg_methods:
+                    # get root directory of this method for additional preprocessing image
+                    dir_name_of_this_addPrepImg_method = addPrepImg_methods_settings[method]['dir_name']
+                    root_dir_of_this_addPrepImg_method = os.path.join(addPrepImg_output_root_dir, dir_name_of_this_addPrepImg_method)
+                    addPrepImg_methods_root_dir.update([(method, root_dir_of_this_addPrepImg_method)])
+                
+                addPrepImg_infos.update([('root_dir', addPrepImg_methods_root_dir)])
+
+            ds_dataloader, total_num_img = gen_EyeQdataset(ds_num_class=num_class,
+                                                           ds_input_types=model_cfg['input_types_for_model'],
+                                                           train_val_test=v_ds_part, 
                                                            img_path_label_dict=v_img_path_label_dict,
                                                            img_path_dict_key=img_path_dict_key,
                                                            img_label_dict_key=img_label_dict_key,
@@ -137,12 +233,31 @@ def gen_dataset(dataset_name, dataset_cfg, train_cfg):
                                                            augment=augment,
                                                            augment_infos=augment_infos,
                                                            resized_img_dim=dataset_cfg['resized_image_dim'],
+                                                           rescale=rescale,
+                                                           rescale_infos=rescale_infos,
+                                                           normalize=normalize,
+                                                           normalize_infos=normalize_infos,
+                                                           additional_preprocessing_image=addPrepImg,
+                                                           additional_preprocessing_image_infos=addPrepImg_infos,
                                                            batch_size=train_cfg['batch_size'],
-                                                           drop_remainder=drop_remainder)
+                                                           drop_remainder=drop_remainder,
+                                                           oversampling=oversampling, 
+                                                           oversampling_infos=oversampling_infos,
+                                                           train_search=train_search,
+                                                           seed=seed)
             ds_dataloaders.append(ds_dataloader)
-            ds_num_imgs.append(total_num_img)
-            logging.info('Create \'{}\' dataloader containing {} images'.format(v_ds_part, total_num_img))
-
+            this_ds_num_img_dict = {'total_num_img': total_num_img, 'list_num_img_of_each_class_id': list()}
+            logging.info('Create \'{}\' dataloader containing {} images (Number and portion of data for each class are below)'.format(v_ds_part, total_num_img))
+            # show number and portion of data for each class of dataset
+            assert num_class == len(name_class)
+            str_num_and_portion_of_data_for_classes_of_ds = ""
+            for class_id, class_name in enumerate(name_class):
+                num_input_of_this_class = v_img_path_label_dict[img_label_dict_key].count(class_id)
+                this_ds_num_img_dict['list_num_img_of_each_class_id'].append(num_input_of_this_class)
+                portion_input_of_this_class = num_input_of_this_class / total_num_img * 100
+                str_num_and_portion_of_data_for_classes_of_ds += f"{name_class[class_id]} [{num_input_of_this_class} ({portion_input_of_this_class:.2f}%)], "
+            logging.info('\t{}'.format(str_num_and_portion_of_data_for_classes_of_ds))
+            ds_num_imgs.append(this_ds_num_img_dict)
     else:
         raise ValueError('Unknown \'{}\' dataset'.format(dataset_name))
 

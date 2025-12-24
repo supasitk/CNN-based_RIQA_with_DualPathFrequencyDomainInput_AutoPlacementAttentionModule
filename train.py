@@ -8,20 +8,26 @@ import numpy as np
 import tensorflow as tf
 
 from modules.utils import (load_yaml, set_memory_growth, write_exec_config_summary, 
-                           write_dataset_config_summary, write_model_config_summary,
-                           ProgressBar, evaluation_result_log, last_k_avg_max_min_accuracy,
+                           write_dataset_config_summary, write_model_config_summary, 
+                           write_model_attention_config_summary, ProgressBar, 
+                           evaluation_result_log, last_k_avg_max_min_metric,
                            evaluation_result_writer)
 from modules.dataset.dataset_main import (gen_dataset)
 from modules.model.model_main import (NNmodel)
 from modules.optimizers import (getOptimizer)
-from modules.losses import (getLossFn)
-from modules.metric import (accumulated_result, compute_metric)
+from modules.losses import (LossFn)
+from modules.metric import (accumulated_result, compute_metric, 
+                            record_top_N_validation_for_specific_metric, record_N_test_for_specific_val_metric)
 
 flags.DEFINE_string('cfg_path', './configs/train/riqa.yaml', 'config file path')
+flags.DEFINE_integer('seed', 0, 'seed number')
 
 
 def main(_):
-    #load execution configuration
+    # seed number
+    seed = FLAGS.seed
+
+    # load execution configuration
     cfg = load_yaml(FLAGS.cfg_path)
 
     # add path of directory containing this python file to PYTHONPATH list
@@ -35,7 +41,7 @@ def main(_):
     logger.disabled = True
     logger.setLevel(logging.FATAL)
     # set up logger configuration for logging training and validation details
-    log_dir = './logs/train/' + cfg['config_summary'] + '/run_log/'
+    log_dir = './logs/train/' + cfg['config_summary'] + f"/seed{seed}" + '/run_log/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     logging.get_absl_handler().use_absl_log_file('training.log', log_dir)
@@ -49,9 +55,9 @@ def main(_):
     # Set seed
     # Sets all random seeds for the program (Python, NumPy, and TensorFlow).
     # You can use this utility to make almost any Keras program fully deterministic.
-    if cfg['seed'] != None:
-        tf.keras.utils.set_random_seed(cfg['seed'])
-        logging.info('Seed {} is used.'.format(cfg['seed']))
+    if seed != None:
+        tf.keras.utils.set_random_seed(seed)
+        logging.info('Seed {} is used.'.format(seed))
     else:
         logging.info('Seed is not set.')
     
@@ -70,17 +76,41 @@ def main(_):
     model_cfg = load_yaml(model_cfg_path)
     write_model_config_summary(model_structure, model_cfg)
 
+    # summarize important configuration of model attention to log file
+    model_attn = cfg['model_attention']
+    model_attn_cfg_path = cfg['model_attention_config_path']
+    model_attn_cfg = load_yaml(model_attn_cfg_path)
+    write_model_attention_config_summary(model_attn, model_attn_cfg)
+
     # generate train/validation/test dataloader of the RIQA dataset
-    train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, cfg)
+    train_ds, train_ds_len, val_ds, val_ds_len, test_ds, test_ds_len = gen_dataset(ds_name, ds_cfg, model_cfg, cfg, seed=seed)
     
     # calculate number of steps per epoch, total number of steps, maximum number of epochs for training
     train_batch_size = int(cfg['batch_size'])
-    steps_per_epoch = train_ds_len // train_batch_size
+    # whether using random oversampling 
+    # (non-oversampling uses 'number_of_train_data (total_num_img)' as 'one_epoch' while 
+    #  oversampling uses 'number_of_majority-class_train_data' as 'one_epoch')
+    using_oversampling = ds_cfg['train_random_oversampling']
+    if using_oversampling:
+        dict_key_list_num_img_of_each_class_id = 'list_num_img_of_each_class_id'
+        prob_sampling_each_class_on_each_batch = ds_cfg['train_random_oversampling_weight']
+        num_class = ds_cfg['class_num']
+
+        idx_majority_class = np.argmax(train_ds_len[dict_key_list_num_img_of_each_class_id])
+        if prob_sampling_each_class_on_each_batch == None:  # uniform distribution across classes
+            prob_sampling_majority_class_on_each_batch = 1.0 / num_class
+        else:
+            prob_sampling_majority_class_on_each_batch = prob_sampling_each_class_on_each_batch[idx_majority_class]
+
+        steps_per_epoch = int(np.ceil(train_ds_len[dict_key_list_num_img_of_each_class_id][idx_majority_class] / (train_batch_size * prob_sampling_majority_class_on_each_batch))) 
+    else:
+        steps_per_epoch = int(np.ceil(train_ds_len['total_num_img'] / train_batch_size))
+    
     total_steps = int(cfg['max_train_unit']) if cfg['train_unit'] == 'step' else int(cfg['max_train_unit'] * steps_per_epoch)
     max_epoch = total_steps / steps_per_epoch
 
     # define network
-    model = NNmodel(cfg, ds_cfg, model_cfg)
+    model = NNmodel(cfg, ds_cfg, model_cfg, model_attn_cfg, seed=seed)
     # show detail of network
     logging.info('-' * 30)
     logging.info('Network structure: {}'.format(model_structure))
@@ -88,13 +118,13 @@ def main(_):
     model.summary()
 
     # optimizer
-    optimizer = getOptimizer(cfg)
+    optimizer = getOptimizer(cfg, total_steps, steps_per_epoch)
 
     # loss function
-    criterion = getLossFn(cfg)
+    criterion = LossFn(cfg, ds_cfg, train_ds_len)
 
     # load checkpoint
-    checkpoint_dir = './checkpoints/train/' + cfg['config_summary']
+    checkpoint_dir = './checkpoints/train/' + cfg['config_summary'] + f"/seed{seed}/"
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     checkpoint = tf.train.Checkpoint(step=tf.Variable(0, name='step'), 
@@ -114,8 +144,8 @@ def main(_):
     def train_step(inputs, labels):
         with tf.GradientTape() as tape:
             logits = model(inputs, training=True)
-            loss = criterion(labels, logits)
-            grads = tape.gradient(loss, model.trainable_variables)
+            loss = criterion.compute_loss(labels, logits, training=True)
+        grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return logits, loss
     
@@ -131,13 +161,26 @@ def main(_):
     train_accumulated_results = accumulated_result()
     val_accumulated_results = accumulated_result()
     val_on_every_step = int(cfg['val_on_every_unit']) if cfg['val_unit'] == 'step' else int(cfg['val_on_every_unit'] * steps_per_epoch)
-    val_acc_list = []
-    val_last_k_accuracy = int(cfg['val_last_k_accuracy'])
-    val_best_acc = 0.
-    val_best_acc_step = 0
+    val_metrics_for_find_top_N_val = cfg['val_metrics_for_find_top_N_val']
+    val_top_N = cfg['val_top_N']
+    top_N_validation_on_metrics = dict()
+    val_metrics_list = dict()
+    N_test_on_val_metrics = dict()
+    for metric in val_metrics_for_find_top_N_val:
+        top_N_validation_on_metrics[metric] = record_top_N_validation_for_specific_metric(N=val_top_N, 
+                                                                                          metric=metric)
+        val_metrics_list[metric] = list()
+        N_test_on_val_metrics[metric] = record_N_test_for_specific_val_metric(N=val_top_N, 
+                                                                              val_metric=metric)
+    val_last_k_metrics = int(cfg['val_last_k_metrics'])
+    save_weights_dir = checkpoint_dir + '/weights/'
+    if not os.path.exists(save_weights_dir):
+        os.makedirs(save_weights_dir)
+    suffix_saving_onlyWeights_filename = '_onlyWeights.weights.h5'
+    suffix_saving_modelWithWeights_filename = '_ModelWithWeights.keras'
     test_accumulated_results = accumulated_result()
     class_names = ds_cfg['class_name']
-    summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'])
+    summary_writer = tf.summary.create_file_writer('./logs/train/' + cfg['config_summary'] + f"/seed{seed}/")
     save_on_every_step = int(cfg['save_on_every_unit']) if cfg['save_unit'] == 'step' else int(cfg['save_on_every_unit'] * steps_per_epoch)
 
     logging.info('Number of steps per epoch: {}'.format(steps_per_epoch))
@@ -155,61 +198,96 @@ def main(_):
         logits, loss = train_step(inputs, labels)
         
         train_accumulated_results.update(input_paths, labels, logits)
-        prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}, elapsed_time={} h:m:s'.format(
-                        epochs, max_epoch, loss.numpy(), str(datetime.timedelta(seconds=time.time()-start_time))))
+        prog_bar.update('epoch={:d}/{:.2f}, loss={:.4f}, lr={:.2e}, elapsed_time={} h:m:s'.format(
+                        epochs, max_epoch, loss.numpy(), optimizer.learning_rate.numpy(), str(datetime.timedelta(seconds=time.time()-start_time))))
 
         # check if end each epoch of train
         if steps % steps_per_epoch == 0:
-            loss = criterion(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit))
+            loss = criterion.compute_loss(np.array(train_accumulated_results.accum_y_true), np.array(train_accumulated_results.accum_y_logit), training=True)
             train_eval_result = compute_metric(train_accumulated_results.accum_y_true, 
                                                train_accumulated_results.accum_y_prob,
                                                train_accumulated_results.accum_y_pred, 
                                                class_names)
             evaluation_result_log('Train', loss, train_eval_result, (steps / steps_per_epoch))
-            evaluation_result_writer(summary_writer, 'train', loss, train_eval_result, steps)
+            evaluation_result_writer(summary_writer, 'train', loss, train_eval_result, steps, lr=optimizer.learning_rate.numpy())
             train_accumulated_results.reset()
 
         # check if validation
         if (steps % val_on_every_step) == 0 and steps > 1:
+            # run validation and record its results
             val_accumulated_results.reset()
             for val_inputs, val_input_paths, val_labels in val_ds:
                 val_logits = val_test_step(val_inputs)
                 val_accumulated_results.update(val_input_paths, val_labels, val_logits)
-            val_loss = criterion(np.array(val_accumulated_results.accum_y_true), np.array(val_accumulated_results.accum_y_logit))
+            val_loss = criterion.compute_loss(np.array(val_accumulated_results.accum_y_true), np.array(val_accumulated_results.accum_y_logit))
             val_eval_result = compute_metric(val_accumulated_results.accum_y_true, 
                                              val_accumulated_results.accum_y_prob, 
                                              val_accumulated_results.accum_y_pred, 
                                              class_names)
             evaluation_result_log('Validation', val_loss, val_eval_result, (steps / steps_per_epoch))
-            current_val_acc = np.mean(val_eval_result['Accuracy'])
             
-            # check if best accuracy of validation
-            is_current_val_best_acc = False 
-            if current_val_acc > val_best_acc:
-                is_current_val_best_acc = True
-                # delete last best weight of validation
-                last_best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
-                last_best_val_acc_model_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras"
-                if os.path.exists(last_best_val_acc_weight_filepath):
-                    os.remove(last_best_val_acc_weight_filepath)
-                if os.path.exists(last_best_val_acc_model_filepath):
-                    os.remove(last_best_val_acc_model_filepath)
-                val_best_acc = current_val_acc
-                val_best_acc_step = steps
-                model.save_weights(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5")
-                model.save(f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_ModelWithWeights.keras")
+            # summarize information of validation result
+            current_epoch = steps / steps_per_epoch
+            current_val_loss = val_loss
+            current_val_acc = np.mean(val_eval_result['Accuracy'])
+            current_val_macroPrecision = np.mean(val_eval_result['Precision'])
+            current_val_macroSensitivity = np.mean(val_eval_result['Sensitivity'])
+            current_val_macroF1 = np.mean(val_eval_result['F1'])
+            current_val_qwk = np.mean(val_eval_result['QWK'])
 
-            evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, is_current_val_best_acc)
+            current_val_info = {'Epoch': current_epoch,
+                                'Loss': current_val_loss,
+                                'Accuracy': current_val_acc,
+                                'macroPrecision': current_val_macroPrecision,
+                                'macroSensitivity': current_val_macroSensitivity,
+                                'macroF1': current_val_macroF1,
+                                'QWK': current_val_qwk
+                               }
 
-            val_acc_list.append(current_val_acc)
-            val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc = last_k_avg_max_min_accuracy(val_acc_list, 
-                                                                                                     int(steps/val_on_every_step), 
-                                                                                                     val_last_k_accuracy)
-            logging.info(str("[Validation - epoch {}]".format((steps / steps_per_epoch))) +
-                         str(" New best validation accuracy: {}".format(is_current_val_best_acc)) +
-                         str(", Last {:d} avg|max|min validation accuracy: {:0.4f}|{:0.4f}|{:0.4f}".format(val_last_k_accuracy, val_last_k_avg_acc, val_last_k_max_acc, val_last_k_min_acc)) +
-                         str(", Best validation accuracy: {:0.4f} @ epoch {:0.2f} [step {:d}]".format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step)))
-        
+            # check if the current validation information is better than the previous top-N validation for each metric,
+            # if yes (for each metric), updating new top-N validation of the metric and save weights of model.
+            # also, showing average/max/min value for each metric from last K validation 
+            logging.info('[Validation - epoch {}]: '.format((current_epoch)))
+            for metric in val_metrics_for_find_top_N_val:
+                # check if updating new top-N validation of this metric
+                top_N_validation_on_metrics[metric].update_top_N_validation(current_val_info)
+                logging.info('\tNew top-{} Validation of {} found: {}'.format(val_top_N, metric, top_N_validation_on_metrics[metric].is_current_val_metric_value_better))
+                top_N_validation_on_metrics[metric].show_top_N_validation()
+
+                # check if save weights of model
+                if top_N_validation_on_metrics[metric].is_current_val_metric_value_better == True:
+                    weight_filepath = f"{save_weights_dir}/EP{current_epoch}{suffix_saving_onlyWeights_filename}"
+                    model_filepath = f"{save_weights_dir}/EP{current_epoch}{suffix_saving_modelWithWeights_filename}"
+                    if not os.path.exists(weight_filepath): # avoid duplicate saving from different metrics
+                        model.save_weights(weight_filepath)
+                    if not os.path.exists(model_filepath): # avoid duplicate saving from different metrics
+                        model.save(model_filepath)
+
+                # showing average/max/min value for each metric from last K validation
+                val_metrics_list[metric].append(current_val_info[metric])
+                val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric = last_k_avg_max_min_metric(val_metrics_list[metric],
+                                                                                                                int(steps/val_on_every_step),
+                                                                                                                val_last_k_metrics)
+                logging.info('\tLast {:d} avg|max|min validation {}: {:0.4f}|{:0.4f}|{:0.4f}\n'.format(val_last_k_metrics, metric, val_last_k_avg_metric, val_last_k_max_metric, val_last_k_min_metric))
+
+            # delete the previous saved weights of model which are not in the current top-N validation of every metrics
+            list_epoch_num_in_topN_val_from_every_metrics = list()
+            for metric in val_metrics_for_find_top_N_val:
+                list_epoch_num_in_topN_val_of_this_metric = top_N_validation_on_metrics[metric].get_epoch_number_in_top_N_validation()
+                list_epoch_num_in_topN_val_from_every_metrics.extend(list_epoch_num_in_topN_val_of_this_metric)
+            
+            list_epoch_num_in_topN_val_from_every_metrics = list(set(list_epoch_num_in_topN_val_from_every_metrics)) # remove duplicate of epoch numbers
+
+            list_saved_onlyWeights_filename = [f"EP{ep_num}{suffix_saving_onlyWeights_filename}" for ep_num in list_epoch_num_in_topN_val_from_every_metrics] 
+            list_saved_modelWithWeights_filename = [f"EP{ep_num}{suffix_saving_modelWithWeights_filename}" for ep_num in list_epoch_num_in_topN_val_from_every_metrics]
+            list_saved_onlyWeights_modelWithWeights_filename = list_saved_onlyWeights_filename + list_saved_modelWithWeights_filename
+
+            for filename in os.listdir(save_weights_dir):
+                if filename not in list_saved_onlyWeights_modelWithWeights_filename:
+                    os.remove(save_weights_dir + filename)
+
+            evaluation_result_writer(summary_writer, 'validation', val_loss, val_eval_result, steps, val_metrics=val_metrics_for_find_top_N_val, topN_val_on_metrics=top_N_validation_on_metrics)
+
         # check if checkpoint
         if steps % save_on_every_step == 0:
             manager.save()
@@ -218,26 +296,117 @@ def main(_):
     manager.save()
     logging.info('-' * 50)
     logging.info('[*] End of training and Save ckpt file at {}'.format(manager.latest_checkpoint))
-    
+
     # test
-    # evaluate the best weight of validating model with test dataset
-    best_val_acc_weight_filepath = f"{checkpoint_dir}/bestEP{(val_best_acc_step / steps_per_epoch)}_onlyWeights.weights.h5"
+    # evaluate the top-N weight of validating model from every validation metrics with test dataset
     logging.info('-' * 50)
-    logging.info('Evaluating the best weight [val_acc: {:0.4f} @ epoch/step: {:0.2f}/{:d} ] of validating model with test dataset...'.format(val_best_acc, (val_best_acc_step / steps_per_epoch), val_best_acc_step))
-    logging.info('Load the best weight @ {}'.format(best_val_acc_weight_filepath))
-    # load the best weight into model
-    model.load_weights(best_val_acc_weight_filepath)
-    test_accumulated_results.reset()
-    for test_inputs, test_input_paths, test_labels in test_ds:
-        test_logits = val_test_step(test_inputs)
-        test_accumulated_results.update(test_input_paths, test_labels, test_logits)
-    test_loss = criterion(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
-    test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
-                                      test_accumulated_results.accum_y_prob, 
-                                      test_accumulated_results.accum_y_pred, 
-                                      class_names)
-    evaluation_result_log('Test', test_loss, test_eval_result, (steps / steps_per_epoch))
-    evaluation_result_writer(summary_writer, 'test', test_loss, test_eval_result, steps)
+    logging.info('[Test]')
+    logging.info('-' * 50)
+    for metric in val_metrics_for_find_top_N_val:
+        logging.info('-' * 50)
+        logging.info('Top-{} {} validation:'.format(val_top_N, metric))
+        for rank in range(val_top_N):
+            val_epoch_num = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Epoch']
+            val_loss = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Loss']
+            val_acc = top_N_validation_on_metrics[metric].top_N_val_list[rank]['Accuracy']
+            val_macroPrecision = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroPrecision']
+            val_macroSensitivity = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroSensitivity']
+            val_macroF1 = top_N_validation_on_metrics[metric].top_N_val_list[rank]['macroF1']
+            val_qwk = top_N_validation_on_metrics[metric].top_N_val_list[rank]['QWK']
+            logging.info('\tRank#{} with validation infos (epoch: {}, loss: {:0.4f}, accuracy: {:0.4f}, macroPrecision: {:0.4f}, macroSensitivity: {:0.4f}, macroF1: {:0.4f}, QWK: {:0.4f}):'.format(rank+1, val_epoch_num, val_loss, val_acc, val_macroPrecision, val_macroSensitivity, val_macroF1, val_qwk))
+            
+            # load weight into model
+            weight_filepath = f"{save_weights_dir}/EP{val_epoch_num}{suffix_saving_onlyWeights_filename}"
+            model.load_weights(weight_filepath)
+            logging.info('\tLoad the weight @ {}'.format(weight_filepath))
+
+            # evaluate with test dataset
+            test_accumulated_results.reset()
+            for test_inputs, test_input_paths, test_labels in test_ds:
+                test_logits = val_test_step(test_inputs)
+                test_accumulated_results.update(test_input_paths, test_labels, test_logits)
+            test_loss = criterion.compute_loss(np.array(test_accumulated_results.accum_y_true), np.array(test_accumulated_results.accum_y_logit))
+            test_eval_result = compute_metric(test_accumulated_results.accum_y_true, 
+                                              test_accumulated_results.accum_y_prob, 
+                                              test_accumulated_results.accum_y_pred, 
+                                              class_names)
+            
+            # test infos
+            test_acc = np.mean(test_eval_result['Accuracy'])
+            test_macroPrecision = np.mean(test_eval_result['Precision'])
+            test_macroSensitivity = np.mean(test_eval_result['Sensitivity'])
+            test_macroF1 = np.mean(test_eval_result['F1'])
+            test_qwk = np.mean(test_eval_result['QWK'])
+            logging.info(str("\t\t[Test infos]:") + 
+                         ' Loss: ' + str("{:0.4f}".format(test_loss)) +
+                         ', Accuracy: ' + str("{:0.4f}".format(test_acc)) +
+                         ', macroPrecision: ' + str("{:0.4f}".format(test_macroPrecision)) +
+                         ', macroSensitivity: ' + str("{:0.4f}".format(test_macroSensitivity)) +
+                         ', macroF1: ' + str("{:0.4f}".format(test_macroF1)) +
+                         ', QWK: ' + str("{:0.4f}".format(test_qwk)))
+            
+            # record test infos
+            current_test_info = {'Val_Rank': rank+1,
+                                 'Val_Epoch': val_epoch_num,
+                                 'Loss': test_loss,
+                                 'Accuracy': test_acc,
+                                 'macroPrecision': test_macroPrecision,
+                                 'macroSensitivity': test_macroSensitivity,
+                                 'macroF1': test_macroF1,
+                                 'QWK': test_qwk
+                                }
+            N_test_on_val_metrics[metric].update_N_test(curr_test_info=current_test_info, rank=rank)
+    
+    # find the best/worst test for each validation metrics 
+    logging.info('-' * 50)
+    logging.info('[Test Summary]')
+    logging.info('-' * 50)
+    list_best_test_of_val_metrics = list()
+    list_worst_test_of_val_metrics = list()
+    for metric in val_metrics_for_find_top_N_val:
+        logging.info('-' * 50)
+        N_test_on_val_metrics[metric].show_best_worst_test()
+
+        best_test_of_this_val_metric = N_test_on_val_metrics[metric].best_test
+        best_test_of_this_val_metric.update({'Val_Metric': metric})
+        list_best_test_of_val_metrics.append(best_test_of_this_val_metric)
+
+        worst_test_of_this_val_metric = N_test_on_val_metrics[metric].worst_test
+        worst_test_of_this_val_metric.update({'Val_Metric': metric})
+        list_worst_test_of_val_metrics.append(worst_test_of_this_val_metric)
+
+    # find the best/worst test among every validation metrics
+    logging.info('-' * 50)
+    # sorting best test from every validation metrics (list of dictionaries) first by 'Accuracy', 'QWK', and then by 'macroF1', 
+    # and sorting it in DESCENDING (reverse=True) [largest to smallest] order (greater accuracy/macroF1 is better)
+    sorted_list_best_test_of_val_metrics = sorted(list_best_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['QWK'], x['macroF1']), reverse=True)
+    final_best_test = sorted_list_best_test_of_val_metrics[0]
+    # sorting worst test from every validation metrics (list of dictionaries) first by 'Accuracy', 'QWK', and then by 'macroF1', 
+    # and sorting it in ASCENDING (reverse=False) [smallest to largest] order (less accuracy/macroF1 is worse)
+    sorted_list_worst_test_of_val_metrics = sorted(list_worst_test_of_val_metrics, key=lambda x: (x['Accuracy'], x['QWK'], x['macroF1']), reverse=False)
+    final_worst_test = sorted_list_worst_test_of_val_metrics[0]
+
+    list_final_test = [('Best', final_best_test), ('Worst', final_worst_test)]
+
+    for level, final_test in list_final_test:
+        logging.info('{} Test of every validation metrics:'.format(level))
+        logging.info(str("\tFrom {} validation Rank #{} (epoch: {}):".format(final_test['Val_Metric'], final_test['Val_Rank'], final_test['Val_Epoch'])) +
+                     ' Loss: ' + str("{:0.4f}".format(final_test['Loss'])) +
+                     ', Accuracy: ' + str("{:0.4f}".format(final_test['Accuracy'])) +
+                     ', macroPrecision: ' + str("{:0.4f}".format(final_test['macroPrecision'])) +
+                     ', macroSensitivity: ' + str("{:0.4f}".format(final_test['macroSensitivity'])) +
+                     ', macroF1: ' + str("{:0.4f}".format(final_test['macroF1'])) +
+                     ', QWK: ' + str("{:0.4f}".format(final_test['QWK'])))
+
+    # record best test infos
+    best_test_eval_result = {'Loss': final_best_test['Loss'],
+                             'Accuracy': final_best_test['Accuracy'],
+                             'Precision': final_best_test['macroPrecision'],
+                             'Sensitivity': final_best_test['macroSensitivity'],
+                             'F1': final_best_test['macroF1'],
+                             'QWK': final_best_test['QWK']
+                            }
+    evaluation_result_writer(summary_writer, 'test', best_test_eval_result['Loss'], best_test_eval_result, steps)
 
     # write execution summary
     logging.info('-' * 100)

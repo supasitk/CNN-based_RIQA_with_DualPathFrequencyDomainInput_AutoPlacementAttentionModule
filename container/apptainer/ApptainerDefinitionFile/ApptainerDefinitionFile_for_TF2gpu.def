@@ -1,0 +1,7 @@
+Bootstrap: docker
+From: tensorflow/tensorflow:2.16.1-gpu-jupyter
+
+%post
+    apt-get -y update
+    apt-get -y install ca-certificates build-essential vim wget git libnccl2 libnccl-dev python3-opencv cmake
+    pip install tensorflow-model-optimization tensorflow_datasets tensorflow[and-cuda] tensorflow-io numpy opencv-python PyYAML ipython graphviz scikit-learn scikit-image dlib niet

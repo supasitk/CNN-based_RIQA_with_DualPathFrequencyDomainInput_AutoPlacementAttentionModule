@@ -17,6 +17,7 @@ RUN pip install \
     tensorflow-model-optimization \ 
     tensorflow_datasets \
     tensorflow[and-cuda] \
+    tensorflow-io \
     numpy \
     opencv-python \
     PyYAML \ 
@@ -24,4 +25,5 @@ RUN pip install \
     graphviz \ 
     scikit-learn \ 
     scikit-image \ 
-    dlib
+    dlib \
+    niet

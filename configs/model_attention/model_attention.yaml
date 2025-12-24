@@ -1,0 +1,74 @@
+# Attention configuration for model
+# This attention configuration need to corresponds with the model configuration 'model.yaml' 
+
+attention_existence:    # Whether to use attention [True, False] (#elements must be equal to 'number_of_branch')
+  1: True  
+
+attention_config_of_branches:       # Attention configuration for branch(es) (#elements must be equal to 'number_of_branch')
+                                    # Specify only block's ID needed to attach attention module (not given block's ID imply to not need attention module)
+                                    # Format is [Block_ID (integer), Attention_Type (string), Attention_configuration (list)]
+  1: [
+      {'block_id': 0, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 1, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 2, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 3, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 4, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 5, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 6, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 7, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 8, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 9, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 10, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 11, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 12, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 13, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 14, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+      {'block_id': 15, 'attn_type': 'ChannelAttention0', 'attn_config': [16, 'relu', 'sigmoid']},
+     ]
+
+
+##############################################################################################################################################
+# Supported attention type(s) and configuration(s) are 
+#    1. Squeeze-and-Excitation (SE) Networks [2017] 
+#         'ChannelAttention0' -> [reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
+#    2. (CBAM_ChannelAttention) CBAM: Convolutional Block Attention Module [2018]
+#         'ChannelAttention1' -> [spatial_pooling_methods (default=['avg', 'max']), reduction_ratio (default=16), use_bias (default=True), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid')]
+#    3. FcaNet: Frequency Channel Attention Networks [2021] 
+#         'ChannelAttention2' -> [freq_select_method ('TriangleLow'), num_freq (1,2,4,8,16,32), reduction_ratio (default=16), activation_dense1 (default='relu'), activation_dense2 (default='sigmoid'), use_bias (default=True)]
+#    4. DepthwiseMultiFreqChannelAttention [DepthwiseGlobalSpatialPooling: (null or reduction_method) -> 
+#                                           Depthwise2DdctSpatialPooling: (freq_select_method, first_freq_component, last_freq_component, step_frep, num_freq) -> 
+#                                           DepthwiseMultiFreqReduction: (num_group_of_freq, num_freq_per_group, method) -> 
+#                                           MLP: (arrangement, reduction_ratio, use_bias, activation_dense1, weighted_dense2_outputs, activation_dense2)]
+#         'ChannelAttention3' -> [globalSpaPool_reduction_method (null [no using DepthwiseGlobalSpatialPooling] or method ('avg', 'max', 'avg_max')), 
+#                                 dctSpaPool_freq_select_method ('TriangleLow', 'TriangleHigh'),
+#                                 dctSpaPool_freq_component_specifying_type ('freq_range', 'freq_list') [specifying type of freq_component used],
+#                                 dctSpaPool_freq_component_specification (list) [specification of the used/selected freq_component(s) depended on 'dctSpaPool_freq_component_specifying_type']: 
+#                                     1. 'freq_range': the list must contain 3 value [
+#                                                                                     dctSpaPool_first_freq_component [value of freq_component started from 0] (integer), 
+#                                                                                     dctSpaPool_last_freq_component [value of freq_component started from 0] (integer), 
+#                                                                                     dctSpaPool_step_freq] (integer) [step_freq is the increment between each number (freq), from 'first' to 'last' frequency component, included in the sequence (used/selected freq component(s))]
+#                                                                                    ]
+#                                     2. 'freq_list': the list contains [
+#                                                                        value of the used/selected freq_component(s), ...
+#                                                                       ], 
+#                                 dctSpaPool_num_freq (integer) [for 'freq_range', num_freq must be (last_freq_component - first_freq_component + 1) // step_freq; 
+#                                                             as for 'freq_list', num_freq must be len(list containing value of the used/selected freq_component(s))], 
+#                                 multiFreqReduction_num_group_of_freq (integer), 
+#                                 multiFreqReduction_num_freq_per_group (integer), 
+#                                 multiFreqReduction_method ('reduce_mean', 'reduce_sum', 'reduce_max', 'reduce_mean_max'), 
+#                                 mlp_arrangement ('share' [1 GlobalSpatialDomain aggregation (if any) & N groups DCTspatialDomain aggregation -to- One MLP] (MaxNumMLP=1), 
+#                                                  'seperateAll' [1 GlobalSpatialDomain aggregation (if any) -to- One MLP & N groups DCTspatialDomain aggregation -to- N MLPs] (MaxNumMLP=1+N),
+#                                                  'seperateDomain' [1 GlobalSpatialDomain aggregation (if any) -to- One MLP & N groups DCTspatialDomain aggregation -to- One MLP] (MaxNumMLP=2)), 
+#                                 mlp_reduction_ratio (integer [default=16]), 
+#                                 mlp_use_bias (boolean [default=True]), 
+#                                 mlp_activation_dense1 (activation_fn [default='relu']), 
+#                                 mlp_weighted_dense2_outputs (boolean [default=False]), 
+#                                 mlp_activation_dense2 (activation_fn [default='sigmoid')]]
+#    5. Learning for retinal image quality assessment with label regularization [2022]
+#         'SpatialAttention0' -> [filter (default=1), kernel_size (default=1), stride (default=1), activation (default='softplus'), epsilon (default=0.1)]
+#    6. (CBAM_SpatialAttention) CBAM: Convolutional Block Attention Module [2018]
+#         'SpatialAttention1' -> [channel_pooling_methods (default=['avg', 'max']), filter (default=1), kernel_size (default=7), stride (default=1), activation (default='sigmoid'), use_bias (default=False), use_bn (default=True), use_relu (default=False)]  
+#    7. CBAM: Convolutional Block Attention Module [2018]
+#         'ChannelSpatialAttention0' -> [cam_spatial_pooling_methods (default=['avg', 'max']), cam_reduction_ratio (default=16), cam_use_bias (default=True), cam_activation_dense1 (default='relu'), cam_activation_dense2 (default='sigmoid'), 
+#                                        sam_channel_pooling_methods (default=['avg', 'max']), sam_filter (default=1), sam_kernel_size (default=7), sam_stride (default=1), sam_activation (default='sigmoid'), sam_use_bias (default=False), sam_use_bn (default=True), sam_use_relu (default=False)]
+##############################################################################################################################################

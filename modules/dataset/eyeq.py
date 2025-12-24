@@ -2,8 +2,10 @@ import os
 import random
 import numpy as np
 import tensorflow as tf
+import tensorflow_io as tfio
 
-from tensorflow.keras import layers
+from tensorflow.keras.layers import (RandomFlip, RandomRotation, Rescaling, Normalization)
+from modules.dataset.dataset_statistic.compute_mean_std_of_dataset.eyeq import *
 
 
 def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key):
@@ -19,7 +21,8 @@ def _EyeQimgPathLabelDict(ds_part_dir, img_info, img_filename_col_name, img_labe
     return img_path_label_dict
 
 
-def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key, val_from_train, val_from_train_shuffle, val_portion):
+def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, img_filename_col_name, img_label_col_name, img_path_dict_key, img_label_dict_key, 
+                             train_portion, train_shuffle, val_from_train, val_from_train_shuffle, val_portion, seed=None):
     """Create dictionaries of image path and label for train/validation/test of dataset"""
     # train and validation dataset
     train_img_path_label_dict = _EyeQimgPathLabelDict(ds_part_dir=ds_part_dirs[ds_parts['train']], 
@@ -28,6 +31,24 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
                                                       img_label_col_name=img_label_col_name,
                                                       img_path_dict_key=img_path_dict_key,
                                                       img_label_dict_key=img_label_dict_key)
+
+    if train_portion != 1.0: # all training data are not used
+        tmp_train_img_path_label_dict = {img_path_dict_key: list(), img_label_dict_key: list()}
+        
+        for class_id in range(ds_num_class):
+            indices_of_this_class_train_img_path_label_dict = np.where(np.array(train_img_path_label_dict[img_label_dict_key]) == class_id)[0]
+        
+            if train_shuffle:
+                indices_of_this_class_train_img_path_label_dict = tf.random.shuffle(indices_of_this_class_train_img_path_label_dict, seed=seed)
+        
+            num_train_img_of_this_class = len(indices_of_this_class_train_img_path_label_dict)
+            indices_of_this_class_for_train, _ = np.split(indices_of_this_class_train_img_path_label_dict, 
+                                                          [int(round(num_train_img_of_this_class*train_portion))])
+                                                    
+            tmp_train_img_path_label_dict[img_path_dict_key].extend(np.take(np.array(train_img_path_label_dict[img_path_dict_key]), indices_of_this_class_for_train))
+            tmp_train_img_path_label_dict[img_label_dict_key].extend(np.take(np.array(train_img_path_label_dict[img_label_dict_key]), indices_of_this_class_for_train))
+
+        train_img_path_label_dict = tmp_train_img_path_label_dict            
 
     # whether validation dataset splitted from train dataset
     if val_from_train == True:
@@ -38,7 +59,7 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
             indices_of_this_class_train_img_path_label_dict = np.where(np.array(train_img_path_label_dict[img_label_dict_key]) == class_id)[0]
                         
             if val_from_train_shuffle:
-                np.random.shuffle(indices_of_this_class_train_img_path_label_dict)
+                indices_of_this_class_train_img_path_label_dict = tf.random.shuffle(indices_of_this_class_train_img_path_label_dict, seed=seed)
             
             num_train_img_of_this_class = len(indices_of_this_class_train_img_path_label_dict)
             indices_of_this_class_for_val, indices_of_this_class_for_train = np.split(indices_of_this_class_train_img_path_label_dict, 
@@ -68,12 +89,13 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
                                                      img_path_dict_key=img_path_dict_key,
                                                      img_label_dict_key=img_label_dict_key) 
 
-    # shuffle train dataset
+    # train dataset
     zipped_train_img_path_label_dict = list(zip(train_img_path_label_dict[img_path_dict_key], train_img_path_label_dict[img_label_dict_key]))
-    random.shuffle(zipped_train_img_path_label_dict)
-    shuffled_train_img_path, shuffled_train_img_label = zip(*zipped_train_img_path_label_dict)
-    train_img_path_label_dict[img_path_dict_key] = list(shuffled_train_img_path)
-    train_img_path_label_dict[img_label_dict_key] = list(shuffled_train_img_label)
+    # if train_shuffle:
+    #     random.shuffle(zipped_train_img_path_label_dict)
+    train_img_path, train_img_label = zip(*zipped_train_img_path_label_dict)
+    train_img_path_label_dict[img_path_dict_key] = list(train_img_path)
+    train_img_path_label_dict[img_label_dict_key] = list(train_img_label)
 
     # dictionary of image path and label for train/validation/test of dataset
     img_path_label_dicts = {ds_parts['train']: train_img_path_label_dict, 
@@ -83,52 +105,159 @@ def gen_EyeQImgPathLabelDict(ds_num_class, ds_parts, ds_part_dirs, img_infos, im
     return img_path_label_dicts
 
 
-def _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim):
+def _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, addPrepImg, addPrepImg_infos, seed=None):
     # function of data augmentation
     if augment:
         data_augmentation = tf.keras.Sequential()
         if augment_infos['hflip']:
-            data_augmentation.add(layers.RandomFlip('horizontal'))
+            data_augmentation.add(RandomFlip('horizontal', seed=seed))
         if augment_infos['vflip']:
-            data_augmentation.add(layers.RandomFlip('vertical'))
+            data_augmentation.add(RandomFlip('vertical', seed=seed))
         if augment_infos['rotation']:
-            data_augmentation.add(layers.RandomRotation(augment_infos['rotation_factor']))    
+            data_augmentation.add(RandomRotation(augment_infos['rotation_factor'], seed=seed))
+
+    # function of rescaling
+    if rescale:
+        rescale_range = rescale_infos['range']
+        if rescale_range == 'ZerotoOne':
+            scale_value = 1./255
+            offset_value = 0
+        elif rescale_range == 'minusOnetoOne':
+            scale_value = 1./127.5
+            offset_value = -1
+        else:
+            raise ValueError('Rescale input value range \'{}\' is unknown'.format(rescale_range))
+        rescaling_fn = Rescaling(scale=scale_value, offset=offset_value)
+
+    # function of normalization
+    if normalize:
+        norm_fn = dict()
+        for ds_input_type in ds_input_types:
+            norm_stat_name_of_ds_input_type = normalize_infos['stat'][ds_input_type]
+            norm_fn_of_ds_input_type = None
+            if ds_input_type == 'RGB':
+                if norm_stat_name_of_ds_input_type == 'EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne':
+                    mean = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['mean']
+                    var = EyeQpreprocessedTrain_imgRGBresize224rescaleMinusOneToOne['var']
+                elif norm_stat_name_of_ds_input_type == 'EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne':
+                    mean = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['mean']
+                    var = EyeQpreprocessedTrain_imgRGBresize448rescaleMinusOneToOne['var']
+                elif norm_stat_name_of_ds_input_type == None:
+                    mean = None
+                    var = None
+                else:
+                    raise ValueError
+            elif ds_input_type == 'RGB_wCLAHE':
+                if norm_stat_name_of_ds_input_type == None:
+                    mean = None
+                    var = None
+                else:
+                    raise ValueError
+            else:
+                raise ValueError
+                
+            if (mean != None) and (var != None):
+                norm_fn_of_ds_input_type = Normalization(mean=mean, variance=var)
+        
+            norm_fn.update([(ds_input_type, norm_fn_of_ds_input_type)])
+
+    # details of additional preprocessing image after doing the preprocessed images for EyeQ
+    if addPrepImg:
+        ds_input_types_root_dir = dict()
+        for ds_input_type in ds_input_types:
+            if ds_input_type != 'RGB': # note that 'RGB' is default (not additional preprocessing) input type of dataset
+                ds_input_types_root_dir.update([(ds_input_type, addPrepImg_infos['root_dir'][ds_input_type])])
+
 
     def transform_data(img_path, img_label):
-        img = tf.io.read_file(img_path)
-        # decode image to tensor with type uint8 having values in the range [0, 255]
-        img = tf.io.decode_image(img, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
-        # convert image from type uint8 to float32 which the values are normalized by 255 (MAX value of the input dtype, uint8),
-        # and return values in the range [0,1]
-        img = tf.image.convert_image_dtype(img, tf.dtypes.float32)
-        img = tf.image.resize(img, [resized_img_dim, resized_img_dim])
-        if augment:
-            img = data_augmentation(img)
-        # rescale an input in the [0, 1] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
-        img = layers.Rescaling(scale=2, offset=-1)(img)
+        list_img_path_of_input_types = list()
+        list_input_types = list()
+        for input_type in ds_input_types:
+            if input_type == 'RGB':
+                this_input_type_img_path = img_path
+            else:
+                split_img_path = tf.strings.split(img_path, sep=os.sep)
+                img_ds_part = split_img_path[-2] # 'train' or 'val' or 'test' directory
+                img_filename = split_img_path[-1]
+                this_input_type_img_path = tf.strings.join([ds_input_types_root_dir[input_type], os.sep, img_ds_part, os.sep, img_filename])
+            # read input
+            this_input_type = tf.io.read_file(this_input_type_img_path)
+            # decode image (default type is 'RGB') to tensor with type uint8 having values in the range [0, 255]
+            this_input_type = tf.io.decode_image(this_input_type, channels=3, dtype=tf.dtypes.uint8, expand_animations=False)
+            # resize
+            this_input_type = tf.image.resize(this_input_type, [resized_img_dim, resized_img_dim])
+            # rescale an input in the [0, 255] range to be in the [-1, 1] range (outputs: `(inputs * scale) + offset`)
+            if rescale:
+                this_input_type = rescaling_fn(this_input_type)
+            # normalization
+            if normalize:
+                if norm_fn[input_type] != None:
+                    this_input_type = norm_fn[input_type](this_input_type)
+            # get and concatenate types of input needed for model 
+            list_img_path_of_input_types.append(this_input_type_img_path)
+            list_input_types.append(this_input_type)
         
-        return img, img_path, img_label
+        img_paths = tf.strings.join(list_img_path_of_input_types, separator=', ')    
+        inputs = tf.concat(list_input_types, axis=-1)
+        
+        # augmentation
+        if augment:
+            inputs = data_augmentation(inputs)
+                
+        return inputs, img_paths, img_label
     return transform_data
 
 
-def gen_EyeQdataset(train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, resized_img_dim, batch_size, drop_remainder=True):
+def gen_EyeQdataset(ds_num_class, ds_input_types, train_val_test, img_path_label_dict, img_path_dict_key, img_label_dict_key, shuffle, augment, augment_infos, 
+                    resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, additional_preprocessing_image, additional_preprocessing_image_infos, 
+                    batch_size, drop_remainder=True, oversampling=False, oversampling_infos=None, 
+                    train_search=False, seed=None):
     """Create dataloader for train/validation/test of dataset"""
     num_img_path = len(img_path_label_dict[img_path_dict_key])
     num_img_label = len(img_path_label_dict[img_label_dict_key])
     if num_img_path != num_img_label:
         raise ValueError('Number of image path ({}) and label ({}) of \'{}\' dataset are not equal'.format(num_img_path, num_img_label, train_val_test))
-
     num_img = num_img_label
-    dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
 
-    if train_val_test == 'train':
+    if oversampling:
+        if oversampling_infos['type'] == 'WeightedProbabilityEveryClassOnEachBatch':
+            # split whole (all class) data into each specfic-class (each class) data, then create list of dataloader for each specific-class data
+            list_dataloader_for_each_specific_class_data = list()
+            for class_id in range(ds_num_class):
+                # -- split whole (all class) data into this specfic-class data
+                indices_of_this_class_in_ds_img_path_label_dict = np.where(np.array(img_path_label_dict[img_label_dict_key]) == class_id)[0]
+                num_img_of_this_class = len(indices_of_this_class_in_ds_img_path_label_dict)
+
+                this_class_img_path_label_dict = {img_path_dict_key: list(), img_label_dict_key: list()}
+                this_class_img_path_label_dict[img_path_dict_key].extend(np.take(np.array(img_path_label_dict[img_path_dict_key]), indices_of_this_class_in_ds_img_path_label_dict))
+                this_class_img_path_label_dict[img_label_dict_key].extend(np.take(np.array(img_path_label_dict[img_label_dict_key]), indices_of_this_class_in_ds_img_path_label_dict))
+
+                # -- create dataloader for this specific-class data
+                this_class_dataset = tf.data.Dataset.from_tensor_slices((this_class_img_path_label_dict[img_path_dict_key], this_class_img_path_label_dict[img_label_dict_key]))
+                if shuffle:
+                    this_class_dataset = this_class_dataset.shuffle(buffer_size=num_img_of_this_class, seed=seed)
+                this_class_dataset = this_class_dataset.repeat()
+
+                # -- add this specific-class dataloader to list of dataloader for each specific-class data
+                list_dataloader_for_each_specific_class_data.append(this_class_dataset)
+            
+            # create the final dataloader contains every specific-class dataloaders with given probability (weight) of sampling for each specific-class data
+            dataset = tf.data.Dataset.sample_from_datasets(datasets=list_dataloader_for_each_specific_class_data, 
+                                                           weights=oversampling_infos['weight'],
+                                                           seed=seed)
+        else:
+            raise ValueError('Unknown \'{}\' type of random oversampling'.format(oversampling_infos['type']))
+    else:
+        dataset = tf.data.Dataset.from_tensor_slices((img_path_label_dict[img_path_dict_key], img_path_label_dict[img_label_dict_key]))
+
+    if ((train_val_test == 'train') or ((train_val_test == 'validation') and (train_search == True))):
         dataset = dataset.repeat()
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=num_img)
+        dataset = dataset.shuffle(buffer_size=num_img, seed=seed)
 
     dataset = dataset.map(
-                _transform_data_EyeQdataset(train_val_test, augment, augment_infos, resized_img_dim),
+                _transform_data_EyeQdataset(ds_input_types, train_val_test, augment, augment_infos, resized_img_dim, rescale, rescale_infos, normalize, normalize_infos, additional_preprocessing_image, additional_preprocessing_image_infos, seed=seed),
                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
